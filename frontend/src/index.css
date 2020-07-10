@@ -8,4 +8,12 @@ html {
 
 body {
   margin: 0;
+  background-color: #009688;
+  color: white;
+}
+
+input,
+select,
+textarea {
+  color: white;
 }
