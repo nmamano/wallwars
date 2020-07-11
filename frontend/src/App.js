@@ -17,7 +17,7 @@ const App = () => {
           <LobbyPage />
         </Route>
         <Route path="/game/:gameId" exact>
-          <GamePage />
+          <GamePage duration={5} increment={2} p1Name="placeholder" />
         </Route>
         <Redirect to="/lobby" />
       </Switch>
