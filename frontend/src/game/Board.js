@@ -1,7 +1,7 @@
 import React from "react";
 import { Icon } from "react-materialize";
 
-import { CellType, cellTypeByPos } from "../gameLogic/mainLogic";
+import { cellTypeByPos } from "../gameLogic/mainLogic";
 
 //all the cosmetic parameters of the board
 const config = {
@@ -21,8 +21,8 @@ const Board = (props) => {
   const [g1, g2] = props.goals;
 
   const colorByCellType = (cellType, config) => {
-    if (cellType === CellType.Ground) return config.cellColor;
-    if (cellType === CellType.Pillar) return config.pillarColor;
+    if (cellType === "Ground") return config.cellColor;
+    if (cellType === "Pillar") return config.pillarColor;
     return config.emptyWallColor;
   };
 
@@ -57,9 +57,8 @@ const Board = (props) => {
         const wallBuilder = grid[pos.r][pos.c];
         if (wallBuilder === 1) col = c1 + " darken-3";
         if (wallBuilder === 2) col = c2 + " darken-3";
-        if (cellType === CellType.Ground) col += " waves-effect waves-light";
-        if (cellType === CellType.VWall || cellType === CellType.HWall)
-          col += " waves-effect waves-dark";
+        if (cellType === "Ground") col += " waves-effect waves-light";
+        if (cellType === "Wall") col += " waves-effect waves-dark";
         return (
           <div
             className={col}

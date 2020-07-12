@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Row, Col } from "react-materialize";
 
+import { numberOfActions } from "../gameLogic/mainLogic";
 import Header from "../shared/Header";
 import Board from "./Board";
 
@@ -111,6 +112,14 @@ const GamePage = (props) => {
   //and sending complete moves to the server
   const handleClick = (pos) => {
     console.log("clicked", pos);
+    const na = numberOfActions(
+      GS.grid,
+      GS.playerPos,
+      GS.goals,
+      GS.p1ToMove ? 1 : 2,
+      pos
+    );
+    console.log("number of actions: ", na);
   };
 
   return (
