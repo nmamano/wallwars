@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Row, Col } from "react-materialize";
+import cloneDeep from "lodash.clonedeep";
 
-import { numberOfActions } from "../gameLogic/mainLogic";
+import { cellTypeByPos, numberOfActions } from "../gameLogic/mainLogic";
 import Header from "../shared/Header";
 import Board from "./Board";
 
@@ -70,7 +71,7 @@ const initialGameState = (duration, increment, p1Name) => {
     //this means that the two players can see slightly different boards
 
     //null is the player to move hasn't made any individual action, the cell of the action otherwise
-    partialMove: null,
+    singleAction: null,
   };
 };
 
@@ -97,6 +98,24 @@ const getStatusMessage = (GS) => {
   }
 };
 
+const makeMove = (GS, actions) => {
+  GS.singleAction = null;
+  for (let k = 0; k < actions.length; k++) {
+    const aPos = actions[k];
+    const at = cellTypeByPos(aPos);
+    if (at === "Ground") {
+      if (GS.p1ToMove) GS.playerPos[0] = aPos;
+      else GS.playerPos[1] = aPos;
+    } else if (at === "Wall") {
+      if (GS.p1ToMove) GS.grid[aPos.r][aPos.c] = 1;
+      else GS.grid[aPos.r][aPos.c] = 2;
+    } else {
+      console.error("the above cases should cover all the options");
+    }
+  }
+  GS.p1ToMove = !GS.p1ToMove;
+};
+
 const GamePage = (props) => {
   const gameId = useParams().gameId;
   const showHelp = () => {
@@ -112,14 +131,65 @@ const GamePage = (props) => {
   //and sending complete moves to the server
   const handleClick = (pos) => {
     console.log("clicked", pos);
-    const na = numberOfActions(
+    const numA = numberOfActions(
       GS.grid,
       GS.playerPos,
       GS.goals,
       GS.p1ToMove ? 1 : 2,
       pos
     );
-    console.log("number of actions: ", na);
+    console.log("number of actions: ", numA);
+    const aType = cellTypeByPos(pos);
+    if (aType === "Pillar") return; //we could even disable onClick for the pillars
+
+    const pmPos = GS.singleAction; //partial move action
+    const pmState = pmPos === null ? "None" : cellTypeByPos(pmPos); //one of 'None', 'Ground', 'Wall'
+
+    const newGS = cloneDeep(GS);
+    
+    //how the state should change depends on the pre-existing partial-move state
+    //and the newly clicked pos/action
+    if (pmState === "None") {
+      if (aType === "Wall") {
+        if (numA === 1) newGS.singleAction = pos;
+        else return;
+      } else if (aType === "Ground") {
+        if (numA === 1) newGS.singleAction = pos;
+        if (numA === 2) makeMove(newGS, [pos]);
+        else return;
+      } else {
+        console.error("unexpected action type", aType);
+      }
+    } else if (pmState === "Wall") {
+      if (aType === "Wall") {
+        if (numA === 1 && pmPos.r === pos.r && pmPos.c === pos.c)
+          newGS.singleAction = null;
+        else if (numA === 1) makeMove(newGS, [pos, pmPos]);
+        else return;
+      } else if (aType === "Ground") {
+        if (numA === 1) makeMove(newGS, [pos, pmPos]);
+        else return;
+      } else {
+        console.error("unexpected action type", aType);
+      }
+    } else if (pmState === "Ground") {
+      if (aType === "Wall") {
+        if (numA === 1) makeMove(newGS, [pos, pmPos]);
+        else return;
+      } else if (aType === "Ground") {
+        if (numA === 0) newGS.singleAction = null;
+        else if (numA === 1) newGS.singleAction = pos;
+        else if (numA === 2) makeMove(newGS, [pos]);
+        else return;
+      } else {
+        console.error("unexpected action type", aType);
+      }
+    } else {
+      console.error("unexpected partial-move state", pmState);
+    }
+    setGameState((prevGS) => {
+      return newGS;
+    });
   };
 
   return (
