@@ -1,7 +1,7 @@
 import React from "react";
 import { Icon } from "react-materialize";
 
-import { cellTypeByPos } from "../gameLogic/mainLogic";
+import { cellTypeByPos, posEq } from "../gameLogic/mainLogic";
 
 //all the cosmetic parameters of the board
 const config = {
@@ -19,12 +19,8 @@ const Board = (props) => {
   const grid = props.grid;
   const [p1, p2] = props.playerPos;
   const [g1, g2] = props.goals;
-
-  const colorByCellType = (cellType, config) => {
-    if (cellType === "Ground") return config.cellColor;
-    if (cellType === "Pillar") return config.pillarColor;
-    return config.emptyWallColor;
-  };
+  const p1ToMove = props.p1ToMove;
+  const saPos = props.singleAction;
 
   const dims = { h: grid.length, w: grid[0].length };
   const allPos = [];
@@ -32,8 +28,8 @@ const Board = (props) => {
     for (let c = 0; c < dims.w; c++) allPos[r * dims.w + c] = { r: r, c: c };
 
   const [cellpx, wallpx] = [config.cellSize, config.wallWidth];
-  const [c1, c2] = config.playerColors;
-  const [i1, i2] = config.playerIcons;
+  const [color1, color2] = config.playerColors;
+  const [icon1, icon2] = config.playerIcons;
   const [repRows, repCols] = [(dims.h - 1) / 2, (dims.w - 1) / 2];
 
   return (
@@ -46,22 +42,47 @@ const Board = (props) => {
       }}
     >
       {allPos.map((pos) => {
-        const p1Here = pos.r === p1.r && pos.c === p1.c;
-        const p2Here = pos.r === p2.r && pos.c === p2.c;
-        const g1Here = pos.r === g1.r && pos.c === g1.c;
-        const g2Here = pos.r === g2.r && pos.c === g2.c;
+        const [p1Here, p2Here] = [posEq(pos, p1), posEq(pos, p2)];
+        const [goal1Here, goal2Here] = [posEq(pos, g1), posEq(pos, g2)];
+        //ghosts are the partial moves that are only displayed locally
+        const ghostHere = saPos !== null && posEq(saPos, pos);
+        const [p1GhostHere, p2GhostHere] = [
+          ghostHere && p1ToMove,
+          ghostHere && !p1ToMove,
+        ];
         const cellType = cellTypeByPos(pos);
-        let col = colorByCellType(cellType, config);
-        if (g1Here) col = c1 + " lighten-4";
-        if (g2Here) col = c2 + " lighten-4";
-        const wallBuilder = grid[pos.r][pos.c];
-        if (wallBuilder === 1) col = c1 + " darken-3";
-        if (wallBuilder === 2) col = c2 + " darken-3";
-        if (cellType === "Ground") col += " waves-effect waves-light";
-        if (cellType === "Wall") col += " waves-effect waves-dark";
+
+        let color;
+        if (cellType === "Ground") color = config.cellColor;
+        else if (cellType === "Wall") color = config.emptyWallColor;
+        else color = config.pillarColor;
+
+        //special coloring for Ground cells containing the goals goals
+        if (goal1Here) color = color1 + " lighten-4";
+        if (goal2Here) color = color2 + " lighten-4";
+
+        //wall coloring for built walls (depending on builder)
+        if (cellType === "Wall") {
+          const solidWallHere = grid[pos.r][pos.c] !== 0;
+          if (solidWallHere || ghostHere) {
+            if (solidWallHere) {
+              color = grid[pos.r][pos.c] === 1 ? color1 : color2;
+              color += " darken-3";
+            } else {
+              color = p1ToMove ? color1 : color2;
+              color += " lighten-3";
+            }
+          }
+        }
+
+        //add waves cosmetic effect when clicking a cell
+        if (cellType === "Ground") color += " waves-effect waves-light";
+        if (cellType === "Wall") color += " waves-effect waves-dark";
+
+        const anyPHere = p1Here || p2Here || p1GhostHere || p2GhostHere;
         return (
           <div
-            className={col}
+            className={color}
             key={`cell_${pos.r}_${pos.c}`}
             onClick={() => props.handleClick(pos)}
             style={{
@@ -70,10 +91,24 @@ const Board = (props) => {
               alignItems: "center",
             }}
           >
-            {p1Here && <Icon className={`${c1}-text small`}>{i1}</Icon>}
-            {p2Here && <Icon className={`${c2}-text small`}>{i2}</Icon>}
-            {g1Here && <Icon className="white-text small">{i1}</Icon>}
-            {g2Here && <Icon className="white-text small">{i2}</Icon>}
+            {p1Here && <Icon className={`${color1}-text small`}>{icon1}</Icon>}
+            {p2Here && <Icon className={`${color2}-text small`}>{icon2}</Icon>}
+            {goal1Here && !anyPHere && (
+              <Icon className="white-text small">{icon1}</Icon>
+            )}
+            {goal2Here && !anyPHere && (
+              <Icon className="white-text small">{icon2}</Icon>
+            )}
+            {p1GhostHere && cellType === "Ground" && (
+              <Icon className={`${color1}-text small text-lighten-4`}>
+                {icon1}
+              </Icon>
+            )}
+            {p2GhostHere && cellType === "Ground" && (
+              <Icon className={`${color2}-text small text-lighten-4`}>
+                {icon2}
+              </Icon>
+            )}
           </div>
         );
       })}

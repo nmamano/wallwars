@@ -14,6 +14,10 @@ export function cellTypeByPos(pos) {
   return "Pillar"; //case i%2 === 1 && j%2 === 1
 }
 
+export function posEq(pos1, pos2) {
+  return pos1.r === pos2.r && pos1.c === pos2.c;
+}
+
 function dimensions(grid) {
   return { h: grid.length, w: grid[0].length };
 }
@@ -52,9 +56,9 @@ function accessibleNeighbors(grid, pos) {
   return res;
 }
 
-function distance(grid, start, target) {
+export function distance(grid, start, target) {
   //implements bfs algorithm
-  if (start.r === target.r && start.c === target.c) return 0;
+  if (posEq(start, target)) return 0;
   const C = grid[0].length;
   const posToKey = (pos) => pos.r * C + pos.c;
 
@@ -69,8 +73,7 @@ function distance(grid, start, target) {
       let nbr = nbrs[k];
       if (!dist.has(posToKey(nbr))) {
         dist.set(posToKey(nbr), dist.get(posToKey(pos)) + 1);
-        if (nbr.r === target.r && nbr.c === target.c)
-          return dist.get(posToKey(nbr));
+        if (posEq(nbr, target)) return dist.get(posToKey(nbr));
         queue.push(nbr);
       }
     }
@@ -90,24 +93,10 @@ function isValidBoard(grid, playerPos, goals) {
   return true;
 }
 
-function canBuildWall(grid, playerPos, goals, pos) {
+export function canBuildWall(grid, playerPos, goals, pos) {
   if (isWallBuilt(grid, pos)) return false;
   grid[pos.r][pos.c] = 1; //grid parameter is only modified in this scope
   var res = isValidBoard(grid, playerPos, goals);
   grid[pos.r][pos.c] = 0;
   return res;
-}
-
-//when player selects / clicks a position, it can trigger one or two actions
-//1 action = build 1 wall or move to adj cell
-//-1 indicates that the clicked position triggers no action
-export function numberOfActions(grid, playerPos, goals, pId, pos) {
-  const cellType = cellTypeByPos(pos);
-  if (cellType === "Ground") {
-    return distance(grid, playerPos[pId - 1], pos);
-  } else if (cellType === "Wall") {
-    return canBuildWall(grid, playerPos, goals, pos) ? 1 : 0;
-  } else {
-    return 0; //clicked on pillar
-  }
 }
