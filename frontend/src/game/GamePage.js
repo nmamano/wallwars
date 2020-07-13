@@ -12,9 +12,9 @@ import {
 import Header from "../shared/Header";
 import Board from "./Board";
 
-const initialGameState = (duration, increment, p1Name) => {
+const initialGameState = (gameId, duration, increment, p1Name) => {
   const randomBoolean = () => Math.random() < 0.5;
-  const randomGameId = () => Math.random().toString(36).substring(2, 10);
+
   const p1Starts = randomBoolean();
   const dims = { w: 23, h: 19 }; //traditional board size
   const corners = {
@@ -34,7 +34,7 @@ const initialGameState = (duration, increment, p1Name) => {
     //a) state that never changes for a particular game (should it even be here?)
 
     //auto-generated at creation and displayed in the header; used by the joiner to join the game
-    gameId: randomGameId(),
+    gameId: gameId,
 
     duration: duration, //in minutes
     increment: increment, //in seconds
@@ -124,13 +124,14 @@ const makeMove = (GS, actions) => {
 
 const GamePage = (props) => {
   const gameId = useParams().gameId;
+
   const showHelp = () => {
     console.log("todo: show game help in modal window");
   };
 
   //GS is short-hand for 'gameState'. encapsulates everything about the game
   const [GS, setGameState] = useState(
-    initialGameState(props.duration, props.increment, props.p1Name)
+    initialGameState(gameId, props.duration, props.increment, props.p1Name)
   );
 
   //this handles the logic of storing/displaying partial moves locally,
@@ -208,7 +209,7 @@ const GamePage = (props) => {
 
   return (
     <div>
-      <Header gameName={gameId} showHelp={showHelp} />
+      <Header gameName={gameId} showLobby showHelp={showHelp} />
       <h5 style={{ marginLeft: "2rem" }}>{getStatusMessage(GS)}</h5>
       <Row className="valign-wrapper container">
         <Col className="center" s={2}>

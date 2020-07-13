@@ -1,6 +1,7 @@
 import React from "react";
 import "materialize-css";
 import { Navbar, Icon, NavItem } from "react-materialize";
+import { Link } from "react-router-dom";
 
 function Header(props) {
   let headerText;
@@ -14,11 +15,7 @@ function Header(props) {
   return (
     <Navbar
       alignLinks="right"
-      brand={
-        <a className="brand-logo" href=".">
-          {headerText}
-        </a>
-      }
+      brand={<span className="brand-logo">{headerText}</span>}
       centerLogo
       id="mobile-nav"
       menuIcon={<Icon>menu</Icon>}
@@ -34,6 +31,7 @@ function Header(props) {
         preventScrolling: true,
       }}
     >
+      {props.showLobby && <Link to=".">Lobby</Link>}
       <NavItem onClick={props.showHelp}>Help</NavItem>
       <NavItem onClick={showAbout}>About</NavItem>
     </Navbar>
