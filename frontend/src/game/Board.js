@@ -3,7 +3,7 @@ import { Icon } from "react-materialize";
 
 import { cellTypeByPos, posEq } from "../gameLogic/mainLogic";
 
-//all the cosmetic parameters of the board
+//cosmetic parameters of the board
 const config = {
   cellSize: 40,
   wallWidth: 8,
@@ -11,7 +11,6 @@ const config = {
   pillarColor: "cyan lighten-3",
   emptyWallColor: "cyan lighten-5",
   playerIcons: ["face", "outlet"],
-  playerColors: ["red", "indigo"],
 };
 
 //stateless component to display the board. all the state is at GamePage
@@ -21,6 +20,7 @@ const Board = (props) => {
   const [g1, g2] = props.goals;
   const p1ToMove = props.p1ToMove;
   const ghostPos = props.ghostAction;
+  const playerColors = props.playerColors;
 
   const dims = { h: grid.length, w: grid[0].length };
   const allPos = [];
@@ -28,7 +28,7 @@ const Board = (props) => {
     for (let c = 0; c < dims.w; c++) allPos[r * dims.w + c] = { r: r, c: c };
 
   const [cellpx, wallpx] = [config.cellSize, config.wallWidth];
-  const [color1, color2] = config.playerColors;
+  const [color1, color2] = playerColors;
   const [icon1, icon2] = config.playerIcons;
   const [repRows, repCols] = [(dims.h - 1) / 2, (dims.w - 1) / 2];
 
