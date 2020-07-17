@@ -65,7 +65,8 @@ const LobbyPage = () => {
                 state: {
                   duration: duration,
                   increment: increment,
-                  p1Name: playerName,
+                  playerName: playerName,
+                  isCreator: true,
                 },
               }}
             >
@@ -104,7 +105,8 @@ const LobbyPage = () => {
               to={{
                 pathname: `/game/${joinGameId}`,
                 state: {
-                  p2Name: playerName,
+                  playerName: playerName,
+                  isCreator: false,
                 },
               }}
             >

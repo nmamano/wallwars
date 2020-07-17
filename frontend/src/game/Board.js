@@ -20,7 +20,7 @@ const Board = (props) => {
   const [p1, p2] = props.playerPos;
   const [g1, g2] = props.goals;
   const p1ToMove = props.p1ToMove;
-  const saPos = props.singleAction;
+  const ghostPos = props.ghostAction;
 
   const dims = { h: grid.length, w: grid[0].length };
   const allPos = [];
@@ -45,7 +45,7 @@ const Board = (props) => {
         const [p1Here, p2Here] = [posEq(pos, p1), posEq(pos, p2)];
         const [goal1Here, goal2Here] = [posEq(pos, g1), posEq(pos, g2)];
         //ghosts are the partial moves that are only displayed locally
-        const ghostHere = saPos !== null && posEq(saPos, pos);
+        const ghostHere = ghostPos !== null && posEq(ghostPos, pos);
         const [p1GhostHere, p2GhostHere] = [
           ghostHere && p1ToMove,
           ghostHere && !p1ToMove,
