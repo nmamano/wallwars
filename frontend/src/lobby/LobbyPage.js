@@ -1,101 +1,80 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Row, Col, TextInput, Button } from "react-materialize";
-import { Redirect } from "react-router-dom";
 import socketIOClient from "socket.io-client";
 
+import GamePage from "../game/GamePage";
 import Header from "../shared/Header";
 
 const randPlayerName = () => Math.random().toString(36).substring(2, 7);
 
-//store (as global variables) the last configuration used,
-//so the next time you go to the lobby you get the same configuration
-var storedPlayerName = randPlayerName();
-var storedDuration = 5;
-var storedIncrement = 2;
-
 const LobbyPage = () => {
-  const showHelp = () => {
-    console.log("todo: show lobby help in modal window");
-  };
+  const BACKEND_ENDPOINT = "localhost:4001"; //placeholder
 
-  const [playerName, setPlayerName] = useState(storedPlayerName);
-  const [duration, setDuration] = useState(storedDuration);
-  const [increment, setIncrement] = useState(storedIncrement);
+  const [playerName, setPlayerName] = useState(randPlayerName());
+  const [duration, setDuration] = useState(5);
+  const [increment, setIncrement] = useState(2);
   const [joinGameId, setJoinGameId] = useState("");
-  const [createGameClicked, setCreateGameClicked] = useState(false);
-  const [joinGameClicked, setJoinGameClicked] = useState(false);
   const [serverParams, setServerParams] = useState(null);
+  const [socket, setSocket] = useState(null);
+  const [isOngoingGame, setIsOngoingGame] = useState(false);
 
-  const handlePlayerName = (props) => {
-    storedPlayerName = props.target.value;
-    setPlayerName(storedPlayerName);
-  };
-  const handleDuration = (props) => {
-    storedDuration = props.target.value;
-    setDuration(storedDuration);
-  };
-  const handleIncrement = (props) => {
-    storedIncrement = props.target.value;
-    setIncrement(storedIncrement);
-  };
-  const handleJoinGameId = (props) => {
-    setJoinGameId(props.target.value);
-  };
+  const handlePlayerName = (props) => setPlayerName(props.target.value);
+  const handleDuration = (props) => setDuration(props.target.value);
+  const handleIncrement = (props) => setIncrement(props.target.value);
+  const handleJoinGameId = (props) => setJoinGameId(props.target.value);
+
   const handleCreateGame = () => {
-    setCreateGameClicked(true);
-  };
-  const handleJoinGame = () => {
-    setJoinGameClicked(true);
-  };
-
-  useEffect(() => {
-    if (createGameClicked === false && joinGameClicked === false) return;
-
-    const BACKEND_ENDPOINT = "localhost:4001"; //placeholder
-    const socket = socketIOClient(BACKEND_ENDPOINT);
-    if (createGameClicked) {
-      socket.emit("createGame", {
-        timeControl: { duration: duration, increment: increment },
-        p1Name: playerName,
-      });
-      setCreateGameClicked(false);
-    } else {
-      socket.emit("joinGame", { gameId: joinGameId, p2Name: playerName });
-      setJoinGameClicked(false);
-    }
-
-    socket.on("gameCreated", (params) => {
+    const newSocket = socketIOClient(BACKEND_ENDPOINT);
+    newSocket.on("gameCreated", (params) => {
       console.log("created game successfully");
       setServerParams(params);
+      setIsOngoingGame(true);
     });
-
-    socket.on("gameJoined", (params) => {
+    newSocket.emit("createGame", {
+      timeControl: { duration: duration, increment: increment },
+      p1Name: playerName,
+    });
+    setSocket(newSocket);
+  };
+  const handleJoinGame = () => {
+    const newSocket = socketIOClient(BACKEND_ENDPOINT);
+    newSocket.on("gameJoined", (params) => {
       console.log("joined game successfully");
       setServerParams(params);
+      setIsOngoingGame(true);
     });
-  }, [
-    createGameClicked,
-    joinGameClicked,
-    duration,
-    increment,
-    playerName,
-    joinGameId,
-  ]);
+    newSocket.emit("joinGame", {
+      gameId: joinGameId,
+      p2Name: playerName,
+    });
+    setSocket(newSocket);
+  };
 
-  if (serverParams != null) {
+  const showGameHelp = () =>
+    console.log("todo: show game help in modal window");
+  const showLobbyHelp = () =>
+    console.log("todo: show lobby help in modal window");
+
+  if (isOngoingGame) {
     return (
-      <Redirect
-        to={{
-          pathname: `/game/${serverParams.gameId}`,
-          state: serverParams,
-        }}
-      />
+      <div>
+        <Header
+          gameName={serverParams.gameId}
+          showLobby
+          endGame={() => setIsOngoingGame(false)}
+          showHelp={showGameHelp}
+        />
+        <GamePage
+          serverParams={serverParams}
+          socket={socket}
+        />
+      </div>
     );
   }
 
   return (
     <div>
-      <Header gameName={""} showHelp={showHelp} />
+      <Header gameName={""} showHelp={showLobbyHelp} />
       <div className="container teal darken-2" style={{ marginTop: "2rem" }}>
         <Row className="valign-wrapper">
           <Col className="center" s={3}>

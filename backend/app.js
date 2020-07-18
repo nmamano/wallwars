@@ -12,20 +12,21 @@ const io = socketIo(server);
 
 //this could be a map with gameIds as keys to avoid linear search, not needed for now
 const unjoinedGames = [];
+const ongoingGames = [];
 
 const randomGameId = () => Math.random().toString(36).substring(2, 8);
 const randomBoolean = () => Math.random() < 0.5;
 
 io.on("connection", (socket) => {
-  const clientId = socket.id;
-  console.log(`new socket connection from client ${clientId}`);
+  const socketId = socket.id;
+  console.log(`new connection from socket ${socketId}`);
 
   socket.on("createGame", (creatorParams) => {
-    console.log(`client ${clientId} requests createGame`);
+    console.log(`client ${socketId}: createGame`);
     const gameParams = {
       gameId: randomGameId(),
-      playerClientIds: [clientId, null],
-      playerNames: [creatorParams.p1Name, "______"],
+      socketIds: [socketId, null],
+      playerNames: [creatorParams.p1Name, null],
       timeControl: creatorParams.timeControl,
       p1Starts: randomBoolean(),
     };
@@ -35,17 +36,19 @@ io.on("connection", (socket) => {
   });
 
   socket.on("joinGame", (joinerParams) => {
-    const gameId = joinerParams.gameId;
-    console.log(`client ${clientId} requests joinGame with gameId ${gameId}`);
+    console.log(`client ${socketId}: joinGame ${joinerParams.gameId}`);
     for (let i = 0; i < unjoinedGames.length; i += 1) {
       const gameParams = unjoinedGames[i];
-      if (gameParams.gameId === gameId) {
-        console.log("found game");
+      if (gameParams.gameId === joinerParams.gameId) {
+        gameParams.socketIds[1] = socketId;
         gameParams.playerNames[1] = joinerParams.p2Name;
-        gameParams.playerClientIds[1] = clientId;
         socket.emit("gameJoined", gameParams);
-        unjoinedGames.splice(i, 1); //remove the game from unjoined games
+        io.to(gameParams.socketIds[0]).emit("p2Joined", gameParams);
+        unjoinedGames.splice(i, 1); //move the game from unjoined to ongoing
+        ongoingGames.push(gameParams);
+        console.log("found game");
         console.log("Unjoined games:", unjoinedGames);
+        console.log("Ongoing games:", ongoingGames);
         return;
       }
       socket.emit("gameNotFoundError");
@@ -53,16 +56,27 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log(`${clientId} disconnected`);
+    console.log(`socket ${socketId} disconnected`);
     removeStaleGames();
   });
 
-  //remove previous games created by this client
+  //remove games created or joined by this client
   const removeStaleGames = () => {
     for (let i = 0; i < unjoinedGames.length; i += 1) {
       const gameParams = unjoinedGames[i];
-      if (gameParams.playerClientIds[0] === clientId) {
+      if (gameParams.socketIds[0] === socketId) {
         unjoinedGames.splice(i, 1); //remove game(s) created by this client
+        i -= 1;
+      }
+    }
+    for (let i = 0; i < ongoingGames.length; i += 1) {
+      const gameParams = ongoingGames[i];
+      if (
+        gameParams.socketIds[0] === socketId ||
+        gameParams.socketIds[1] === socketId
+      ) {
+        ongoingGames.splice(i, 1); //remove game(s) created by this client
+        i -= 1;
       }
     }
   };

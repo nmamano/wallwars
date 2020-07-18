@@ -1,7 +1,6 @@
 import React from "react";
 import "materialize-css";
 import { Navbar, Icon, NavItem } from "react-materialize";
-import { Link } from "react-router-dom";
 
 function Header(props) {
   let headerText;
@@ -31,7 +30,7 @@ function Header(props) {
         preventScrolling: true,
       }}
     >
-      {props.showLobby && <Link to=".">Lobby</Link>}
+      {props.showLobby && <NavItem onClick={props.endGame}>Lobby</NavItem>}
       <NavItem onClick={props.showHelp}>Help</NavItem>
       <NavItem onClick={showAbout}>About</NavItem>
     </Navbar>

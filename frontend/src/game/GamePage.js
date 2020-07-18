@@ -1,8 +1,6 @@
 import React, { useState } from "react";
-import { useParams } from "react-router-dom";
 import { Row, Col } from "react-materialize";
 import cloneDeep from "lodash.clonedeep";
-// import socketIOClient from "socket.io-client";
 
 import {
   cellTypeByPos,
@@ -10,7 +8,6 @@ import {
   distance,
   canBuildWall,
 } from "../gameLogic/mainLogic";
-import Header from "../shared/Header";
 import Board from "./Board";
 
 const initialGameState = (params) => {
@@ -95,17 +92,19 @@ const makeMove = (GS, actions) => {
   GS.p1ToMove = !GS.p1ToMove;
 };
 
-const showHelp = () => {
-  console.log("todo: show game help in modal window");
-};
-
 const GamePage = (props) => {
-  const gameId = useParams().gameId;
-  const params = props.location.state;
+  const params = props.serverParams;
+  const socket = props.socket;
+  const isCreator = params.socketIds[0] === socket.id;
 
-  const startGS = initialGameState(params);
+  if (isCreator) {
+    socket.on("p2Joined", (serverParams) => {
+      console.log("player 2 joined");
+      setGameState(initialGameState(serverParams));
+    });
+  }
 
-  const [GS, setGameState] = useState(startGS);
+  const [GS, setGameState] = useState(initialGameState(params));
 
   //this handles the logic of storing/displaying partial moves locally,
   //and sending complete moves to the server
@@ -188,7 +187,8 @@ const GamePage = (props) => {
   };
 
   const actor = GS.p1ToMove ? 1 : 2;
-  const [name1, name2] = GS.playerNames;
+  const name1 = GS.playerNames[0];
+  const name2 = GS.playerNames[1] === null ? "......" : GS.playerNames[1];
   const playerColors = ["red", "indigo"];
   const [color1, color2] = playerColors;
   const turnHighlight = "lighten-1 z-depth-2";
@@ -197,7 +197,6 @@ const GamePage = (props) => {
   const [time1, time2] = GS.remainingTime;
   return (
     <div>
-      <Header gameName={gameId} showLobby showHelp={showHelp} />
       <h5 style={{ marginLeft: "2rem" }}>{getStatusMessage(GS)}</h5>
       <Row className="valign-wrapper container">
         <Col
