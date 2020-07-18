@@ -1,12 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Row, Col, TextInput, Button } from "react-materialize";
-import { Link } from "react-router-dom";
+import { Redirect } from "react-router-dom";
+import socketIOClient from "socket.io-client";
 
 import Header from "../shared/Header";
 
 const randPlayerName = () => Math.random().toString(36).substring(2, 7);
-const randomGameId = () => Math.random().toString(36).substring(2, 8);
-const randomBoolean = () => Math.random() < 0.5;
 
 //store (as global variables) the last configuration used,
 //so the next time you go to the lobby you get the same configuration
@@ -23,6 +22,9 @@ const LobbyPage = () => {
   const [duration, setDuration] = useState(storedDuration);
   const [increment, setIncrement] = useState(storedIncrement);
   const [joinGameId, setJoinGameId] = useState("");
+  const [createGameClicked, setCreateGameClicked] = useState(false);
+  const [joinGameClicked, setJoinGameClicked] = useState(false);
+  const [serverParams, setServerParams] = useState(null);
 
   const handlePlayerName = (props) => {
     storedPlayerName = props.target.value;
@@ -39,9 +41,57 @@ const LobbyPage = () => {
   const handleJoinGameId = (props) => {
     setJoinGameId(props.target.value);
   };
+  const handleCreateGame = () => {
+    setCreateGameClicked(true);
+  };
+  const handleJoinGame = () => {
+    setJoinGameClicked(true);
+  };
 
-  const newGameId = randomGameId();
-  const p1Starts = randomBoolean();
+  useEffect(() => {
+    if (createGameClicked === false && joinGameClicked === false) return;
+
+    const BACKEND_ENDPOINT = "localhost:4001"; //placeholder
+    const socket = socketIOClient(BACKEND_ENDPOINT);
+    if (createGameClicked) {
+      socket.emit("createGame", {
+        timeControl: { duration: duration, increment: increment },
+        p1Name: playerName,
+      });
+      setCreateGameClicked(false);
+    } else {
+      socket.emit("joinGame", { gameId: joinGameId, p2Name: playerName });
+      setJoinGameClicked(false);
+    }
+
+    socket.on("gameCreated", (params) => {
+      console.log("created game successfully");
+      setServerParams(params);
+    });
+
+    socket.on("gameJoined", (params) => {
+      console.log("joined game successfully");
+      setServerParams(params);
+    });
+  }, [
+    createGameClicked,
+    joinGameClicked,
+    duration,
+    increment,
+    playerName,
+    joinGameId,
+  ]);
+
+  if (serverParams != null) {
+    return (
+      <Redirect
+        to={{
+          pathname: `/game/${serverParams.gameId}`,
+          state: serverParams,
+        }}
+      />
+    );
+  }
 
   return (
     <div>
@@ -62,22 +112,9 @@ const LobbyPage = () => {
         </Row>
         <Row className="valign-wrapper">
           <Col className="center" s={3}>
-            <Link
-              to={{
-                pathname: `/matching/${newGameId}`,
-                state: {
-                  gameId: newGameId,
-                  timeControl: { duration: duration, increment: increment },
-                  playerNames: [playerName, "______"],
-                  p1Starts: p1Starts,
-                  isCreator: true,
-                },
-              }}
-            >
-              <Button node="button" waves="light">
-                Create game
-              </Button>
-            </Link>
+            <Button node="button" waves="light" onClick={handleCreateGame}>
+              Create game
+            </Button>
           </Col>
           <Col s={1} style={{ paddingRight: "0" }}>
             <TextInput
@@ -105,20 +142,9 @@ const LobbyPage = () => {
         </Row>
         <Row className="valign-wrapper">
           <Col className="center" s={3}>
-            <Link
-              to={{
-                pathname: `/matching/${joinGameId}`,
-                state: {
-                  gameId: joinGameId,
-                  p2Name: playerName,
-                  isCreator: false,
-                },
-              }}
-            >
-              <Button node="button" waves="light">
-                Join game
-              </Button>
-            </Link>
+            <Button node="button" waves="light" onClick={handleJoinGame}>
+              Join game
+            </Button>
           </Col>
           <Col s={5}>
             <TextInput

@@ -101,7 +101,7 @@ const showHelp = () => {
 
 const GamePage = (props) => {
   const gameId = useParams().gameId;
-  const params = props.params;
+  const params = props.location.state;
 
   const startGS = initialGameState(params);
 
