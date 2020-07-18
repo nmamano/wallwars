@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Row, Col } from "react-materialize";
 import cloneDeep from "lodash.clonedeep";
+// import socketIOClient from "socket.io-client";
 
 import {
   cellTypeByPos,
@@ -12,10 +13,7 @@ import {
 import Header from "../shared/Header";
 import Board from "./Board";
 
-const initialGameState = (gameId, duration, increment, p1Name) => {
-  const randomBoolean = () => Math.random() < 0.5;
-
-  const p1Starts = randomBoolean();
+const initialGameState = (params) => {
   const dims = { w: 23, h: 19 }; //traditional board size
   const corners = {
     tl: { r: 0, c: 0 },
@@ -29,53 +27,28 @@ const initialGameState = (gameId, duration, increment, p1Name) => {
     for (let c = 0; c < dims.w; c++) grid[r][c] = 0;
   }
   return {
-    //state can be grouped as follows:
-
-    //a) state that never changes for a particular game (should it even be here?)
-
-    //auto-generated at creation and displayed in the header; used by the joiner to join the game
-    gameId: gameId,
-
-    duration: duration, //in minutes
-    increment: increment, //in seconds
-    player1Starts: p1Starts, //set to a random value when game is created
+    //a) state that never changes for a particular game (probably needs to be refactored out of here)
+    gameId: params.gameId,
+    timeControl: params.timeControl,
+    p1Starts: params.p1Starts, //set to a random value when game is created
     goals: [corners.br, corners.bl], //where the players have to reach to win
 
     //b) state that changes at life-cycle stage changes
-
-    //life cycle of a game
-    //0. created, but p2 not joined yet.
-    //1. p2 joined, but no moves made yet.
-    //2. joined and one player moved. Clocks still not ticking.
-    //3. both players already made at least 1 move and game has not ended. Clocks are ticking.
-    //4. Game ended because a winning/draw condition is reached.
     lifeCycleStage: 0,
-
-    //auto-generated random suggestion is provided to the users, but they can overwrite it
-    //player 2 gets name "______" until someone joins the game
-    playerNames: [p1Name, "______"],
-
+    playerNames: params.playerNames,
     winner: "", //'' for an on-going game, '1', '2', or 'draw' for a finished game
     finishReason: "", //'' for an on-going game, 'time' or 'goal' for a finished game
 
     //c) state that changes continuously
-
-    remainingTime: [60 * duration, 60 * duration], //in seconds, converted to min:sec format when displayed
-    p1ToMove: p1Starts,
+    remainingTime: [
+      params.timeControl.duration * 60,
+      params.timeControl.duration * 60,
+    ], //in seconds, converted to min:sec format when displayed
+    p1ToMove: params.p1Starts,
     playerPos: [corners.tl, corners.tr],
-
-    //indicates which walls are built, and by whom
-    //for cells that correspond to walls, 0 meant not built, 1/2 means built by player1/2
     grid: grid,
 
     //d) local state, not shared between the client and the server
-
-    //each "move" consists of two actions. players can see (and undo) one action applied individually
-    //in their local view, but they are not sent to the server until both actions have been made
-    //thus, the opponent does not see the individual actions that a player does and undos
-    //this means that the two players can see slightly different boards
-
-    //null is the player to move hasn't made any ghost action, the cell of the action otherwise
     ghostAction: null,
   };
 };
@@ -128,26 +101,20 @@ const showHelp = () => {
 
 const GamePage = (props) => {
   const gameId = useParams().gameId;
-  const params = props.location.state;
+  const params = props.params;
 
-  //GS is short-hand for 'gameState'. encapsulates everything about the game
-  const startGS = initialGameState(
-    gameId,
-    params.duration,
-    params.increment,
-    params.playerName
-  );
+  const startGS = initialGameState(params);
+
   const [GS, setGameState] = useState(startGS);
 
   //this handles the logic of storing/displaying partial moves locally,
   //and sending complete moves to the server
   const handleClick = (clickPos) => {
     const clickType = cellTypeByPos(clickPos);
-    if (clickType === "Pillar") return; //we could even disable onClick for the pillars
+    if (clickType === "Pillar") return; //would be cleaner to simply disable onClick for the pillars
 
-    const ghostPos = GS.ghostAction; //partial move action
+    const ghostPos = GS.ghostAction;
     const ghostType = ghostPos === null ? "None" : cellTypeByPos(ghostPos); //one of 'None', 'Ground', 'Wall'
-
     const actor = GS.p1ToMove ? 1 : 2;
 
     const newGS = cloneDeep(GS);
