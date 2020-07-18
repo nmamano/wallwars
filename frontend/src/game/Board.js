@@ -4,7 +4,7 @@ import { Icon } from "react-materialize";
 import { cellTypeByPos, posEq } from "../gameLogic/mainLogic";
 
 //cosmetic parameters of the board
-const config = {
+const displayParams = {
   cellSize: 40,
   wallWidth: 8,
   cellColor: "cyan lighten-4",
@@ -27,9 +27,9 @@ const Board = (props) => {
   for (let r = 0; r < dims.h; r++)
     for (let c = 0; c < dims.w; c++) allPos[r * dims.w + c] = { r: r, c: c };
 
-  const [cellpx, wallpx] = [config.cellSize, config.wallWidth];
+  const [cellpx, wallpx] = [displayParams.cellSize, displayParams.wallWidth];
   const [color1, color2] = playerColors;
-  const [icon1, icon2] = config.playerIcons;
+  const [icon1, icon2] = displayParams.playerIcons;
   const [repRows, repCols] = [(dims.h - 1) / 2, (dims.w - 1) / 2];
 
   return (
@@ -53,9 +53,9 @@ const Board = (props) => {
         const cellType = cellTypeByPos(pos);
 
         let color;
-        if (cellType === "Ground") color = config.cellColor;
-        else if (cellType === "Wall") color = config.emptyWallColor;
-        else color = config.pillarColor;
+        if (cellType === "Ground") color = displayParams.cellColor;
+        else if (cellType === "Wall") color = displayParams.emptyWallColor;
+        else color = displayParams.pillarColor;
 
         //special coloring for Ground cells containing the goals goals
         if (goal1Here) color = color1 + " lighten-4";

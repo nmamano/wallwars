@@ -4,9 +4,13 @@ import { Link } from "react-router-dom";
 
 import Header from "../shared/Header";
 
+const randPlayerName = () => Math.random().toString(36).substring(2, 7);
+const randomGameId = () => Math.random().toString(36).substring(2, 8);
+const randomBoolean = () => Math.random() < 0.5;
+
 //store (as global variables) the last configuration used,
 //so the next time you go to the lobby you get the same configuration
-var storedPlayerName = Math.random().toString(36).substring(2, 7);
+var storedPlayerName = randPlayerName();
 var storedDuration = 5;
 var storedIncrement = 2;
 
@@ -14,8 +18,6 @@ const LobbyPage = () => {
   const showHelp = () => {
     console.log("todo: show lobby help in modal window");
   };
-
-  const randomGameId = () => Math.random().toString(36).substring(2, 8);
 
   const [playerName, setPlayerName] = useState(storedPlayerName);
   const [duration, setDuration] = useState(storedDuration);
@@ -39,6 +41,7 @@ const LobbyPage = () => {
   };
 
   const newGameId = randomGameId();
+  const p1Starts = randomBoolean();
 
   return (
     <div>
@@ -61,11 +64,12 @@ const LobbyPage = () => {
           <Col className="center" s={3}>
             <Link
               to={{
-                pathname: `/game/${newGameId}`,
+                pathname: `/matching/${newGameId}`,
                 state: {
-                  duration: duration,
-                  increment: increment,
-                  playerName: playerName,
+                  gameId: newGameId,
+                  timeControl: { duration: duration, increment: increment },
+                  playerNames: [playerName, "______"],
+                  p1Starts: p1Starts,
                   isCreator: true,
                 },
               }}
@@ -103,9 +107,10 @@ const LobbyPage = () => {
           <Col className="center" s={3}>
             <Link
               to={{
-                pathname: `/game/${joinGameId}`,
+                pathname: `/matching/${joinGameId}`,
                 state: {
-                  playerName: playerName,
+                  gameId: joinGameId,
+                  p2Name: playerName,
                   isCreator: false,
                 },
               }}
