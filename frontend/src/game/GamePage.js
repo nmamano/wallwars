@@ -94,9 +94,7 @@ const makeMove = (GS, actions) => {
   if (GS.lifeCycleStage === 2) GS.lifeCycleStage = 3;
 };
 
-const GamePage = (props) => {
-  const params = props.serverParams;
-  const socket = props.socket;
+const GamePage = ({ serverParams: params, socket }) => {
   const isCreator = params.socketIds[0] === socket.id;
 
   const [GS, setGameState] = useState(

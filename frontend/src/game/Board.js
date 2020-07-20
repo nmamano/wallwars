@@ -14,21 +14,21 @@ const displayParams = {
 };
 
 //stateless component to display the board. all the state is at GamePage
-const Board = (props) => {
-  const grid = props.grid;
-  const [p1, p2] = props.playerPos;
-  const [g1, g2] = props.goals;
-  const p1ToMove = props.p1ToMove;
-  const ghostPos = props.ghostAction;
-  const playerColors = props.playerColors;
-
+const Board = ({
+  grid,
+  p1ToMove,
+  ghostAction,
+  playerColors: [color1, color2],
+  playerPos: [p1, p2],
+  goals: [g1, g2],
+  handleClick,
+}) => {
   const dims = { h: grid.length, w: grid[0].length };
   const allPos = [];
   for (let r = 0; r < dims.h; r++)
     for (let c = 0; c < dims.w; c++) allPos[r * dims.w + c] = { r: r, c: c };
 
   const [cellpx, wallpx] = [displayParams.cellSize, displayParams.wallWidth];
-  const [color1, color2] = playerColors;
   const [icon1, icon2] = displayParams.playerIcons;
   const [repRows, repCols] = [(dims.h - 1) / 2, (dims.w - 1) / 2];
 
@@ -45,7 +45,7 @@ const Board = (props) => {
         const [p1Here, p2Here] = [posEq(pos, p1), posEq(pos, p2)];
         const [goal1Here, goal2Here] = [posEq(pos, g1), posEq(pos, g2)];
         //ghosts are the partial moves that are only displayed locally
-        const ghostHere = ghostPos !== null && posEq(ghostPos, pos);
+        const ghostHere = ghostAction !== null && posEq(ghostAction, pos);
         const [p1GhostHere, p2GhostHere] = [
           ghostHere && p1ToMove,
           ghostHere && !p1ToMove,
@@ -84,7 +84,7 @@ const Board = (props) => {
           <div
             className={color}
             key={`cell_${pos.r}_${pos.c}`}
-            onClick={() => props.handleClick(pos)}
+            onClick={() => handleClick(pos)}
             style={{
               display: "flex",
               justifyContent: "center",

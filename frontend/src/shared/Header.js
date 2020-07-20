@@ -2,10 +2,9 @@ import React from "react";
 import "materialize-css";
 import { Navbar, Icon, NavItem } from "react-materialize";
 
-function Header(props) {
-  let headerText;
-  if (props.gameName === "") headerText = "WallWars";
-  else headerText = `WallWars    Game ${props.gameName}`;
+function Header({ gameName, showLobby, endGame, showHelp }) {
+  let headerText = "WallWars";
+  if (gameName !== "") headerText += ` Game ${gameName}`;
 
   const showAbout = () => {
     console.log("todo: show about in modal window");
@@ -30,8 +29,8 @@ function Header(props) {
         preventScrolling: true,
       }}
     >
-      {props.showLobby && <NavItem onClick={props.endGame}>Lobby</NavItem>}
-      <NavItem onClick={props.showHelp}>Help</NavItem>
+      {showLobby && <NavItem onClick={endGame}>Lobby</NavItem>}
+      <NavItem onClick={showHelp}>Help</NavItem>
       <NavItem onClick={showAbout}>About</NavItem>
     </Navbar>
   );
