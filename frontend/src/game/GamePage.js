@@ -118,7 +118,9 @@ const GamePage = ({ serverParams: params, socket }) => {
   //handles the logic of ghost moves and sending complete moves to the server
   const handleClick = (clickPos) => {
     if (isPlayer1 !== p1ToMove()) return; //can only move if it's your turn
+    if (lifeCycleStage === 0) return; //cannot move til player 2 joins
     const clickType = cellTypeByPos(clickPos);
+    if (lifeCycleStage < 3 && clickType === "Wall") return; //first move cannot be wall
     const clickActCount = clickActionCount(clickPos);
     let moveActions = null;
     if (ghostType() === "None") {
