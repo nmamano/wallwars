@@ -78,13 +78,15 @@ const Board = ({
         //add waves cosmetic effect when clicking a cell
         if (cellType === "Ground") color += " waves-effect waves-light";
         if (cellType === "Wall") color += " waves-effect waves-dark";
-
+        const isPillar = pos.r % 2 === 1 && pos.c % 2 === 1;
         const anyPHere = p1Here || p2Here || p1GhostHere || p2GhostHere;
         return (
           <div
             className={color}
             key={`cell_${pos.r}_${pos.c}`}
-            onClick={() => handleClick(pos)}
+            onClick={() => {
+              if (!isPillar) handleClick(pos);
+            }}
             style={{
               display: "flex",
               justifyContent: "center",
