@@ -9,6 +9,8 @@ import {
   canBuildWall,
 } from "../gameLogic/mainLogic";
 import Board from "./Board";
+import StatusHeader from "./StatusHeader";
+import TimerHeader from "./TimerHeader";
 
 const emptyGrid = (dims) => {
   let grid = [];
@@ -50,28 +52,6 @@ const GamePage = ({ serverParams: params, socket }) => {
 
   const p1ToMove = () => numMoves % 2 === (p1Starts ? 0 : 1);
   const playerToMove = () => (p1ToMove() ? 1 : 2);
-
-  //each stage in the life cycle of the game gets a status message
-  const getStatusMessage = () => {
-    const [name1, name2] = playerNames;
-    switch (lifeCycleStage) {
-      case 0:
-        return "Waiting for player 2 to join";
-      case 1:
-        return `${p1ToMove() ? name1 : name2} starts`;
-      case 2:
-      case 3:
-        return `${p1ToMove() ? name1 : name2} to move`;
-      case 4:
-        const w = winner;
-        if (w === "draw") return "The game ended in draw";
-        return `${w === "1" ? name1 : name2} won on ${
-          finishReason === "time" ? "on time" : "by reaching the goal"
-        }`;
-      default:
-        console.error("stage should be in range 0..4");
-    }
-  };
 
   //'actions' may contain a single action which is a double step,
   //or two actions which wall/wall or wall/single-step
@@ -190,65 +170,31 @@ const GamePage = ({ serverParams: params, socket }) => {
     makeMove(actions);
   });
 
-  const actor = p1ToMove() ? 1 : 2;
-  const name1 = playerNames[0];
-  const name2 = playerNames[1] === null ? "......" : playerNames[1];
   const playerColors = ["red", "indigo"];
-  const [color1, color2] = playerColors;
-  const turnHighlight = "lighten-1 z-depth-2";
-  const lowTimeColor = "orange lighten-2 z-depth-3";
-  const lowTime = 15;
-  const [time1, time2] = remainingTime;
   return (
     <div>
-      <h5 style={{ marginLeft: "2rem" }}>{getStatusMessage()}</h5>
-      <Row className="valign-wrapper container">
-        <Col
-          className={
-            "center" + (actor === 1 ? ` ${color1} ${turnHighlight}` : "")
-          }
-          s={2}
-        >
-          <h5>{name1}</h5>
-        </Col>
-        <Col
-          className={
-            "center" +
-            (actor === 1 && time1 < lowTime ? ` ${lowTimeColor}` : "")
-          }
-          s={2}
-          style={{ margin: "0rem 1rem" }}
-        >
-          <h5>{time1}s</h5>
-        </Col>
-        <Col s={4}></Col>
-        <Col
-          className={
-            "center" +
-            (actor === 2 && time2 < lowTime ? ` ${lowTimeColor}` : "")
-          }
-          s={2}
-          style={{ margin: "0rem 1rem" }}
-        >
-          <h5>{time2}s</h5>
-        </Col>
-        <Col
-          className={
-            "center" + (actor === 2 ? ` ${color2} ${turnHighlight}` : "")
-          }
-          s={2}
-        >
-          <h5>{name2}</h5>
-        </Col>
-      </Row>
+      <StatusHeader
+        playerNames={playerNames}
+        lifeCycleStage={lifeCycleStage}
+        winner={winner}
+        finishReason={finishReason}
+        numMoves={numMoves}
+        p1ToMove={p1ToMove()}
+      />
+      <TimerHeader
+        playerNames={playerNames}
+        playerColors={playerColors}
+        remainingTime={remainingTime}
+        p1ToMove={p1ToMove()}
+      />
       <Board
         goals={goals}
         playerPos={playerPos}
         grid={grid}
-        p1ToMove={p1ToMove()}
         ghostAction={ghostAction}
         playerColors={playerColors}
         handleClick={handleClick}
+        p1ToMove={p1ToMove()}
       />
     </div>
   );

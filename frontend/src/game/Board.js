@@ -16,12 +16,12 @@ const displayParams = {
 //stateless component to display the board. all the state is at GamePage
 const Board = ({
   grid,
-  p1ToMove,
   ghostAction,
   playerColors: [color1, color2],
   playerPos: [p1, p2],
   goals: [g1, g2],
   handleClick,
+  p1ToMove,
 }) => {
   const dims = { h: grid.length, w: grid[0].length };
   const allPos = [];
