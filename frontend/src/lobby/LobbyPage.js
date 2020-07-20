@@ -1,11 +1,16 @@
 import React, { useState } from "react";
 import { Row, Col, TextInput, Button } from "react-materialize";
 import socketIOClient from "socket.io-client";
+import { uniqueNamesGenerator, names } from "unique-names-generator";
 
 import GamePage from "../game/GamePage";
 import Header from "../shared/Header";
 
-const randPlayerName = () => Math.random().toString(36).substring(2, 7);
+const randPlayerName = () =>
+  uniqueNamesGenerator({
+    dictionaries: [names],
+    length: 1,
+  });
 
 const LobbyPage = () => {
   const BACKEND_ENDPOINT = "localhost:4001"; //placeholder
@@ -43,6 +48,7 @@ const LobbyPage = () => {
       setServerParams(params);
       setIsOngoingGame(true);
     });
+    setJoinGameId("");
     newSocket.emit("joinGame", {
       gameId: joinGameId,
       p2Name: playerName,
@@ -64,10 +70,7 @@ const LobbyPage = () => {
           endGame={() => setIsOngoingGame(false)}
           showHelp={showGameHelp}
         />
-        <GamePage
-          serverParams={serverParams}
-          socket={socket}
-        />
+        <GamePage serverParams={serverParams} socket={socket} />
       </div>
     );
   }
