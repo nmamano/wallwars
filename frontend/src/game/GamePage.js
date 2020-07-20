@@ -10,7 +10,7 @@ import {
 } from "../gameLogic/mainLogic";
 import Board from "./Board";
 
-const initialGameState = (params) => {
+const initialGameState = (params, lifeCycleStage) => {
   const dims = { w: 23, h: 19 }; //traditional board size
   const corners = {
     tl: { r: 0, c: 0 },
@@ -31,7 +31,7 @@ const initialGameState = (params) => {
     goals: [corners.br, corners.bl], //where the players have to reach to win
 
     //b) state that changes at life-cycle stage changes
-    lifeCycleStage: 0,
+    lifeCycleStage: lifeCycleStage,
     playerNames: params.playerNames,
     winner: "", //'' for an on-going game, '1', '2', or 'draw' for a finished game
     finishReason: "", //'' for an on-going game, 'time' or 'goal' for a finished game
@@ -90,6 +90,8 @@ const makeMove = (GS, actions) => {
   }
   GS.ghostAction = null;
   GS.p1ToMove = !GS.p1ToMove;
+  if (GS.lifeCycleStage === 1) GS.lifeCycleStage = 2;
+  if (GS.lifeCycleStage === 2) GS.lifeCycleStage = 3;
 };
 
 const GamePage = (props) => {
@@ -97,20 +99,31 @@ const GamePage = (props) => {
   const socket = props.socket;
   const isCreator = params.socketIds[0] === socket.id;
 
+  const [GS, setGameState] = useState(
+    initialGameState(params, isCreator ? 0 : 1)
+  );
+
   if (isCreator) {
-    socket.on("p2Joined", (serverParams) => {
+    socket.once("p2Joined", (serverParams) => {
       console.log("player 2 joined");
-      setGameState(initialGameState(serverParams));
+      setGameState(initialGameState(serverParams, 1));
     });
   }
 
-  const [GS, setGameState] = useState(initialGameState(params));
+  socket.once("move", (actions) => {
+    console.log("received move ", actions);
+    const newGS = cloneDeep(GS);
+    makeMove(newGS, actions);
+    setGameState(newGS);
+  });
 
   //this handles the logic of storing/displaying partial moves locally,
   //and sending complete moves to the server
   const handleClick = (clickPos) => {
+    if (isCreator !== GS.p1ToMove) return; //can only move if it's your turn
+
     const clickType = cellTypeByPos(clickPos);
-    if (clickType === "Pillar") return; //would be cleaner to simply disable onClick for the pillars
+    if (clickType === "Pillar") return; //would be cleaner to disable onClick for the pillars
 
     const ghostPos = GS.ghostAction;
     const ghostType = ghostPos === null ? "None" : cellTypeByPos(ghostPos); //one of 'None', 'Ground', 'Wall'
@@ -144,13 +157,14 @@ const GamePage = (props) => {
 
     //how the state should change depends on the pre-existing partial-move state
     //and the newly clicked pos/action
+    let moveActions = null;
     if (ghostType === "None") {
       if (clickType === "Wall") {
         if (clickActCount === 1) newGS.ghostAction = clickPos;
         else return;
       } else if (clickType === "Ground") {
         if (clickActCount === 1) newGS.ghostAction = clickPos;
-        else if (clickActCount === 2) makeMove(newGS, [clickPos]);
+        else if (clickActCount === 2) moveActions = [clickPos];
         else return;
       } else {
         console.error("unexpected action type", clickType);
@@ -158,22 +172,22 @@ const GamePage = (props) => {
     } else if (ghostType === "Wall") {
       if (clickType === "Wall") {
         if (posEq(ghostPos, clickPos)) newGS.ghostAction = null;
-        else if (clickActCount === 1) makeMove(newGS, [clickPos, ghostPos]);
+        else if (clickActCount === 1) moveActions = [clickPos, ghostPos];
         else return;
       } else if (clickType === "Ground") {
-        if (clickActCount === 1) makeMove(newGS, [clickPos, ghostPos]);
+        if (clickActCount === 1) moveActions = [clickPos, ghostPos];
         else return;
       } else {
         console.error("unexpected action type", clickType);
       }
     } else if (ghostType === "Ground") {
       if (clickType === "Wall") {
-        if (clickActCount === 1) makeMove(newGS, [clickPos, ghostPos]);
+        if (clickActCount === 1) moveActions = [clickPos, ghostPos];
         else return;
       } else if (clickType === "Ground") {
         if (clickActCount === 0) newGS.ghostAction = null;
         else if (clickActCount === 1) newGS.ghostAction = clickPos;
-        else if (clickActCount === 2) makeMove(newGS, [clickPos]);
+        else if (clickActCount === 2) moveActions = [clickPos];
         else return;
       } else {
         console.error("unexpected action type", clickType);
@@ -181,9 +195,14 @@ const GamePage = (props) => {
     } else {
       console.error("unexpected ghost type", ghostType);
     }
-    setGameState((prevGS) => {
-      return newGS;
-    });
+
+    if (moveActions) {
+      makeMove(newGS, moveActions);
+      setGameState(newGS);
+      socket.emit("move", moveActions);
+    } else {
+      setGameState(newGS); //ghost moves
+    }
   };
 
   const actor = GS.p1ToMove ? 1 : 2;

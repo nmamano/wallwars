@@ -55,6 +55,18 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("move", (actions) => {
+    console.log(`client ${socketId}: move ${actions}`);
+    for (let i = 0; i < ongoingGames.length; i += 1) {
+      const [socketId1, socketId2] = ongoingGames[i].socketIds;
+      if (socketId === socketId1 || socketId === socketId2) {
+        const otherId = socketId === socketId1 ? socketId2 : socketId1;
+        io.to(otherId).emit("move", actions);
+        return;
+      }
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log(`socket ${socketId} disconnected`);
     removeStaleGames();
