@@ -5,8 +5,8 @@ import { cellTypeByPos, posEq } from "../gameLogic/mainLogic";
 
 //cosmetic parameters of the board
 const displayParams = {
-  cellSize: 40,
-  wallWidth: 8,
+  cellSize: 37,
+  wallWidth: 11,
   cellColor: "cyan lighten-4",
   pillarColor: "cyan lighten-3",
   emptyWallColor: "cyan lighten-5",

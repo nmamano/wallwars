@@ -227,7 +227,7 @@ const GamePage = ({ serverParams: params, socket }) => {
         <Col
           className={
             "center" +
-            (actor === 1 && time1 < lowTime ? " " + lowTimeColor : "")
+            (actor === 1 && time1 < lowTime ? ` ${lowTimeColor}` : "")
           }
           s={2}
           style={{ margin: "0rem 1rem" }}
@@ -237,21 +237,21 @@ const GamePage = ({ serverParams: params, socket }) => {
         <Col s={4}></Col>
         <Col
           className={
-            "center" + (actor === 2 ? ` ${color2} ${turnHighlight}` : "")
-          }
-          s={2}
-        >
-          <h5>{name2}</h5>
-        </Col>
-        <Col
-          className={
             "center" +
-            (actor === 2 && time2 < lowTime ? " " + lowTimeColor : "")
+            (actor === 2 && time2 < lowTime ? ` ${lowTimeColor}` : "")
           }
           s={2}
           style={{ margin: "0rem 1rem" }}
         >
           <h5>{time2}s</h5>
+        </Col>
+        <Col
+          className={
+            "center" + (actor === 2 ? ` ${color2} ${turnHighlight}` : "")
+          }
+          s={2}
+        >
+          <h5>{name2}</h5>
         </Col>
       </Row>
       <Board
