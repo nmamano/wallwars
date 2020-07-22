@@ -21,13 +21,14 @@ io.on("connection", (socket) => {
   const socketId = socket.id;
   console.log(`new connection from socket ${socketId}`);
 
-  socket.on("createGame", (creatorParams) => {
+  socket.on("createGame", (timeControl, p1Name) => {
+    removeStaleGames();
     console.log(`client ${socketId}: createGame`);
     const gameParams = {
       gameId: randomGameId(),
       socketIds: [socketId, null],
-      playerNames: [creatorParams.p1Name, null],
-      timeControl: creatorParams.timeControl,
+      playerNames: [p1Name, null],
+      timeControl: timeControl,
       p1Starts: randomBoolean(),
       numMoves: 0,
     };
@@ -39,13 +40,14 @@ io.on("connection", (socket) => {
     console.log("Unjoined games:", unjoinedGames);
   });
 
-  socket.on("joinGame", (joinerParams) => {
-    console.log(`client ${socketId}: joinGame ${joinerParams.gameId}`);
+  socket.on("joinGame", (gameId, p2Name) => {
+    removeStaleGames();
+    console.log(`client ${socketId}: joinGame ${gameId}`);
     for (let i = 0; i < unjoinedGames.length; i += 1) {
       const gameParams = unjoinedGames[i];
-      if (gameParams.gameId === joinerParams.gameId) {
+      if (gameParams.gameId === gameId) {
         gameParams.socketIds[1] = socketId;
-        gameParams.playerNames[1] = joinerParams.p2Name;
+        gameParams.playerNames[1] = p2Name;
         socket.emit("gameJoined", {
           p1Starts: gameParams.p1Starts,
           p1Name: gameParams.playerNames[0],
@@ -62,12 +64,13 @@ io.on("connection", (socket) => {
         console.log("Ongoing games:", ongoingGames);
         return;
       }
-      socket.emit("gameNotFoundError");
     }
+    console.log("game not found");
+    socket.emit("gameNotFoundError");
   });
 
   socket.on("move", (actions, remainingTime) => {
-    console.log(`client ${socketId}: move ${[...actions]}`);
+    console.log(`client ${socketId}: move ${actions}`);
     for (let i = 0; i < ongoingGames.length; i += 1) {
       const game = ongoingGames[i];
       const [socketId1, socketId2] = game.socketIds;
@@ -75,6 +78,18 @@ io.on("connection", (socket) => {
         const otherId = socketId === socketId1 ? socketId2 : socketId1;
         io.to(otherId).emit("move", actions, game.numMoves, remainingTime);
         ongoingGames[i].numMoves += 1;
+        return;
+      }
+    }
+  });
+
+  socket.on("endGame", (gameId) => {
+    console.log(`client ${socketId}: endGame ${gameId}`);
+    removeStaleGames();
+    for (let i = 0; i < ongoingGames.length; i += 1) {
+      const gameParams = ongoingGames[i];
+      if (gameParams.gameId === gameId) {
+        ongoingGames.splice(i, 1); //remove this game
         return;
       }
     }

@@ -9,7 +9,7 @@ const randPlayerName = () =>
   uniqueNamesGenerator({
     dictionaries: [names],
     length: 1,
-  });
+  }).slice(0, 6);
 
 const LobbyPage = ({ socket }) => {
   const [playerName, setPlayerName] = useState(randPlayerName());
@@ -40,6 +40,13 @@ const LobbyPage = ({ socket }) => {
   const showLobbyHelp = () =>
     console.log("todo: show lobby help in modal window");
 
+  const lobbyReturnFromGame = () => {
+    setIsOngoingGame(false);
+    setCreatorParams(null);
+    setJoinerParams(null);
+    setJoinGameId("");
+  };
+
   return (
     <div>
       {isOngoingGame && (
@@ -47,7 +54,7 @@ const LobbyPage = ({ socket }) => {
           socket={socket}
           creatorParams={creatorParams}
           joinerParams={joinerParams}
-          setIsOngoingGame={setIsOngoingGame}
+          lobbyReturnFromGame={lobbyReturnFromGame}
         />
       )}
       {!isOngoingGame && (

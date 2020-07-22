@@ -26,7 +26,7 @@ const GamePage = ({
   socket,
   creatorParams,
   joinerParams,
-  setIsOngoingGame,
+  lobbyReturnFromGame,
 }) => {
   const dims = { w: 23, h: 19 }; //traditional board size
   const corners = {
@@ -63,24 +63,18 @@ const GamePage = ({
       updateState((draftS) => {
         draftS.lifeCycleStage = -1;
       });
-      socket.emit("createGame", {
-        timeControl: S.timeControl,
-        p1Name: S.p1Name,
-      });
+      socket.emit("createGame", S.timeControl, S.p1Name);
     }
     if (!isPlayer1 && S.lifeCycleStage === -2) {
       updateState((draftS) => {
         draftS.lifeCycleStage = -1;
       });
-      socket.emit("joinGame", {
-        gameId: S.gameId,
-        p2Name: S.p2Name,
-      });
+      socket.emit("joinGame", S.gameId, S.p2Name);
     }
   });
 
   useEffect(() => {
-    socket.on("gameCreated", ({ gameId, p1Starts }) => {
+    socket.once("gameCreated", ({ gameId, p1Starts }) => {
       updateState((draftS) => {
         if (draftS.lifeCycleStage === 0) return;
         draftS.gameId = gameId;
@@ -88,8 +82,9 @@ const GamePage = ({
         draftS.lifeCycleStage = 0;
       });
     });
-    socket.on("gameJoined", ({ p1Starts, p1Name, timeControl }) => {
+    socket.once("gameJoined", ({ p1Starts, p1Name, timeControl }) => {
       updateState((draftS) => {
+        console.log(`game joined ${draftS.lifeCycleStage}`);
         if (draftS.lifeCycleStage === 1) return;
         draftS.p1Starts = p1Starts;
         draftS.p1Name = p1Name;
@@ -99,15 +94,20 @@ const GamePage = ({
         draftS.lifeCycleStage = 1;
       });
     });
-    socket.on("p2Joined", (p2Name) => {
+    socket.once("p2Joined", (p2Name) => {
       updateState((draftS) => {
         if (draftS.lifeCycleStage === 1) return;
         draftS.p2Name = p2Name;
         draftS.lifeCycleStage = 1;
       });
     });
-    socket.on("move", (actions, numMoves) => {
+    socket.on("move", (actions, numMoves, receivedTime) => {
       updateState((draftS) => {
+        console.log(
+          `move received ${numMoves} ${receivedTime} ${
+            draftS.numMoves === numMoves
+          }`
+        );
         if (draftS.numMoves !== numMoves) return;
         const pToMove =
           draftS.numMoves % 2 === (draftS.p1Starts ? 0 : 1) ? 1 : 2;
@@ -120,6 +120,8 @@ const GamePage = ({
             draftS.grid[aPos.r][aPos.c] = pToMove;
           } else console.error("unexpected action type", aType);
         }
+        if (isPlayer1) draftS.timeLeft2 = receivedTime;
+        else draftS.timeLeft1 = receivedTime;
         draftS.ghostAction = null;
         draftS.numMoves = numMoves + 1;
         if (draftS.lifeCycleStage === 1 && numMoves === 0)
@@ -128,7 +130,22 @@ const GamePage = ({
           draftS.lifeCycleStage = 3;
       });
     });
-  }, [socket, updateState]);
+    return () => {
+      socket.removeAllListeners();
+    };
+  }, [socket, updateState, isPlayer1, S.gameId]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      updateState((draftS) => {
+        if (draftS.lifeCycleStage !== 3) return;
+        const p1ToM = draftS.numMoves % 2 === (draftS.p1Starts ? 0 : 1);
+        if (p1ToM) draftS.timeLeft1 -= 1;
+        else draftS.timeLeft2 -= 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [updateState]);
 
   //one of 'None', 'Ground', 'Wall'
   const ghostType = () =>
@@ -162,7 +179,6 @@ const GamePage = ({
 
   //handles the logic of ghost moves and sending complete moves to the server
   const handleClick = (clickPos) => {
-    console.log("handle click", clickPos);
     const thisClientToMove = isPlayer1 === p1ToMove();
     if (!thisClientToMove) return; //can only move if it's your turn
     if (S.lifeCycleStage <= 0) return; //cannot move til player 2 joins
@@ -210,12 +226,9 @@ const GamePage = ({
     }
 
     if (actions) {
-      socket.emit(
-        "move",
-        actions,
-        S.numMoves,
-        isPlayer1 ? S.timeLeft1 : S.timeLeft2
-      );
+      let incrementedTime = isPlayer1 ? S.timeLeft1 : S.timeLeft2;
+      if (S.lifeCycleStage === 3) incrementedTime += S.timeControl.increment;
+      socket.emit("move", actions, incrementedTime);
       updateState((draftS) => {
         if (draftS.numMoves !== S.numMoves) return;
         const pToMove =
@@ -229,6 +242,8 @@ const GamePage = ({
             draftS.grid[aPos.r][aPos.c] = pToMove;
           } else console.error("unexpected action type", aType);
         }
+        if (isPlayer1) draftS.timeLeft1 = incrementedTime;
+        else draftS.timeLeft2 = incrementedTime;
         draftS.ghostAction = null;
         draftS.numMoves = S.numMoves + 1;
         if (draftS.lifeCycleStage === 1 && S.numMoves === 0)
@@ -236,7 +251,7 @@ const GamePage = ({
         else if (draftS.lifeCycleStage === 2 && S.numMoves === 1)
           draftS.lifeCycleStage = 3;
       });
-    } else if (newGhostAction) {
+    } else {
       updateState((draftS) => {
         draftS.ghostAction = newGhostAction;
       });
@@ -247,12 +262,16 @@ const GamePage = ({
   const showGameHelp = () =>
     console.log("todo: show game help in modal window");
 
+  const handleEndGame = () => {
+    socket.emit("endGame", S.gameId);
+    lobbyReturnFromGame();
+  };
   return (
     <div>
       <Header
         gameName={S.gameId}
         showLobby
-        endGame={() => setIsOngoingGame(false)}
+        endGame={() => handleEndGame()}
         showHelp={showGameHelp}
       />
       <StatusHeader

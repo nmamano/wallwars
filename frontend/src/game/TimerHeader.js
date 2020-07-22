@@ -16,6 +16,9 @@ const TimerHeader = ({
   const lowTimeColor = "orange lighten-2 z-depth-3";
   const lowTime = 15;
 
+  const [min1, min2] = [Math.floor(timeLeft1 / 60), Math.floor(timeLeft2 / 60)];
+  const [sec1, sec2] = [timeLeft1 % 60, timeLeft2 % 60];
+
   return (
     <Row className="valign-wrapper container">
       <Col
@@ -34,7 +37,10 @@ const TimerHeader = ({
         s={2}
         style={{ margin: "0rem 1rem" }}
       >
-        <h5>{timeLeft1}s</h5>
+        <h5>
+          {min1}:{sec1 < 10 && "0"}
+          {sec1}
+        </h5>
       </Col>
       <Col s={4}></Col>
       <Col
@@ -45,7 +51,10 @@ const TimerHeader = ({
         s={2}
         style={{ margin: "0rem 1rem" }}
       >
-        <h5>{timeLeft2}s</h5>
+        <h5>
+          {min2}:{sec2 < 10 && "0"}
+          {sec2}
+        </h5>
       </Col>
       <Col
         className={
