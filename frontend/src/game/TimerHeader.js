@@ -4,7 +4,8 @@ import { Row, Col } from "react-materialize";
 const TimerHeader = ({
   playerNames,
   playerColors,
-  remainingTime,
+  timeLeft1,
+  timeLeft2,
   p1ToMove,
 }) => {
   const actor = p1ToMove ? 1 : 2;
@@ -14,7 +15,6 @@ const TimerHeader = ({
   const turnHighlight = "lighten-1 z-depth-2";
   const lowTimeColor = "orange lighten-2 z-depth-3";
   const lowTime = 15;
-  const [time1, time2] = remainingTime;
 
   return (
     <Row className="valign-wrapper container">
@@ -28,22 +28,24 @@ const TimerHeader = ({
       </Col>
       <Col
         className={
-          "center" + (actor === 1 && time1 < lowTime ? ` ${lowTimeColor}` : "")
+          "center" +
+          (actor === 1 && timeLeft1 < lowTime ? ` ${lowTimeColor}` : "")
         }
         s={2}
         style={{ margin: "0rem 1rem" }}
       >
-        <h5>{time1}s</h5>
+        <h5>{timeLeft1}s</h5>
       </Col>
       <Col s={4}></Col>
       <Col
         className={
-          "center" + (actor === 2 && time2 < lowTime ? ` ${lowTimeColor}` : "")
+          "center" +
+          (actor === 2 && timeLeft2 < lowTime ? ` ${lowTimeColor}` : "")
         }
         s={2}
         style={{ margin: "0rem 1rem" }}
       >
-        <h5>{time2}s</h5>
+        <h5>{timeLeft2}s</h5>
       </Col>
       <Col
         className={

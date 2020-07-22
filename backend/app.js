@@ -29,9 +29,13 @@ io.on("connection", (socket) => {
       playerNames: [creatorParams.p1Name, null],
       timeControl: creatorParams.timeControl,
       p1Starts: randomBoolean(),
+      numMoves: 0,
     };
     unjoinedGames.push(gameParams);
-    socket.emit("gameCreated", gameParams);
+    socket.emit("gameCreated", {
+      gameId: gameParams.gameId,
+      p1Starts: gameParams.p1Starts,
+    });
     console.log("Unjoined games:", unjoinedGames);
   });
 
@@ -42,8 +46,15 @@ io.on("connection", (socket) => {
       if (gameParams.gameId === joinerParams.gameId) {
         gameParams.socketIds[1] = socketId;
         gameParams.playerNames[1] = joinerParams.p2Name;
-        socket.emit("gameJoined", gameParams);
-        io.to(gameParams.socketIds[0]).emit("p2Joined", gameParams);
+        socket.emit("gameJoined", {
+          p1Starts: gameParams.p1Starts,
+          p1Name: gameParams.playerNames[0],
+          timeControl: gameParams.timeControl,
+        });
+        io.to(gameParams.socketIds[0]).emit(
+          "p2Joined",
+          gameParams.playerNames[1]
+        );
         unjoinedGames.splice(i, 1); //move the game from unjoined to ongoing
         ongoingGames.push(gameParams);
         console.log("found game");
@@ -55,13 +66,15 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("move", (actions) => {
-    console.log(`client ${socketId}: move ${actions}`);
+  socket.on("move", (actions, remainingTime) => {
+    console.log(`client ${socketId}: move ${[...actions]}`);
     for (let i = 0; i < ongoingGames.length; i += 1) {
-      const [socketId1, socketId2] = ongoingGames[i].socketIds;
+      const game = ongoingGames[i];
+      const [socketId1, socketId2] = game.socketIds;
       if (socketId === socketId1 || socketId === socketId2) {
         const otherId = socketId === socketId1 ? socketId2 : socketId1;
-        io.to(otherId).emit("move", actions);
+        io.to(otherId).emit("move", actions, game.numMoves, remainingTime);
+        ongoingGames[i].numMoves += 1;
         return;
       }
     }
