@@ -2,6 +2,7 @@ import React from "react";
 import { Row, Col } from "react-materialize";
 
 const TimerHeader = ({
+  lifeCycleStage,
   playerNames,
   playerColors,
   timeLeft1,
@@ -19,14 +20,13 @@ const TimerHeader = ({
   const [min1, min2] = [Math.floor(timeLeft1 / 60), Math.floor(timeLeft2 / 60)];
   const [sec1, sec2] = [timeLeft1 % 60, timeLeft2 % 60];
 
+  const highlightName1 =
+    lifeCycleStage < 4 && actor === 1 ? ` ${color1} ${turnHighlight}` : "";
+  const highlightName2 =
+    lifeCycleStage < 4 && actor === 2 ? ` ${color2} ${turnHighlight}` : "";
   return (
     <Row className="valign-wrapper container">
-      <Col
-        className={
-          "center" + (actor === 1 ? ` ${color1} ${turnHighlight}` : "")
-        }
-        s={2}
-      >
+      <Col className={"center" + highlightName1} s={2}>
         <h5>{name1}</h5>
       </Col>
       <Col
@@ -56,12 +56,7 @@ const TimerHeader = ({
           {sec2}
         </h5>
       </Col>
-      <Col
-        className={
-          "center" + (actor === 2 ? ` ${color2} ${turnHighlight}` : "")
-        }
-        s={2}
-      >
+      <Col className={"center" + highlightName2} s={2}>
         <h5>{name2}</h5>
       </Col>
     </Row>

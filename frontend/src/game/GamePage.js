@@ -108,6 +108,7 @@ const GamePage = ({
             draftS.numMoves === numMoves
           }`
         );
+        if (draftS.lifeCycleStage < 1 || draftS.lifeCycleStage > 3) return;
         if (draftS.numMoves !== numMoves) return;
         const pToMove =
           draftS.numMoves % 2 === (draftS.p1Starts ? 0 : 1) ? 1 : 2;
@@ -116,6 +117,24 @@ const GamePage = ({
           const aType = cellTypeByPos(aPos);
           if (aType === "Ground") {
             draftS.playerPos[pToMove - 1] = aPos;
+            if (posEq(aPos, goals[pToMove - 1])) {
+              const otherP = pToMove === 1 ? 2 : 1;
+              const pToMoveStarted = pToMove === (draftS.p1Starts ? 1 : 2);
+              const remainingDist = distance(
+                draftS.grid,
+                draftS.playerPos[otherP - 1],
+                goals[otherP - 1]
+              );
+              if (pToMoveStarted && remainingDist <= 2) {
+                draftS.winner = "draw";
+                draftS.finishReason = "goal";
+                draftS.lifeCycleStage = 4;
+              } else {
+                draftS.winner = pToMove.toString();
+                draftS.finishReason = "goal";
+                draftS.lifeCycleStage = 4;
+              }
+            }
           } else if (aType === "Wall") {
             draftS.grid[aPos.r][aPos.c] = pToMove;
           } else console.error("unexpected action type", aType);
@@ -133,15 +152,28 @@ const GamePage = ({
     return () => {
       socket.removeAllListeners();
     };
-  }, [socket, updateState, isPlayer1, S.gameId]);
+  }, [socket, updateState, isPlayer1, S.gameId, goals]);
 
   useEffect(() => {
     const interval = setInterval(() => {
       updateState((draftS) => {
         if (draftS.lifeCycleStage !== 3) return;
         const p1ToM = draftS.numMoves % 2 === (draftS.p1Starts ? 0 : 1);
-        if (p1ToM) draftS.timeLeft1 -= 1;
-        else draftS.timeLeft2 -= 1;
+        if (p1ToM) {
+          draftS.timeLeft1 -= 1;
+          if (draftS.timeLeft1 === 0) {
+            draftS.winner = "2";
+            draftS.finishReason = "time";
+            draftS.lifeCycleStage = 4;
+          }
+        } else {
+          draftS.timeLeft2 -= 1;
+          if (draftS.timeLeft2 === 0) {
+            draftS.winner = "1";
+            draftS.finishReason = "time";
+            draftS.lifeCycleStage = 4;
+          }
+        }
       });
     }, 1000);
     return () => clearInterval(interval);
@@ -182,8 +214,10 @@ const GamePage = ({
     const thisClientToMove = isPlayer1 === p1ToMove();
     if (!thisClientToMove) return; //can only move if it's your turn
     if (S.lifeCycleStage <= 0) return; //cannot move til player 2 joins
+    if (S.lifeCycleStage > 3) return; //cannot move if game finished
     const clickType = cellTypeByPos(clickPos);
-    if (S.lifeCycleStage < 3 && clickType === "Wall") return; //first move by each player cannot be a wall
+    //first move by each player cannot be a wall
+    if (S.lifeCycleStage < 3 && clickType === "Wall") return;
     const clickActCount = clickActionCount(clickPos);
 
     let [actions, newGhostAction] = [null, null];
@@ -238,6 +272,25 @@ const GamePage = ({
           const aType = cellTypeByPos(aPos);
           if (aType === "Ground") {
             draftS.playerPos[pToMove - 1] = aPos;
+            if (posEq(aPos, goals[pToMove - 1])) {
+              //special draw rule
+              const otherP = pToMove === 1 ? 2 : 1;
+              const pToMoveStarted = pToMove === (draftS.p1Starts ? 1 : 2);
+              const remainingDist = distance(
+                draftS.grid,
+                draftS.playerPos[otherP - 1],
+                goals[otherP - 1]
+              );
+              if (pToMoveStarted && remainingDist <= 2) {
+                draftS.winner = "draw";
+                draftS.finishReason = "goal";
+                draftS.lifeCycleStage = 4;
+              } else {
+                draftS.winner = pToMove.toString();
+                draftS.finishReason = "goal";
+                draftS.lifeCycleStage = 4;
+              }
+            }
           } else if (aType === "Wall") {
             draftS.grid[aPos.r][aPos.c] = pToMove;
           } else console.error("unexpected action type", aType);
@@ -283,6 +336,7 @@ const GamePage = ({
         p1ToMove={p1ToMove()}
       />
       <TimerHeader
+        lifeCycleStage={S.lifeCycleStage}
         playerNames={[S.p1Name, S.p2Name]}
         playerColors={playerColors}
         timeLeft1={S.timeLeft1}

@@ -29,10 +29,11 @@ const StatusHeader = ({
       msg = `${p1ToMove ? name1 : name2} to move`;
       break;
     case 4:
-      if (winner === "draw") msg = "The game ended in draw";
-      msg = `${winner === "1" ? name1 : name2} won on ${
-        finishReason === "time" ? "on time" : "by reaching the goal"
-      }`;
+      if (winner === "draw") msg = "The game ended in a draw";
+      else
+        msg = `${winner === "1" ? name1 : name2} won on ${
+          finishReason === "time" ? "on time" : "by reaching the goal"
+        }`;
       break;
     default:
       console.error("stage should be in range 0..4");
