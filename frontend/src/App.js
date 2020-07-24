@@ -14,10 +14,10 @@ const App = () => {
     <React.StrictMode>
       <BrowserRouter>
         <Switch>
-          <Route path="/" exact>
+          <Route path="/wallwars" exact>
             <LobbyPage socket={socket} />
           </Route>
-          <Redirect to="/" />
+          <Redirect to="/wallwars" />
         </Switch>
       </BrowserRouter>
     </React.StrictMode>
