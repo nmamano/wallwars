@@ -21,40 +21,40 @@ io.on("connection", (socket) => {
   const socketId = socket.id;
   console.log(`new connection from socket ${socketId}`);
 
-  socket.on("createGame", (timeControl, p1Name) => {
+  socket.on("createGame", (timeControl, creatorName) => {
     removeStaleGames();
     console.log(`client ${socketId}: createGame`);
     const gameParams = {
       gameId: randomGameId(),
       socketIds: [socketId, null],
-      playerNames: [p1Name, null],
+      playerNames: [creatorName, null],
       timeControl: timeControl,
-      p1Starts: randomBoolean(),
-      numMoves: 0,
+      creatorStarts: randomBoolean(),
+      turnCount: 0,
     };
     unjoinedGames.push(gameParams);
     socket.emit("gameCreated", {
       gameId: gameParams.gameId,
-      p1Starts: gameParams.p1Starts,
+      creatorStarts: gameParams.creatorStarts,
     });
     console.log("Unjoined games:", unjoinedGames);
   });
 
-  socket.on("joinGame", (gameId, p2Name) => {
+  socket.on("joinGame", (gameId, joinerName) => {
     removeStaleGames();
     console.log(`client ${socketId}: joinGame ${gameId}`);
     for (let i = 0; i < unjoinedGames.length; i += 1) {
       const gameParams = unjoinedGames[i];
       if (gameParams.gameId === gameId) {
         gameParams.socketIds[1] = socketId;
-        gameParams.playerNames[1] = p2Name;
+        gameParams.playerNames[1] = joinerName;
         socket.emit("gameJoined", {
-          p1Starts: gameParams.p1Starts,
-          p1Name: gameParams.playerNames[0],
+          creatorStarts: gameParams.creatorStarts,
+          creatorName: gameParams.playerNames[0],
           timeControl: gameParams.timeControl,
         });
         io.to(gameParams.socketIds[0]).emit(
-          "p2Joined",
+          "joinerJoined",
           gameParams.playerNames[1]
         );
         unjoinedGames.splice(i, 1); //move the game from unjoined to ongoing
@@ -76,8 +76,8 @@ io.on("connection", (socket) => {
       const [socketId1, socketId2] = game.socketIds;
       if (socketId === socketId1 || socketId === socketId2) {
         const otherId = socketId === socketId1 ? socketId2 : socketId1;
-        io.to(otherId).emit("move", actions, game.numMoves, remainingTime);
-        ongoingGames[i].numMoves += 1;
+        io.to(otherId).emit("move", actions, game.turnCount + 1, remainingTime);
+        ongoingGames[i].turnCount += 1;
         return;
       }
     }

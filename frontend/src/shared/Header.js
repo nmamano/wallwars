@@ -4,7 +4,7 @@ import { Navbar, Icon, NavItem } from "react-materialize";
 
 function Header({ gameName, showLobby, endGame, showHelp }) {
   let headerText = "WallWars";
-  if (gameName !== "") headerText += ` Game ${gameName}`;
+  if (gameName && gameName !== "") headerText += ` Game ${gameName}`;
 
   const showAbout = () => {
     console.log("todo: show about in modal window");

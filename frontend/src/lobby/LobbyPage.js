@@ -13,7 +13,7 @@ const randPlayerName = () =>
 
 const LobbyPage = ({ socket }) => {
   const [playerName, setPlayerName] = useState(randPlayerName());
-  const [duration, setDuration] = useState(5);
+  const [duration, setDuration] = useState(3);
   const [increment, setIncrement] = useState(2);
   const [joinGameId, setJoinGameId] = useState("");
   const [isOngoingGame, setIsOngoingGame] = useState(false);
@@ -28,19 +28,19 @@ const LobbyPage = ({ socket }) => {
   const handleCreateGame = () => {
     setCreatorParams({
       timeControl: { duration: duration, increment: increment },
-      p1Name: playerName,
+      creatorName: playerName,
     });
     setIsOngoingGame(true);
   };
   const handleJoinGame = () => {
-    setJoinerParams({ gameId: joinGameId, p2Name: playerName });
+    setJoinerParams({ gameId: joinGameId, joinerName: playerName });
     setIsOngoingGame(true);
   };
 
   const showLobbyHelp = () =>
     console.log("todo: show lobby help in modal window");
 
-  const lobbyReturnFromGame = () => {
+  const returnToLobby = () => {
     setIsOngoingGame(false);
     setCreatorParams(null);
     setJoinerParams(null);
@@ -48,13 +48,13 @@ const LobbyPage = ({ socket }) => {
   };
 
   return (
-    <div>
+    <div style={{ marginBottom: "2rem" }}>
       {isOngoingGame && (
         <GamePage
           socket={socket}
           creatorParams={creatorParams}
           joinerParams={joinerParams}
-          lobbyReturnFromGame={lobbyReturnFromGame}
+          returnToLobby={returnToLobby}
         />
       )}
       {!isOngoingGame && (

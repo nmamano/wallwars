@@ -21,7 +21,7 @@ const Board = ({
   playerPos: [p1, p2],
   goals: [g1, g2],
   handleClick,
-  p1ToMove,
+  creatorToMove,
 }) => {
   const dims = { h: grid.length, w: grid[0].length };
   const allPos = [];
@@ -47,8 +47,8 @@ const Board = ({
         //ghosts are the partial moves that are only displayed locally
         const ghostHere = ghostAction !== null && posEq(ghostAction, pos);
         const [p1GhostHere, p2GhostHere] = [
-          ghostHere && p1ToMove,
-          ghostHere && !p1ToMove,
+          ghostHere && creatorToMove,
+          ghostHere && !creatorToMove,
         ];
         const cellType = cellTypeByPos(pos);
 
@@ -69,7 +69,7 @@ const Board = ({
               color = grid[pos.r][pos.c] === 1 ? color1 : color2;
               color += " darken-3";
             } else {
-              color = p1ToMove ? color1 : color2;
+              color = creatorToMove ? color1 : color2;
               color += " lighten-3";
             }
           }

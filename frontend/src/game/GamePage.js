@@ -13,6 +13,34 @@ import Header from "../shared/Header";
 import StatusHeader from "./StatusHeader";
 import TimerHeader from "./TimerHeader";
 
+//===================================================
+//settings that never change, so they don't need to be inside the component
+//===================================================
+const dims = { w: 23, h: 19 }; //traditional board size
+const corners = {
+  tl: { r: 0, c: 0 },
+  tr: { r: 0, c: dims.w - 1 },
+  bl: { r: dims.h - 1, c: 0 },
+  br: { r: dims.h - 1, c: dims.w - 1 },
+};
+//most data structures related to the players use an array
+//of length 2, with the data for the creator first
+const [creatorIndex, joinerIndex] = [0, 1];
+const initialPlayerPos = [corners.tl, corners.tr];
+const goals = [corners.br, corners.bl];
+const playerColors = ["red", "indigo"];
+
+//===================================================
+//utility functions that don't require any state
+//===================================================
+const creatorToMove = (turnCount, creatorStarts) =>
+  turnCount % 2 === (creatorStarts ? 0 : 1);
+
+const indexToMove = (turnCount, creatorStarts) =>
+  creatorToMove(turnCount, creatorStarts) ? creatorIndex : joinerIndex;
+
+const playerToMoveStarted = (turnCount) => turnCount % 2 === 0;
+
 const emptyGrid = (dims) => {
   let grid = [];
   for (let r = 0; r < dims.h; r++) {
@@ -22,335 +50,348 @@ const emptyGrid = (dims) => {
   return grid;
 };
 
+//one of 'None', 'Ground', 'Wall'
+const ghostType = (pos) => (pos === null ? "None" : cellTypeByPos(pos));
+
+//function that updates the state of the game when a move happens
+//(it's a bit out of context out here but it doesn't need to be inside the component)
+//it applied the move number 'turnCount', consisting of the action(s) in 'actions',
+//to the state 'draftState'
+//'draftState' is a copy of the actual state in the GamePage component, so it can be mutated
+//(see the definition of 'state' in GamePage)
+//'timeLeftAfterMove' is the time left by the player who made the move
+const makeMove = (draftState, actions, turnCount, timeLeftAfterMove) => {
+  //only in life cycle stages 1,2,3 players can make move
+  if (draftState.lifeCycleStage < 1 || draftState.lifeCycleStage > 3) return;
+  //make the move only if it is the next one (safety measure against desync issues)
+  if (draftState.turnCount !== turnCount - 1) return;
+  const idxToMove = indexToMove(draftState.turnCount, draftState.creatorStarts);
+  const otherIdx = idxToMove === creatorIndex ? joinerIndex : creatorIndex;
+  for (let k = 0; k < actions.length; k++) {
+    const aPos = actions[k];
+    const aType = cellTypeByPos(aPos);
+    if (aType === "Ground") {
+      draftState.playerPos[idxToMove] = aPos;
+      if (posEq(aPos, goals[idxToMove])) {
+        const pToMoveStarted = playerToMoveStarted(draftState.turnCount);
+        const remainingDist = distance(
+          draftState.grid,
+          draftState.playerPos[otherIdx],
+          goals[otherIdx]
+        );
+        if (pToMoveStarted && remainingDist <= 2) {
+          draftState.winner = "draw";
+          draftState.finishReason = "goal";
+          draftState.lifeCycleStage = 4;
+        } else {
+          draftState.winner = idxToMove === 0 ? "creator" : "joiner";
+          draftState.finishReason = "goal";
+          draftState.lifeCycleStage = 4;
+        }
+      }
+    } else if (aType === "Wall") {
+      draftState.grid[aPos.r][aPos.c] = idxToMove + 1;
+    } else console.error("unexpected action type", aType);
+  }
+  if (timeLeftAfterMove) draftState.timeLeft[idxToMove] = timeLeftAfterMove;
+  draftState.ghostAction = null; //ghost actions are cleared when a move actually happens
+  draftState.turnCount = turnCount;
+  if (draftState.lifeCycleStage === 1 && turnCount === 1)
+    draftState.lifeCycleStage = 2;
+  else if (draftState.lifeCycleStage === 2 && turnCount === 2)
+    draftState.lifeCycleStage = 3;
+};
+
 const GamePage = ({
   socket,
-  creatorParams,
-  joinerParams,
-  lobbyReturnFromGame,
+  creatorParams, //timeControl and creatorName
+  joinerParams, //gameId and joinerName
+  returnToLobby, //call this to return to lobby
 }) => {
-  const dims = { w: 23, h: 19 }; //traditional board size
-  const corners = {
-    tl: { r: 0, c: 0 },
-    tr: { r: 0, c: dims.w - 1 },
-    bl: { r: dims.h - 1, c: 0 },
-    br: { r: dims.h - 1, c: dims.w - 1 },
-  };
-  const initialPlayerPos = [corners.tl, corners.tr];
-  const goals = [corners.br, corners.bl]; //where the players have to reach to win
-  const isPlayer1 = creatorParams !== null;
+  //===================================================
+  //state that depends on the props, but is otherwise constant
+  //===================================================
+  const clientIsCreator = creatorParams !== null;
 
-  const [S, updateState] = useImmer({
-    timeControl: isPlayer1 ? creatorParams.timeControl : null,
-    gameId: isPlayer1 ? null : joinerParams.gameId,
-    p1Name: isPlayer1 ? creatorParams.p1Name : null,
-    p2Name: isPlayer1 ? null : joinerParams.p2Name,
-    p1Starts: null,
-    lifeCycleStage: -2,
-    numMoves: 0,
+  //===================================================
+  //state that changes over time or needs to be initialized from the server
+  //===================================================
+  const [state, updateState] = useImmer({
+    //===================================================
+    //state initialized from the props OR the server, depending on creator/joiner
+    //===================================================
+
+    //game code used by the joiner to join the game
+    gameId: clientIsCreator ? null : joinerParams.gameId,
+    //duration in minutes and increment in seconds
+    timeControl: clientIsCreator ? creatorParams.timeControl : null,
+    names: [
+      clientIsCreator ? creatorParams.creatorName : null,
+      clientIsCreator ? null : joinerParams.joinerName,
+    ],
+    creatorStarts: null, //who starts is decided by the server
+
+    //===================================================
+    //state that changes during the game and is common to both clients and synched
+    //===================================================
+    turnCount: 0,
     playerPos: initialPlayerPos,
+    //grid contains the locations of all the built walls, labeled by who built them
+    //0: empty wall, 1: player built by creator, 2: player built by joiner
     grid: emptyGrid(dims),
-    timeLeft1: isPlayer1 ? creatorParams.timeControl.duration * 60 : null,
-    timeLeft2: isPlayer1 ? creatorParams.timeControl.duration * 60 : null,
-    winner: "", //'' for an ongoing game, '1', '2', or 'draw' for a finished game
-    finishReason: "", //'' for an on-going game, 'time' or 'goal' for a finished game
-    ghostAction: null,
+    timeLeft: [
+      clientIsCreator ? creatorParams.timeControl.duration * 60 : null,
+      clientIsCreator ? creatorParams.timeControl.duration * 60 : null,
+    ],
+    winner: "", //'' if game is ongoing, else 'creator', 'joiner', or 'draw'
+    finishReason: "", //'' if game is ongoing, 'time' or 'goal' for a finished game
+
+    //life cycle of the game
+    //-2. Before sending 'createGame'/'joinGame' (for creator/joiner) to the server
+    //-1. Before receiving 'gameCreated'/'gameJoined' (for creator/joiner) from the server
+    //0. game created on server, but joiner not joined yet (only creator goes into this stage).
+    //1. joiner joined, but no moves made yet. Clocks not ticking.
+    //2. One player moved. Clocks still not ticking.
+    //3. Both players made at least 1 move and game has not ended. Clocks are ticking.
+    //4. Game ended because a win/draw condition is reached.
+    lifeCycleStage: -2,
+
+    //===================================================
+    //state that changes during the game AND is unique to this client
+    //===================================================
+    ghostAction: null, //a single action that is shown only to this client
+    //it can be combined with another action to make a full move, or undone in order to
+    //choose a different action
   });
 
-  const p1ToMove = () => S.numMoves % 2 === (S.p1Starts ? 0 : 1);
-
+  //first contact to server
   useEffect(() => {
-    if (isPlayer1 && S.lifeCycleStage === -2) {
-      updateState((draftS) => {
-        draftS.lifeCycleStage = -1;
+    //first contact only from lifecycle stage -2
+    if (state.lifeCycleStage !== -2) return;
+    if (clientIsCreator) {
+      updateState((draftState) => {
+        draftState.lifeCycleStage = -1;
       });
-      socket.emit("createGame", S.timeControl, S.p1Name);
+      socket.emit("createGame", state.timeControl, state.names[creatorIndex]);
     }
-    if (!isPlayer1 && S.lifeCycleStage === -2) {
-      updateState((draftS) => {
-        draftS.lifeCycleStage = -1;
+    if (!clientIsCreator) {
+      updateState((draftState) => {
+        draftState.lifeCycleStage = -1;
       });
-      socket.emit("joinGame", S.gameId, S.p2Name);
+      socket.emit("joinGame", state.gameId, state.names[joinerIndex]);
     }
   });
 
+  //process server messages
   useEffect(() => {
-    socket.once("gameCreated", ({ gameId, p1Starts }) => {
-      updateState((draftS) => {
-        if (draftS.lifeCycleStage === 0) return;
-        draftS.gameId = gameId;
-        draftS.p1Starts = p1Starts;
-        draftS.lifeCycleStage = 0;
+    socket.once("gameCreated", ({ gameId, creatorStarts }) => {
+      updateState((draftState) => {
+        //if life cycle stage is already 0, it means we already processed the response
+        if (draftState.lifeCycleStage === 0) return;
+        draftState.gameId = gameId;
+        draftState.creatorStarts = creatorStarts;
+        draftState.lifeCycleStage = 0;
       });
     });
-    socket.once("gameJoined", ({ p1Starts, p1Name, timeControl }) => {
-      updateState((draftS) => {
-        console.log(`game joined ${draftS.lifeCycleStage}`);
-        if (draftS.lifeCycleStage === 1) return;
-        draftS.p1Starts = p1Starts;
-        draftS.p1Name = p1Name;
-        draftS.timeControl = timeControl;
-        draftS.timeLeft1 = timeControl.duration * 60;
-        draftS.timeLeft2 = timeControl.duration * 60;
-        draftS.lifeCycleStage = 1;
+    socket.once("gameJoined", ({ creatorStarts, creatorName, timeControl }) => {
+      updateState((draftState) => {
+        console.log(`game joined`);
+        //if life cycle stage is already 1, it means we already joined
+        if (draftState.lifeCycleStage === 1) return;
+        draftState.creatorStarts = creatorStarts;
+        draftState.names[creatorIndex] = creatorName;
+        draftState.timeControl = timeControl;
+        draftState.timeLeft = [
+          timeControl.duration * 60,
+          timeControl.duration * 60,
+        ];
+        draftState.lifeCycleStage = 1;
       });
     });
-    socket.once("p2Joined", (p2Name) => {
-      updateState((draftS) => {
-        if (draftS.lifeCycleStage === 1) return;
-        draftS.p2Name = p2Name;
-        draftS.lifeCycleStage = 1;
+    socket.once("joinerJoined", (joinerName) => {
+      updateState((draftState) => {
+        //if life cycle stage is already 1, it means the joiner already joined
+        if (draftState.lifeCycleStage === 1) return;
+        draftState.names[joinerIndex] = joinerName;
+        draftState.lifeCycleStage = 1;
       });
     });
-    socket.on("move", (actions, numMoves, receivedTime) => {
-      updateState((draftS) => {
-        console.log(
-          `move received ${numMoves} ${receivedTime} ${
-            draftS.numMoves === numMoves
-          }`
-        );
-        if (draftS.lifeCycleStage < 1 || draftS.lifeCycleStage > 3) return;
-        if (draftS.numMoves !== numMoves) return;
-        const pToMove =
-          draftS.numMoves % 2 === (draftS.p1Starts ? 0 : 1) ? 1 : 2;
-        for (let k = 0; k < actions.length; k++) {
-          const aPos = actions[k];
-          const aType = cellTypeByPos(aPos);
-          if (aType === "Ground") {
-            draftS.playerPos[pToMove - 1] = aPos;
-            if (posEq(aPos, goals[pToMove - 1])) {
-              const otherP = pToMove === 1 ? 2 : 1;
-              const pToMoveStarted = pToMove === (draftS.p1Starts ? 1 : 2);
-              const remainingDist = distance(
-                draftS.grid,
-                draftS.playerPos[otherP - 1],
-                goals[otherP - 1]
-              );
-              if (pToMoveStarted && remainingDist <= 2) {
-                draftS.winner = "draw";
-                draftS.finishReason = "goal";
-                draftS.lifeCycleStage = 4;
-              } else {
-                draftS.winner = pToMove.toString();
-                draftS.finishReason = "goal";
-                draftS.lifeCycleStage = 4;
-              }
-            }
-          } else if (aType === "Wall") {
-            draftS.grid[aPos.r][aPos.c] = pToMove;
-          } else console.error("unexpected action type", aType);
-        }
-        if (isPlayer1) draftS.timeLeft2 = receivedTime;
-        else draftS.timeLeft1 = receivedTime;
-        draftS.ghostAction = null;
-        draftS.numMoves = numMoves + 1;
-        if (draftS.lifeCycleStage === 1 && numMoves === 0)
-          draftS.lifeCycleStage = 2;
-        else if (draftS.lifeCycleStage === 2 && numMoves === 1)
-          draftS.lifeCycleStage = 3;
+    socket.on("move", (actions, turnCount, receivedTime) => {
+      updateState((draftState) => {
+        console.log(`move ${turnCount} received ${receivedTime}`);
+        makeMove(draftState, actions, turnCount, receivedTime);
       });
     });
     return () => {
       socket.removeAllListeners();
     };
-  }, [socket, updateState, isPlayer1, S.gameId, goals]);
+  }, [socket, updateState, clientIsCreator, state.gameId]);
 
+  //timer interval to update clocks every second
   useEffect(() => {
     const interval = setInterval(() => {
-      updateState((draftS) => {
-        if (draftS.lifeCycleStage !== 3) return;
-        const p1ToM = draftS.numMoves % 2 === (draftS.p1Starts ? 0 : 1);
-        if (p1ToM) {
-          draftS.timeLeft1 -= 1;
-          if (draftS.timeLeft1 === 0) {
-            draftS.winner = "2";
-            draftS.finishReason = "time";
-            draftS.lifeCycleStage = 4;
-          }
-        } else {
-          draftS.timeLeft2 -= 1;
-          if (draftS.timeLeft2 === 0) {
-            draftS.winner = "1";
-            draftS.finishReason = "time";
-            draftS.lifeCycleStage = 4;
-          }
+      updateState((draftState) => {
+        //clocks only run after each player have made the first move, and the game has not ended
+        if (draftState.lifeCycleStage !== 3) return;
+        const idx = indexToMove(draftState.turnCount, draftState.creatorStarts);
+        draftState.timeLeft[idx] -= 1;
+        if (draftState.timeLeft[idx] === 0) {
+          draftState.winner = idx === 0 ? "joiner" : "creator";
+          draftState.finishReason = "time";
+          draftState.lifeCycleStage = 4;
         }
       });
     }, 1000);
     return () => clearInterval(interval);
   }, [updateState]);
 
-  //one of 'None', 'Ground', 'Wall'
-  const ghostType = () =>
-    S.ghostAction === null ? "None" : cellTypeByPos(S.ghostAction);
-
-  //when player selects / clicks a cell, it can trigger a different number of actions
-  //1 action: build 1 wall or 1 step
+  //part of the logic of handleClick:
+  //when the player selects / clicks a cell, it can trigger a different
+  //number of actions (1 action: build 1 wall or move 1 step)
+  //this function counts the number of actions for a clicked position
   const clickActionCount = (clickPos) => {
-    let [pos1, pos2] = cloneDeep(S.playerPos);
-    const playerToMove = p1ToMove() ? 1 : 2;
-
+    const idx = indexToMove(state.turnCount, state.creatorStarts);
     const clickType = cellTypeByPos(clickPos);
     if (clickType === "Ground") {
-      const actorPos = playerToMove === 1 ? pos1 : pos2;
-      return distance(S.grid, actorPos, clickPos);
-    } else if (clickType === "Wall") {
-      const gridCopy = cloneDeep(S.grid); //copy to preserve immutability of state
-      if (ghostType() === "Wall") {
+      return distance(state.grid, state.playerPos[idx], clickPos);
+    }
+    if (clickType === "Wall") {
+      //copy to preserve immutability of state, since we may need to modify the
+      //grid / player positions to account for ghost actions
+      const gridCopy = cloneDeep(state.grid);
+      const playerPosCopy = cloneDeep(state.playerPos);
+      const gType = ghostType(state.ghostAction);
+      if (gType === "Wall") {
         //block ghost wall for the check
-        gridCopy[S.ghostAction.r][S.ghostAction.c] = 1;
-      } else if (ghostType() === "Ground") {
+        gridCopy[state.ghostAction.r][state.ghostAction.c] = 1;
+      } else if (gType === "Ground") {
         //use ghost position for the check
-        [pos1, pos2] =
-          playerToMove === 1 ? [S.ghostAction, pos2] : [pos1, S.ghostAction];
+        playerPosCopy[idx] = state.ghostAction;
       }
-      return canBuildWall(gridCopy, [pos1, pos2], goals, clickPos) ? 1 : 0;
-    } else {
-      console.error("unexpected action type", clickType);
+      return canBuildWall(gridCopy, playerPosCopy, goals, clickPos) ? 1 : 0;
     }
+    console.error("unexpected action type", clickType);
   };
 
-  //handles the logic of ghost moves and sending complete moves to the server
+  //manage the state change on click. this may have no effect,
+  //change the ghost action (which is only shown to this client),
+  //or make a full move, in which case it is applied to both clients
   const handleClick = (clickPos) => {
-    const thisClientToMove = isPlayer1 === p1ToMove();
+    const thisClientToMove =
+      clientIsCreator === creatorToMove(state.turnCount, state.creatorStarts);
     if (!thisClientToMove) return; //can only move if it's your turn
-    if (S.lifeCycleStage <= 0) return; //cannot move til player 2 joins
-    if (S.lifeCycleStage > 3) return; //cannot move if game finished
+    if (state.lifeCycleStage < 1) return; //cannot move til player 2 joins
+    if (state.lifeCycleStage > 3) return; //cannot move if game finished
     const clickType = cellTypeByPos(clickPos);
-    //first move by each player cannot be a wall
-    if (S.lifeCycleStage < 3 && clickType === "Wall") return;
-    const clickActCount = clickActionCount(clickPos);
 
-    let [actions, newGhostAction] = [null, null];
-    if (ghostType() === "None") {
+    //there's a rule that the first move by each player must be a move
+    if (state.lifeCycleStage < 3 && clickType === "Wall") return;
+    const actCount = clickActionCount(clickPos);
+    const gType = ghostType(state.ghostAction);
+
+    //variables to store the outcome of the click, if any.
+    //in the case analysis below, if we detect that the click does
+    //not trigger any change, we simply return
+    //see docs/moveLogic.md for the description of the case analysis
+    let [fullMoveActions, newGhostAction] = [null, null];
+
+    if (gType === "None") {
       if (clickType === "Wall") {
-        if (clickActCount === 1) newGhostAction = clickPos;
+        if (actCount === 1) newGhostAction = clickPos;
         else return;
       } else if (clickType === "Ground") {
-        if (clickActCount === 1) newGhostAction = clickPos;
-        else if (clickActCount === 2) actions = [clickPos];
+        if (actCount === 1) newGhostAction = clickPos;
+        else if (actCount === 2) fullMoveActions = [clickPos];
         else return;
       } else {
         console.error("unexpected action type", clickType);
       }
-    } else if (ghostType() === "Wall") {
+    } else if (gType === "Wall") {
       if (clickType === "Wall") {
-        if (posEq(S.ghostAction, clickPos)) newGhostAction = null;
-        else if (clickActCount === 1) actions = [clickPos, S.ghostAction];
+        if (posEq(state.ghostAction, clickPos)) newGhostAction = null;
+        else if (actCount === 1)
+          fullMoveActions = [clickPos, state.ghostAction];
         else return;
       } else if (clickType === "Ground") {
-        if (clickActCount === 1) actions = [clickPos, S.ghostAction];
+        if (actCount === 1) fullMoveActions = [clickPos, state.ghostAction];
         else return;
       } else {
         console.error("unexpected action type", clickType);
       }
-    } else if (ghostType() === "Ground") {
+    } else if (gType === "Ground") {
       if (clickType === "Wall") {
-        if (clickActCount === 1) actions = [clickPos, S.ghostAction];
+        if (actCount === 1) fullMoveActions = [clickPos, state.ghostAction];
         else return;
       } else if (clickType === "Ground") {
-        if (clickActCount === 0) newGhostAction = null;
-        else if (clickActCount === 1) newGhostAction = clickPos;
-        else if (clickActCount === 2) actions = [clickPos];
+        if (actCount === 0) newGhostAction = null;
+        else if (actCount === 1) {
+          if (posEq(clickPos, state.ghostAction)) return;
+          newGhostAction = clickPos;
+        } else if (actCount === 2) fullMoveActions = [clickPos];
         else return;
       } else {
         console.error("unexpected action type", clickType);
       }
     } else {
-      console.error("unexpected ghost type", ghostType());
+      console.error("unexpected ghost type", gType);
     }
 
-    if (actions) {
-      let incrementedTime = isPlayer1 ? S.timeLeft1 : S.timeLeft2;
-      if (S.lifeCycleStage === 3) incrementedTime += S.timeControl.increment;
-      socket.emit("move", actions, incrementedTime);
-      updateState((draftS) => {
-        if (draftS.numMoves !== S.numMoves) return;
-        const pToMove =
-          draftS.numMoves % 2 === (draftS.p1Starts ? 0 : 1) ? 1 : 2;
-        for (let k = 0; k < actions.length; k++) {
-          const aPos = actions[k];
-          const aType = cellTypeByPos(aPos);
-          if (aType === "Ground") {
-            draftS.playerPos[pToMove - 1] = aPos;
-            if (posEq(aPos, goals[pToMove - 1])) {
-              //special draw rule
-              const otherP = pToMove === 1 ? 2 : 1;
-              const pToMoveStarted = pToMove === (draftS.p1Starts ? 1 : 2);
-              const remainingDist = distance(
-                draftS.grid,
-                draftS.playerPos[otherP - 1],
-                goals[otherP - 1]
-              );
-              if (pToMoveStarted && remainingDist <= 2) {
-                draftS.winner = "draw";
-                draftS.finishReason = "goal";
-                draftS.lifeCycleStage = 4;
-              } else {
-                draftS.winner = pToMove.toString();
-                draftS.finishReason = "goal";
-                draftS.lifeCycleStage = 4;
-              }
-            }
-          } else if (aType === "Wall") {
-            draftS.grid[aPos.r][aPos.c] = pToMove;
-          } else console.error("unexpected action type", aType);
-        }
-        if (isPlayer1) draftS.timeLeft1 = incrementedTime;
-        else draftS.timeLeft2 = incrementedTime;
-        draftS.ghostAction = null;
-        draftS.numMoves = S.numMoves + 1;
-        if (draftS.lifeCycleStage === 1 && S.numMoves === 0)
-          draftS.lifeCycleStage = 2;
-        else if (draftS.lifeCycleStage === 2 && S.numMoves === 1)
-          draftS.lifeCycleStage = 3;
+    if (fullMoveActions) {
+      const idx = indexToMove(state.turnCount, state.creatorStarts);
+      let tLeft = state.timeLeft[idx];
+      //we don't add the increment until the clocks start running (stage 3)
+      if (state.lifeCycleStage === 3) tLeft += state.timeControl.increment;
+      socket.emit("move", fullMoveActions, tLeft);
+      updateState((draftState) => {
+        makeMove(draftState, fullMoveActions, state.turnCount + 1, tLeft);
       });
     } else {
-      updateState((draftS) => {
-        draftS.ghostAction = newGhostAction;
+      updateState((draftState) => {
+        draftState.ghostAction = newGhostAction;
       });
     }
   };
 
-  const playerColors = ["red", "indigo"];
   const showGameHelp = () =>
     console.log("todo: show game help in modal window");
 
   const handleEndGame = () => {
-    socket.emit("endGame", S.gameId);
-    lobbyReturnFromGame();
+    //tell the server to stop listening to moves for this game
+    socket.emit("endGame", state.gameId);
+    returnToLobby();
   };
+
   return (
     <div>
       <Header
-        gameName={S.gameId}
+        gameName={state.gameId}
         showLobby
         endGame={() => handleEndGame()}
         showHelp={showGameHelp}
       />
       <StatusHeader
-        playerNames={[S.p1Name, S.p2Name]}
-        lifeCycleStage={S.lifeCycleStage}
-        winner={S.winner}
-        finishReason={S.finishReason}
-        numMoves={S.numMoves}
-        p1ToMove={p1ToMove()}
+        lifeCycleStage={state.lifeCycleStage}
+        names={state.names}
+        indexToMove={indexToMove(state.turnCount, state.creatorStarts)}
+        winner={state.winner}
+        finishReason={state.finishReason}
+        turnCount={state.turnCount}
       />
       <TimerHeader
-        lifeCycleStage={S.lifeCycleStage}
-        playerNames={[S.p1Name, S.p2Name]}
+        lifeCycleStage={state.lifeCycleStage}
+        names={state.names}
+        indexToMove={indexToMove(state.turnCount, state.creatorStarts)}
         playerColors={playerColors}
-        timeLeft1={S.timeLeft1}
-        timeLeft2={S.timeLeft2}
-        p1ToMove={p1ToMove()}
+        timeLeft={state.timeLeft}
       />
       <Board
-        goals={goals}
-        playerPos={S.playerPos}
-        grid={S.grid}
-        ghostAction={S.ghostAction}
+        creatorToMove={creatorToMove(state.turnCount, state.creatorStarts)}
         playerColors={playerColors}
+        grid={state.grid}
+        playerPos={state.playerPos}
+        goals={goals}
+        ghostAction={state.ghostAction}
         handleClick={handleClick}
-        p1ToMove={p1ToMove()}
       />
     </div>
   );
