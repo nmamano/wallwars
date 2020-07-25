@@ -4,7 +4,7 @@ import { uniqueNamesGenerator, names } from "unique-names-generator";
 import GamePage from "../game/GamePage";
 import Header from "../shared/Header";
 import LobbyForm from "./LobbyForm";
-
+import LobbyHelp from "./LobbyHelp";
 const randPlayerName = () =>
   uniqueNamesGenerator({
     dictionaries: [names],
@@ -37,9 +37,6 @@ const LobbyPage = ({ socket }) => {
     setIsOngoingGame(true);
   };
 
-  const showLobbyHelp = () =>
-    console.log("todo: show lobby help in modal window");
-
   const returnToLobby = () => {
     setIsOngoingGame(false);
     setCreatorParams(null);
@@ -59,7 +56,7 @@ const LobbyPage = ({ socket }) => {
       )}
       {!isOngoingGame && (
         <div>
-          <Header gameName={""} showHelp={showLobbyHelp} />
+          <Header gameName={""} helpText={LobbyHelp()} />
           <LobbyForm
             playerName={playerName}
             handlePlayerName={handlePlayerName}

@@ -12,6 +12,7 @@ import Board from "./Board";
 import Header from "../shared/Header";
 import StatusHeader from "./StatusHeader";
 import TimerHeader from "./TimerHeader";
+import GameHelp from "./GameHelp";
 
 //===================================================
 //settings that never change, so they don't need to be inside the component
@@ -352,9 +353,6 @@ const GamePage = ({
     }
   };
 
-  const showGameHelp = () =>
-    console.log("todo: show game help in modal window");
-
   const handleEndGame = () => {
     //tell the server to stop listening to moves for this game
     socket.emit("endGame", state.gameId);
@@ -366,8 +364,8 @@ const GamePage = ({
       <Header
         gameName={state.gameId}
         showLobby
-        endGame={() => handleEndGame()}
-        showHelp={showGameHelp}
+        endGame={handleEndGame}
+        helpText={GameHelp()}
       />
       <StatusHeader
         lifeCycleStage={state.lifeCycleStage}
