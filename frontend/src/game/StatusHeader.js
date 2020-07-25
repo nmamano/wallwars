@@ -8,6 +8,7 @@ const StatusHeader = ({
   finishReason,
   turnCount,
   indexToMove,
+  timeControl,
 }) => {
   let msg;
   const nameToMove = names[indexToMove];
@@ -44,10 +45,16 @@ const StatusHeader = ({
       className="container valign-wrapper"
       style={{ marginTop: "10px", marginBottom: "10px" }}
     >
-      <Col s={8}>
+      <Col s={5}>
         <h6>{msg}</h6>
       </Col>
-      <Col s={3}></Col>
+      <Col s={6}>
+        {timeControl && (
+          <h6>
+            Time control: {timeControl.duration}+{timeControl.increment}
+          </h6>
+        )}
+      </Col>
       <Col s={1}>
         <h6>{turnCount}</h6>
       </Col>

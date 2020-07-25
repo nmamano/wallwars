@@ -20,20 +20,42 @@ const LobbyPage = ({ socket }) => {
   const [creatorParams, setCreatorParams] = useState(null);
   const [joinerParams, setJoinerParams] = useState(null);
 
-  const handlePlayerName = (props) => setPlayerName(props.target.value);
+  const handlePlayerName = (props) => {
+    const maxNameLen = 8;
+    setPlayerName(props.target.value.slice(0, maxNameLen));
+  };
   const handleDuration = (props) => setDuration(props.target.value);
   const handleIncrement = (props) => setIncrement(props.target.value);
   const handleJoinGameId = (props) => setJoinGameId(props.target.value);
 
   const handleCreateGame = () => {
+    let [dur, inc] = [parseFloat(duration), parseFloat(increment)];
+    if (isNaN(dur) || dur < 0.1) {
+      dur = 3;
+      console.log(
+        "given duration is not a number, using default value instead"
+      );
+    }
+    if (isNaN(inc) || inc < 0) {
+      inc = 2;
+      console.log(
+        "given increment is not a number, using default value instead"
+      );
+    }
     setCreatorParams({
-      timeControl: { duration: duration, increment: increment },
+      timeControl: {
+        duration: dur,
+        increment: inc,
+      },
       creatorName: playerName,
     });
     setIsOngoingGame(true);
   };
   const handleJoinGame = () => {
-    setJoinerParams({ gameId: joinGameId, joinerName: playerName });
+    setJoinerParams({
+      gameId: joinGameId,
+      joinerName: playerName,
+    });
     setIsOngoingGame(true);
   };
 

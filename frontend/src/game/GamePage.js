@@ -374,6 +374,7 @@ const GamePage = ({
         winner={state.winner}
         finishReason={state.finishReason}
         turnCount={state.turnCount}
+        timeControl={state.timeControl}
       />
       <TimerHeader
         lifeCycleStage={state.lifeCycleStage}
