@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { Button, Row, Col } from "react-materialize";
 import cloneDeep from "lodash.clonedeep"; //probably not needed
 import { useImmer } from "use-immer";
 
@@ -217,6 +218,24 @@ const GamePage = ({
         draftState.lifeCycleStage = 1;
       });
     });
+    socket.on("rematchStarted", (gameId) => {
+      console.log("rematch started");
+      updateState((draftState) => {
+        draftState.gameId = gameId;
+        draftState.creatorStarts = !draftState.creatorStarts;
+        draftState.turnCount = 0;
+        draftState.playerPos = initialPlayerPos;
+        draftState.grid = emptyGrid(dims);
+        draftState.timeLeft = [
+          draftState.timeControl.duration * 60,
+          draftState.timeControl.duration * 60,
+        ];
+        draftState.winner = "";
+        draftState.finishReason = "";
+        draftState.lifeCycleStage = 1;
+        draftState.ghostAction = null;
+      });
+    });
     socket.on("move", (actions, turnCount, receivedTime) => {
       updateState((draftState) => {
         console.log(`move ${turnCount} received ${receivedTime}`);
@@ -283,10 +302,11 @@ const GamePage = ({
     if (!thisClientToMove) return; //can only move if it's your turn
     if (state.lifeCycleStage < 1) return; //cannot move til player 2 joins
     if (state.lifeCycleStage > 3) return; //cannot move if game finished
-    const clickType = cellTypeByPos(clickPos);
 
+    const clickType = cellTypeByPos(clickPos);
     //there's a rule that the first move by each player must be a move
     if (state.lifeCycleStage < 3 && clickType === "Wall") return;
+
     const actCount = clickActionCount(clickPos);
     const gType = ghostType(state.ghostAction);
 
@@ -358,6 +378,9 @@ const GamePage = ({
     socket.emit("endGame", state.gameId);
     returnToLobby();
   };
+  const handleRematch = () => {
+    socket.emit("rematch", state.gameId);
+  };
 
   return (
     <div>
@@ -392,6 +415,23 @@ const GamePage = ({
         ghostAction={state.ghostAction}
         handleClick={handleClick}
       />
+      {state.lifeCycleStage === 4 && (
+        <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
+          <Col s={4} />
+          <Col className="center" s={4}>
+            <Button
+              large
+              className="red"
+              node="button"
+              waves="light"
+              onClick={handleRematch}
+            >
+              Rematch
+            </Button>
+          </Col>
+          <Col s={4} />
+        </Row>
+      )}
     </div>
   );
 };

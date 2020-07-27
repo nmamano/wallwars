@@ -22,7 +22,7 @@ io.on("connection", (socket) => {
   console.log(`new connection from socket ${socketId}`);
 
   socket.on("createGame", (timeControl, creatorName) => {
-    removeStaleGames();
+    purgeGamesOfClient();
     console.log(`client ${socketId}: createGame`);
     const gameParams = {
       gameId: randomGameId(),
@@ -41,7 +41,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("joinGame", (gameId, joinerName) => {
-    removeStaleGames();
+    purgeGamesOfClient();
     console.log(`client ${socketId}: joinGame ${gameId}`);
     for (let i = 0; i < unjoinedGames.length; i += 1) {
       const gameParams = unjoinedGames[i];
@@ -83,12 +83,37 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("endGame", (gameId) => {
-    console.log(`client ${socketId}: endGame ${gameId}`);
-    removeStaleGames();
+  socket.on("rematch", (gameId) => {
+    console.log(`client ${socketId}: rematch ${gameId}`);
     for (let i = 0; i < ongoingGames.length; i += 1) {
       const gameParams = ongoingGames[i];
       if (gameParams.gameId === gameId) {
+        console.log("game found");
+        const game = ongoingGames.splice(i, 1)[0]; //remove the finished game
+        const newGame = {
+          gameId: randomGameId(),
+          socketIds: game.socketIds,
+          playerNames: game.playerNames,
+          timeControl: game.timeControl,
+          creatorStarts: !game.creatorStarts,
+          turnCount: 0,
+        };
+        ongoingGames.push(newGame);
+        io.to(game.socketIds[0])
+          .to(game.socketIds[1])
+          .emit("rematchStarted", newGame.gameId);
+        return;
+      }
+    }
+  });
+
+  socket.on("endGame", (gameId) => {
+    console.log(`client ${socketId}: endGame ${gameId}`);
+    purgeGamesOfClient();
+    for (let i = 0; i < ongoingGames.length; i += 1) {
+      const gameParams = ongoingGames[i];
+      if (gameParams.gameId === gameId) {
+        console.log("remove ongoing game: ", JSON.stringify(ongoingGames[i]));
         ongoingGames.splice(i, 1); //remove this game
         return;
       }
@@ -97,25 +122,35 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log(`socket ${socketId} disconnected`);
-    removeStaleGames();
+    purgeGamesOfClient();
   });
 
   //remove games created or joined by this client
-  const removeStaleGames = () => {
+  const purgeGamesOfClient = () => {
+    //remove game(s) created by this client
     for (let i = 0; i < unjoinedGames.length; i += 1) {
       const gameParams = unjoinedGames[i];
       if (gameParams.socketIds[0] === socketId) {
-        unjoinedGames.splice(i, 1); //remove game(s) created by this client
+        console.log(
+          "remove stale unjoined game: ",
+          JSON.stringify(unjoinedGames[i])
+        );
+        unjoinedGames.splice(i, 1);
         i -= 1;
       }
     }
+    //remove game(s) created by this client
     for (let i = 0; i < ongoingGames.length; i += 1) {
       const gameParams = ongoingGames[i];
       if (
         gameParams.socketIds[0] === socketId ||
         gameParams.socketIds[1] === socketId
       ) {
-        ongoingGames.splice(i, 1); //remove game(s) created by this client
+        console.log(
+          "remove stale ongoing game: ",
+          JSON.stringify(ongoingGames[i])
+        );
+        ongoingGames.splice(i, 1);
         i -= 1;
       }
     }
