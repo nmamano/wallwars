@@ -16,14 +16,12 @@ The goal of each player is to get to their goal before the opponent gets to thei
 
 It is inspired by a board game I played once as a kid, of which I don't remember the name, unfortunately.
 
-### Technologies used
+### Tools used
 
 #### Frontend
 
 - React as framework
 - [Materialize](https://materializecss.com/) for styling (with the [react-materialize](http://react-materialize.github.io/react-materialize/?path=/story/react-materialize--welcome) wrapper)
-- [Immer](https://immerjs.github.io/immer/docs/introduction) for maintaining the state (with the [useImmer](https://github.com/immerjs/use-immer) hook)
-- [unique-names-generator](https://www.npmjs.com/package/unique-names-generator) to generate random user names.
 - [gh-pages module](https://www.npmjs.com/package/gh-pages) to host the client directly from the github repo (it uses the gh-pages branch).
 
 #### Backend

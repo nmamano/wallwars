@@ -12,6 +12,11 @@ const StatusHeader = ({
 }) => {
   let msg;
   const nameToMove = names[indexToMove];
+  const finishMessage = {
+    time: "on time",
+    goal: "by reaching the goal",
+    resign: "by resignation",
+  };
   switch (lifeCycleStage) {
     case -2:
       msg = "Haven't tried to connect to the server yet";
@@ -33,7 +38,7 @@ const StatusHeader = ({
       if (winner === "draw") msg = "The game ended in a draw";
       else
         msg = `${names[winner === "creator" ? 0 : 1]} won ${
-          finishReason === "time" ? "on time" : "by reaching the goal"
+          finishMessage[finishReason]
         }`;
       break;
     default:

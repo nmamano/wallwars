@@ -107,6 +107,20 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("resign", (gameId) => {
+    console.log(`client ${socketId}: resign ${gameId}`);
+    for (let i = 0; i < ongoingGames.length; i += 1) {
+      const game = ongoingGames[i];
+      if (game.gameId === gameId) {
+        const resignerIsCreator = game.socketIds[0] === socketId;
+        io.to(game.socketIds[0])
+          .to(game.socketIds[1])
+          .emit("playerResigned", resignerIsCreator);
+        return;
+      }
+    }
+  });
+
   socket.on("endGame", (gameId) => {
     console.log(`client ${socketId}: endGame ${gameId}`);
     purgeGamesOfClient();

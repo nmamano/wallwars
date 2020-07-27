@@ -1,7 +1,9 @@
 import React, { useEffect } from "react";
 import { Button, Row, Col } from "react-materialize";
-import cloneDeep from "lodash.clonedeep"; //probably not needed
+import cloneDeep from "lodash.clonedeep";
 import { useImmer } from "use-immer";
+import { confirmAlert } from "react-confirm-alert";
+import "react-confirm-alert/src/react-confirm-alert.css";
 
 import {
   cellTypeByPos,
@@ -146,7 +148,7 @@ const GamePage = ({
       clientIsCreator ? creatorParams.timeControl.duration * 60 : null,
     ],
     winner: "", //'' if game is ongoing, else 'creator', 'joiner', or 'draw'
-    finishReason: "", //'' if game is ongoing, 'time' or 'goal' for a finished game
+    finishReason: "", //'' if game is ongoing, else 'time', 'goal', or 'resign'
 
     //life cycle of the game
     //-2. Before sending 'createGame'/'joinGame' (for creator/joiner) to the server
@@ -234,6 +236,13 @@ const GamePage = ({
         draftState.finishReason = "";
         draftState.lifeCycleStage = 1;
         draftState.ghostAction = null;
+      });
+    });
+    socket.on("playerResigned", (resignerIsCreator) => {
+      updateState((draftState) => {
+        draftState.lifeCycleStage = 4;
+        draftState.winner = resignerIsCreator ? "joiner" : "creator";
+        draftState.finishReason = "resign";
       });
     });
     socket.on("move", (actions, turnCount, receivedTime) => {
@@ -373,7 +382,7 @@ const GamePage = ({
     }
   };
 
-  const handleEndGame = () => {
+  const handleEndSession = () => {
     //tell the server to stop listening to moves for this game
     socket.emit("endGame", state.gameId);
     returnToLobby();
@@ -381,13 +390,32 @@ const GamePage = ({
   const handleRematch = () => {
     socket.emit("rematch", state.gameId);
   };
+  const handleOfferDraw = () => {};
+  const handleResign = () => {
+    socket.emit("resign", state.gameId);
+  };
 
+  const confirmResign = () => {
+    confirmAlert({
+      message: "Are you sure you want to resign?",
+      buttons: [
+        {
+          label: "Yes",
+          onClick: handleResign,
+        },
+        {
+          label: "No",
+          onClick: () => {},
+        },
+      ],
+    });
+  };
   return (
     <div>
       <Header
         gameName={state.gameId}
         showLobby
-        endGame={handleEndGame}
+        endGame={handleEndSession}
         helpText={GameHelp()}
       />
       <StatusHeader
@@ -406,15 +434,55 @@ const GamePage = ({
         playerColors={playerColors}
         timeLeft={state.timeLeft}
       />
-      <Board
-        creatorToMove={creatorToMove(state.turnCount, state.creatorStarts)}
-        playerColors={playerColors}
-        grid={state.grid}
-        playerPos={state.playerPos}
-        goals={goals}
-        ghostAction={state.ghostAction}
-        handleClick={handleClick}
-      />
+
+      <Row className="valign-wrapper">
+        <Col s={3} />
+        <Col s={6}>
+          <Board
+            creatorToMove={creatorToMove(state.turnCount, state.creatorStarts)}
+            playerColors={playerColors}
+            grid={state.grid}
+            playerPos={state.playerPos}
+            goals={goals}
+            ghostAction={state.ghostAction}
+            handleClick={handleClick}
+          />
+        </Col>
+        <Col s={3} className="center">
+          {state.lifeCycleStage === 3 && (
+            <div
+              className="container teal darken-2"
+              style={{ padding: "0.2rem" }}
+            >
+              <Row className="valign-wrapper" style={{ paddingTop: "1rem" }}>
+                <Col s={12}>
+                  <Button
+                    className="red"
+                    node="button"
+                    waves="light"
+                    disabled
+                    onClick={handleOfferDraw}
+                  >
+                    Offer Draw
+                  </Button>
+                </Col>
+              </Row>
+              <Row className="valign-wrapper">
+                <Col s={12}>
+                  <Button
+                    className="red"
+                    node="button"
+                    waves="light"
+                    onClick={confirmResign}
+                  >
+                    Resign
+                  </Button>
+                </Col>
+              </Row>
+            </div>
+          )}
+        </Col>
+      </Row>
       {state.lifeCycleStage === 4 && (
         <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
           <Col s={4} />
