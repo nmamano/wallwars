@@ -6,7 +6,7 @@ http://nmamano.com/wallwars/index.html
 
 Disclaimer 1: if nobody has played in a while, the server can sometimes take a minute to wake up.
 
-Disclaimer 2: mobile devices not supported for now.
+Disclaimer 2: mobile devices not recommended for now.
 
 ## About
 

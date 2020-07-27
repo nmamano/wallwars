@@ -13,7 +13,7 @@ const displayParams = {
   emptyWallHoverColor: "#f1bfa0",
   pillarColor: "#cccccc",
   playerIcons: ["face", "outlet"],
-  borderStyle: "2px solid black",
+  borderStyle: "1px solid black",
 };
 
 //stateless component to display the board. all the state is at GamePage

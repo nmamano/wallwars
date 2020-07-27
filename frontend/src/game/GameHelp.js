@@ -5,6 +5,7 @@ const GameHelp = () => (
     <h6>
       To connect with your friend, share the game code in the top header with
       them and tell them to use it when clicking "Join Game" from the lobby.
+      Click on the code to copy it to the clipboard.
     </h6>
     <h6>Rules of the game:</h6>
     <h6>
