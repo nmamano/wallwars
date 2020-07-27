@@ -8,22 +8,28 @@ import "react-toastify/dist/ReactToastify.css";
 function Header({ gameName, showLobby, endGame, helpText }) {
   let brand;
   if (!gameName) {
-    brand = <span>WallWars</span>;
+    brand = (
+      <span style={{ marginLeft: "1rem", marginRight: "1rem" }}>WallWars</span>
+    );
   } else {
     brand = (
-      <CopyToClipboard
-        text={gameName}
-        onCopy={() =>
-          toast("Game code copied to clipboard!", {
-            autoClose: 2500,
-            hideProgressBar: true,
-            transition: Slide,
-            pauseOnFocusLoss: false,
-          })
-        }
-      >
-        <span>{"WallWars Game " + gameName}</span>
-      </CopyToClipboard>
+      <span style={{ marginLeft: "1rem", marginRight: "1rem" }}>
+        <span>WallWars&nbsp;&nbsp;</span>
+        <CopyToClipboard
+          style={{ cursor: "pointer" }}
+          text={gameName}
+          onCopy={() =>
+            toast("Game code copied to clipboard!", {
+              autoClose: 2500,
+              hideProgressBar: true,
+              transition: Slide,
+              pauseOnFocusLoss: false,
+            })
+          }
+        >
+          <span>Game {gameName}</span>
+        </CopyToClipboard>
+      </span>
     );
   }
 
@@ -67,7 +73,60 @@ function Header({ gameName, showLobby, endGame, helpText }) {
           preventScrolling: true,
         }}
       >
-        {showLobby && <NavItem onClick={endGame}>Lobby</NavItem>}
+        {showLobby && (
+          <Modal
+            style={{ color: "black" }}
+            actions={[
+              <Button
+                style={{
+                  backgroundColor: "#009688",
+                  color: "white",
+                  marginRight: "1rem",
+                }}
+                flat
+                modal="close"
+                node="button"
+                waves="green"
+                onClick={endGame}
+              >
+                Quit game
+              </Button>,
+              <Button
+                style={{
+                  backgroundColor: "#009688",
+                  color: "white",
+                }}
+                flat
+                modal="close"
+                node="button"
+                waves="green"
+              >
+                Close
+              </Button>,
+            ]}
+            bottomSheet={false}
+            fixedFooter={false}
+            header="Resign"
+            open={false}
+            options={{
+              dismissible: true,
+              endingTop: "10%",
+              inDuration: 250,
+              opacity: 0.4,
+              outDuration: 250,
+              preventScrolling: true,
+              startingTop: "4%",
+            }}
+            trigger={<NavItem>Lobby</NavItem>}
+          >
+            {
+              <p>
+                Are you sure you want to return to the lobby? You will not be
+                able to rejoin this game.
+              </p>
+            }
+          </Modal>
+        )}
         <Modal
           style={{ color: "black" }}
           actions={[
@@ -84,7 +143,6 @@ function Header({ gameName, showLobby, endGame, helpText }) {
           bottomSheet={false}
           fixedFooter={false}
           header="Help"
-          id="modal1"
           open={false}
           options={{
             dismissible: true,
@@ -116,7 +174,6 @@ function Header({ gameName, showLobby, endGame, helpText }) {
           bottomSheet={false}
           fixedFooter={false}
           header="About"
-          id="modal1"
           open={false}
           options={{
             dismissible: true,

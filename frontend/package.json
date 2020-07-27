@@ -14,7 +14,6 @@
     "lodash.clonedeep": "^4.5.0",
     "materialize-css": "^1.0.0-rc.2",
     "react": "^16.13.1",
-    "react-confirm-alert": "^2.6.1",
     "react-copy-to-clipboard": "^5.0.2",
     "react-dom": "^16.13.1",
     "react-materialize": "^3.9.2",

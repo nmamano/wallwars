@@ -1,9 +1,7 @@
-import React, { useEffect } from "react";
-import { Button, Row, Col } from "react-materialize";
+import React, { useEffect, useState } from "react";
+import { Button, Row, Col, Modal } from "react-materialize";
 import cloneDeep from "lodash.clonedeep";
 import { useImmer } from "use-immer";
-import { confirmAlert } from "react-confirm-alert";
-import "react-confirm-alert/src/react-confirm-alert.css";
 
 import {
   cellTypeByPos,
@@ -395,21 +393,21 @@ const GamePage = ({
     socket.emit("resign", state.gameId);
   };
 
-  const confirmResign = () => {
-    confirmAlert({
-      message: "Are you sure you want to resign?",
-      buttons: [
-        {
-          label: "Yes",
-          onClick: handleResign,
-        },
-        {
-          label: "No",
-          onClick: () => {},
-        },
-      ],
-    });
+  const [showBackButtonWarning, setShowBackButtonWarning] = useState(false);
+  const onBackButtonEvent = (e) => {
+    e.preventDefault();
+    setShowBackButtonWarning(true);
   };
+  const confirmBackButton = () => {
+    setShowBackButtonWarning(false);
+    handleEndSession();
+  };
+  useEffect(() => {
+    window.history.pushState(null, null, window.location.pathname);
+    window.addEventListener("popstate", onBackButtonEvent);
+    return () => window.removeEventListener("popstate", onBackButtonEvent);
+  });
+
   return (
     <div>
       <Header
@@ -469,14 +467,57 @@ const GamePage = ({
               </Row>
               <Row className="valign-wrapper">
                 <Col s={12}>
-                  <Button
-                    className="red"
-                    node="button"
-                    waves="light"
-                    onClick={confirmResign}
+                  <Modal
+                    style={{ color: "black" }}
+                    actions={[
+                      <Button
+                        style={{
+                          backgroundColor: "#009688",
+                          color: "white",
+                          marginRight: "1rem",
+                        }}
+                        flat
+                        modal="close"
+                        node="button"
+                        waves="green"
+                        onClick={handleResign}
+                      >
+                        Resign
+                      </Button>,
+                      <Button
+                        style={{
+                          backgroundColor: "#009688",
+                          color: "white",
+                        }}
+                        flat
+                        modal="close"
+                        node="button"
+                        waves="green"
+                      >
+                        Close
+                      </Button>,
+                    ]}
+                    bottomSheet={false}
+                    fixedFooter={false}
+                    header="Resign"
+                    open={false}
+                    options={{
+                      dismissible: true,
+                      endingTop: "10%",
+                      inDuration: 250,
+                      opacity: 0.4,
+                      outDuration: 250,
+                      preventScrolling: true,
+                      startingTop: "4%",
+                    }}
+                    trigger={
+                      <Button className="red" node="button" waves="light">
+                        Resign
+                      </Button>
+                    }
                   >
-                    Resign
-                  </Button>
+                    {<p>Are you sure you want to resign?</p>}
+                  </Modal>
                 </Col>
               </Row>
             </div>
@@ -500,6 +541,58 @@ const GamePage = ({
           <Col s={4} />
         </Row>
       )}
+      <Modal
+        style={{ color: "black" }}
+        actions={[
+          <Button
+            style={{
+              backgroundColor: "#009688",
+              color: "white",
+              marginRight: "1rem",
+            }}
+            flat
+            modal="close"
+            node="button"
+            waves="green"
+            onClick={confirmBackButton}
+          >
+            Quit game
+          </Button>,
+          <Button
+            style={{
+              backgroundColor: "#009688",
+              color: "white",
+            }}
+            flat
+            modal="close"
+            node="button"
+            waves="green"
+            onClick={() => setShowBackButtonWarning(false)}
+          >
+            Close
+          </Button>,
+        ]}
+        bottomSheet={false}
+        fixedFooter={false}
+        header="Return to lobby"
+        open={showBackButtonWarning}
+        options={{
+          dismissible: false,
+          endingTop: "10%",
+          inDuration: 250,
+          opacity: 0.4,
+          outDuration: 250,
+          preventScrolling: true,
+          startingTop: "4%",
+        }}
+      >
+        {
+          <p>
+            Are you sure you want to return to the lobby? You will not be able
+            to rejoin this game.
+          </p>
+        }
+      </Modal>
     </div>
   );
 };
