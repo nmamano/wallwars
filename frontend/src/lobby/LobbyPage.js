@@ -47,14 +47,14 @@ const LobbyPage = ({ socket }) => {
         duration: dur,
         increment: inc,
       },
-      creatorName: playerName,
+      creatorName: playerName === "" ? "Anon" : playerName,
     });
     setIsOngoingGame(true);
   };
   const handleJoinGame = () => {
     setJoinerParams({
       gameId: joinGameId,
-      joinerName: playerName,
+      joinerName: playerName === "" ? "Anon" : playerName,
     });
     setIsOngoingGame(true);
   };
