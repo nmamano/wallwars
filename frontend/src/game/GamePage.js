@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Button, Row, Col, Modal } from "react-materialize";
 import cloneDeep from "lodash.clonedeep";
 import { useImmer } from "use-immer";
+import UIfx from "uifx";
+import moveSoundAudio from "./../static/moveSound.mp3";
 
 import {
   cellTypeByPos,
@@ -18,6 +20,8 @@ import GameHelp from "./GameHelp";
 //===================================================
 //settings that never change, so they don't need to be inside the component
 //===================================================
+const moveSound = new UIfx(moveSoundAudio);
+
 const dims = { w: 23, h: 19 }; //traditional board size
 const corners = {
   tl: { r: 0, c: 0 },
@@ -62,11 +66,20 @@ const ghostType = (pos) => (pos === null ? "None" : cellTypeByPos(pos));
 //'draftState' is a copy of the actual state in the GamePage component, so it can be mutated
 //(see the definition of 'state' in GamePage)
 //'timeLeftAfterMove' is the time left by the player who made the move
-const makeMove = (draftState, actions, turnCount, timeLeftAfterMove) => {
+const makeMove = (
+  draftState,
+  actions,
+  turnCount,
+  timeLeftAfterMove,
+  isVolumeOn
+) => {
   //only in life cycle stages 1,2,3 players can make move
   if (draftState.lifeCycleStage < 1 || draftState.lifeCycleStage > 3) return;
   //make the move only if it is the next one (safety measure against desync issues)
   if (draftState.turnCount !== turnCount - 1) return;
+
+  if (isVolumeOn) moveSound.play();
+
   const idxToMove = indexToMove(draftState.turnCount, draftState.creatorStarts);
   const otherIdx = idxToMove === creatorIndex ? joinerIndex : creatorIndex;
   for (let k = 0; k < actions.length; k++) {
@@ -161,10 +174,44 @@ const GamePage = ({
     //===================================================
     //state that changes during the game AND is unique to this client
     //===================================================
-    ghostAction: null, //a single action that is shown only to this client
+    //the ghost action is a single action that is shown only to this client
     //it can be combined with another action to make a full move, or undone in order to
     //choose a different action
+    ghostAction: null,
+
+    isVolumeOn: false,
+    showBackButtonWarning: false,
   });
+
+  //handle browser back arrow
+  const onBackButtonEvent = (e) => {
+    e.preventDefault();
+    updateState((draftState) => {
+      draftState.showBackButtonWarning = true;
+    });
+  };
+  const handleConfirmBackButton = () => {
+    updateState((draftState) => {
+      draftState.showBackButtonWarning = false;
+    });
+    handleEndSession();
+  };
+  const handleCancelBackButton = () => {
+    updateState((draftState) => {
+      draftState.showBackButtonWarning = false;
+    });
+  };
+  useEffect(() => {
+    window.history.pushState(null, null, window.location.pathname);
+    window.addEventListener("popstate", onBackButtonEvent);
+    return () => window.removeEventListener("popstate", onBackButtonEvent);
+  });
+
+  const handleToggleVolume = () => {
+    updateState((draftState) => {
+      draftState.isVolumeOn = !draftState.isVolumeOn;
+    });
+  };
 
   //first contact to server
   useEffect(() => {
@@ -246,13 +293,19 @@ const GamePage = ({
     socket.on("move", (actions, turnCount, receivedTime) => {
       updateState((draftState) => {
         console.log(`move ${turnCount} received ${receivedTime}`);
-        makeMove(draftState, actions, turnCount, receivedTime);
+        makeMove(
+          draftState,
+          actions,
+          turnCount,
+          receivedTime,
+          state.isVolumeOn
+        );
       });
     });
     return () => {
       socket.removeAllListeners();
     };
-  }, [socket, updateState, clientIsCreator, state.gameId]);
+  }, [socket, updateState, clientIsCreator, state.gameId, state.isVolumeOn]);
 
   //timer interval to update clocks every second
   useEffect(() => {
@@ -371,7 +424,13 @@ const GamePage = ({
       if (state.lifeCycleStage === 3) tLeft += state.timeControl.increment;
       socket.emit("move", fullMoveActions, tLeft);
       updateState((draftState) => {
-        makeMove(draftState, fullMoveActions, state.turnCount + 1, tLeft);
+        makeMove(
+          draftState,
+          fullMoveActions,
+          state.turnCount + 1,
+          tLeft,
+          state.isVolumeOn
+        );
       });
     } else {
       updateState((draftState) => {
@@ -393,21 +452,6 @@ const GamePage = ({
     socket.emit("resign", state.gameId);
   };
 
-  const [showBackButtonWarning, setShowBackButtonWarning] = useState(false);
-  const onBackButtonEvent = (e) => {
-    e.preventDefault();
-    setShowBackButtonWarning(true);
-  };
-  const confirmBackButton = () => {
-    setShowBackButtonWarning(false);
-    handleEndSession();
-  };
-  useEffect(() => {
-    window.history.pushState(null, null, window.location.pathname);
-    window.addEventListener("popstate", onBackButtonEvent);
-    return () => window.removeEventListener("popstate", onBackButtonEvent);
-  });
-
   return (
     <div>
       <Header
@@ -424,6 +468,8 @@ const GamePage = ({
         finishReason={state.finishReason}
         turnCount={state.turnCount}
         timeControl={state.timeControl}
+        isVolumeOn={state.isVolumeOn}
+        handleToggleVolume={handleToggleVolume}
       />
       <TimerHeader
         lifeCycleStage={state.lifeCycleStage}
@@ -554,7 +600,7 @@ const GamePage = ({
             modal="close"
             node="button"
             waves="green"
-            onClick={confirmBackButton}
+            onClick={handleConfirmBackButton}
           >
             Quit game
           </Button>,
@@ -567,7 +613,7 @@ const GamePage = ({
             modal="close"
             node="button"
             waves="green"
-            onClick={() => setShowBackButtonWarning(false)}
+            onClick={handleCancelBackButton}
           >
             Close
           </Button>,
@@ -575,7 +621,7 @@ const GamePage = ({
         bottomSheet={false}
         fixedFooter={false}
         header="Return to lobby"
-        open={showBackButtonWarning}
+        open={state.showBackButtonWarning}
         options={{
           dismissible: false,
           endingTop: "10%",

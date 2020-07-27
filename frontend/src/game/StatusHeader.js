@@ -1,5 +1,5 @@
 import React from "react";
-import { Row, Col } from "react-materialize";
+import { Row, Col, Button, Icon } from "react-materialize";
 
 const StatusHeader = ({
   names,
@@ -9,6 +9,8 @@ const StatusHeader = ({
   turnCount,
   indexToMove,
   timeControl,
+  isVolumeOn,
+  handleToggleVolume,
 }) => {
   let msg;
   const nameToMove = names[indexToMove];
@@ -45,12 +47,13 @@ const StatusHeader = ({
       console.error("stage should be in range [-2..4]");
   }
 
+  const [volumeOnIcon, volumeOffIcon] = ["volume_up", "volume_off"];
   return (
     <Row
       className="container valign-wrapper"
       style={{ marginTop: "10px", marginBottom: "10px" }}
     >
-      <Col s={5}>
+      <Col s={4}>
         <h6>{msg}</h6>
       </Col>
       <Col s={6}>
@@ -62,6 +65,18 @@ const StatusHeader = ({
       </Col>
       <Col s={1}>
         <h6>{turnCount}</h6>
+      </Col>
+      <Col s={1}>
+        <Button
+          className="teal"
+          node="button"
+          onClick={handleToggleVolume}
+          icon={
+            <Icon className="large">
+              {isVolumeOn ? volumeOnIcon : volumeOffIcon}
+            </Icon>
+          }
+        ></Button>
       </Col>
     </Row>
   );
