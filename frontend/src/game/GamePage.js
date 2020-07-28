@@ -218,6 +218,7 @@ const GamePage = ({
 
     isVolumeOn: false,
     showBackButtonWarning: false,
+    isKeyPressed: false,
     //index of the move that the client is looking at, which may not be the last one
     viewIndex: 0,
   });
@@ -385,7 +386,7 @@ const GamePage = ({
     return () => clearInterval(interval);
   }, [updateState]);
 
-  //part of the logic of handleClick:
+  //part of the logic of handleSelectedPosition:
   //when the player selects / clicks a cell, it can trigger a different
   //number of actions (1 action: build 1 wall or move 1 step)
   //this function counts the number of actions for a clicked position
@@ -413,22 +414,24 @@ const GamePage = ({
     console.error("unexpected action type", clickType);
   };
 
-  //manage the state change on click. this may have no effect,
+  //manage the state change on click or keyboard press. this may
   //change the ghost action (which is only shown to this client),
   //or make a full move, in which case it is applied to both clients
-  const handleClick = (clickPos) => {
+  const handleSelectedPosition = (pos) => {
     const thisClientToMove = clientIsCreator === creatorToMove(state);
     if (!thisClientToMove) return; //can only move if it's your turn
     if (state.lifeCycleStage < 1) return; //cannot move til player 2 joins
     if (state.lifeCycleStage > 3) return; //cannot move if game finished
     //can only move if looking at current position
     if (state.viewIndex !== turnCount(state)) return;
+    //out of bounds, can happen when using the keyboard
+    if (pos.r < 0 || pos.r >= dims.h || pos.c < 0 || pos.c >= dims.w) return;
 
-    const clickType = cellTypeByPos(clickPos);
+    const clickType = cellTypeByPos(pos);
     //there's a rule that the first move by each player must be a move
     if (state.lifeCycleStage < 3 && clickType === "Wall") return;
 
-    const actCount = clickActionCount(clickPos);
+    const actCount = clickActionCount(pos);
     const gType = ghostType(state.ghostAction);
 
     //variables to store the outcome of the click, if any.
@@ -439,37 +442,36 @@ const GamePage = ({
 
     if (gType === "None") {
       if (clickType === "Wall") {
-        if (actCount === 1) newGhostAction = clickPos;
+        if (actCount === 1) newGhostAction = pos;
         else return;
       } else if (clickType === "Ground") {
-        if (actCount === 1) newGhostAction = clickPos;
-        else if (actCount === 2) fullMoveActions = [clickPos];
+        if (actCount === 1) newGhostAction = pos;
+        else if (actCount === 2) fullMoveActions = [pos];
         else return;
       } else {
         console.error("unexpected action type", clickType);
       }
     } else if (gType === "Wall") {
       if (clickType === "Wall") {
-        if (posEq(state.ghostAction, clickPos)) newGhostAction = null;
-        else if (actCount === 1)
-          fullMoveActions = [clickPos, state.ghostAction];
+        if (posEq(state.ghostAction, pos)) newGhostAction = null;
+        else if (actCount === 1) fullMoveActions = [pos, state.ghostAction];
         else return;
       } else if (clickType === "Ground") {
-        if (actCount === 1) fullMoveActions = [clickPos, state.ghostAction];
+        if (actCount === 1) fullMoveActions = [pos, state.ghostAction];
         else return;
       } else {
         console.error("unexpected action type", clickType);
       }
     } else if (gType === "Ground") {
       if (clickType === "Wall") {
-        if (actCount === 1) fullMoveActions = [clickPos, state.ghostAction];
+        if (actCount === 1) fullMoveActions = [pos, state.ghostAction];
         else return;
       } else if (clickType === "Ground") {
         if (actCount === 0) newGhostAction = null;
         else if (actCount === 1) {
-          if (posEq(clickPos, state.ghostAction)) return;
-          newGhostAction = clickPos;
-        } else if (actCount === 2) fullMoveActions = [clickPos];
+          if (posEq(pos, state.ghostAction)) return;
+          newGhostAction = pos;
+        } else if (actCount === 2) fullMoveActions = [pos];
         else return;
       } else {
         console.error("unexpected action type", clickType);
@@ -498,6 +500,42 @@ const GamePage = ({
         draftState.ghostAction = newGhostAction;
       });
     }
+  };
+
+  const handleClick = (clickedPos) => handleSelectedPosition(clickedPos);
+
+  useEffect(() => {
+    window.addEventListener("keydown", downHandler);
+    window.addEventListener("keyup", upHandler);
+
+    return () => {
+      window.removeEventListener("keydown", downHandler);
+      window.removeEventListener("keyup", upHandler);
+    };
+  });
+
+  const downHandler = ({ key }) => {
+    if (state.isKeyPressed) return;
+    let p;
+    if (state.ghostAction && ghostType(state.ghostAction) === "Ground")
+      p = state.ghostAction;
+    else p = state.playerPos[indexToMove(state)];
+    if (key === "ArrowDown") p = { r: p.r + 2, c: p.c };
+    else if (key === "ArrowUp") p = { r: p.r - 2, c: p.c };
+    else if (key === "ArrowLeft") p = { r: p.r, c: p.c - 2 };
+    else if (key === "ArrowRight") p = { r: p.r, c: p.c + 2 };
+    else return;
+
+    updateState((draftState) => {
+      draftState.isKeyPressed = true;
+    });
+
+    handleSelectedPosition(p);
+  };
+  const upHandler = () => {
+    updateState((draftState) => {
+      draftState.isKeyPressed = false;
+    });
   };
 
   const handleEndSession = () => {
