@@ -16,6 +16,7 @@ import Header from "../shared/Header";
 import StatusHeader from "./StatusHeader";
 import TimerHeader from "./TimerHeader";
 import GameHelp from "./GameHelp";
+import MoveHistory from "./MoveHistory";
 
 //===================================================
 //settings that never change, so they don't need to be inside the component
@@ -39,13 +40,13 @@ const playerColors = ["red", "indigo"];
 //===================================================
 //utility functions that don't require any state
 //===================================================
-const creatorToMove = (turnCount, creatorStarts) =>
-  turnCount % 2 === (creatorStarts ? 0 : 1);
+const turnCount = (state) => state.moveHistory.length - 1;
 
-const indexToMove = (turnCount, creatorStarts) =>
-  creatorToMove(turnCount, creatorStarts) ? creatorIndex : joinerIndex;
+const creatorToMove = (state) =>
+  turnCount(state) % 2 === (state.creatorStarts ? 0 : 1);
 
-const playerToMoveStarted = (turnCount) => turnCount % 2 === 0;
+const indexToMove = (state) =>
+  creatorToMove(state) ? creatorIndex : joinerIndex;
 
 const emptyGrid = (dims) => {
   let grid = [];
@@ -60,8 +61,8 @@ const emptyGrid = (dims) => {
 const ghostType = (pos) => (pos === null ? "None" : cellTypeByPos(pos));
 
 //function that updates the state of the game when a move happens
-//(it's a bit out of context out here but it doesn't need to be inside the component)
-//it applied the move number 'turnCount', consisting of the action(s) in 'actions',
+//(it's a bit out of context out here, but it doesn't need to be inside the component)
+//it applied the move number 'moveIndex', consisting of the action(s) in 'actions',
 //to the state 'draftState'
 //'draftState' is a copy of the actual state in the GamePage component, so it can be mutated
 //(see the definition of 'state' in GamePage)
@@ -69,26 +70,28 @@ const ghostType = (pos) => (pos === null ? "None" : cellTypeByPos(pos));
 const makeMove = (
   draftState,
   actions,
-  turnCount,
+  moveIndex,
   timeLeftAfterMove,
   isVolumeOn
 ) => {
   //only in life cycle stages 1,2,3 players can make move
   if (draftState.lifeCycleStage < 1 || draftState.lifeCycleStage > 3) return;
   //make the move only if it is the next one (safety measure against desync issues)
-  if (draftState.turnCount !== turnCount - 1) return;
+  const tc = turnCount(draftState);
+  if (tc !== moveIndex - 1) return;
 
   if (isVolumeOn) moveSound.play();
 
-  const idxToMove = indexToMove(draftState.turnCount, draftState.creatorStarts);
+  const idxToMove = indexToMove(draftState);
   const otherIdx = idxToMove === creatorIndex ? joinerIndex : creatorIndex;
+  let wallCount = 0;
   for (let k = 0; k < actions.length; k++) {
     const aPos = actions[k];
     const aType = cellTypeByPos(aPos);
     if (aType === "Ground") {
       draftState.playerPos[idxToMove] = aPos;
       if (posEq(aPos, goals[idxToMove])) {
-        const pToMoveStarted = playerToMoveStarted(draftState.turnCount);
+        const pToMoveStarted = tc % 2 === 0;
         const remainingDist = distance(
           draftState.grid,
           draftState.playerPos[otherIdx],
@@ -106,15 +109,33 @@ const makeMove = (
       }
     } else if (aType === "Wall") {
       draftState.grid[aPos.r][aPos.c] = idxToMove + 1;
+      wallCount += 1;
     } else console.error("unexpected action type", aType);
   }
   if (timeLeftAfterMove) draftState.timeLeft[idxToMove] = timeLeftAfterMove;
   draftState.ghostAction = null; //ghost actions are cleared when a move actually happens
-  draftState.turnCount = turnCount;
-  if (draftState.lifeCycleStage === 1 && turnCount === 1)
+  const wallCounts = cloneDeep(draftState.moveHistory[tc].wallCounts);
+  wallCounts[idxToMove] += wallCount;
+  draftState.moveHistory.push({
+    index: tc + 1,
+    actions: actions,
+    grid: draftState.grid,
+    playerPos: draftState.playerPos,
+    timeLeft: draftState.timeLeft,
+    distances: [
+      distance(draftState.grid, draftState.playerPos[0], goals[0]),
+      distance(draftState.grid, draftState.playerPos[1], goals[1]),
+    ],
+    wallCounts: wallCounts,
+  });
+  if (draftState.lifeCycleStage === 1 && tc === 0)
     draftState.lifeCycleStage = 2;
-  else if (draftState.lifeCycleStage === 2 && turnCount === 2)
+  else if (draftState.lifeCycleStage === 2 && tc === 1)
     draftState.lifeCycleStage = 3;
+
+  //if the player is looking at a previous move, when a move happens
+  //they are automatically switched to viewing the new move
+  draftState.viewIndex = tc + 1;
 };
 
 const GamePage = ({
@@ -129,13 +150,12 @@ const GamePage = ({
   const clientIsCreator = creatorParams !== null;
 
   //===================================================
-  //state that changes over time or needs to be initialized from the server
+  //'state' contains every other piece of state
   //===================================================
   const [state, updateState] = useImmer({
     //===================================================
     //state initialized from the props OR the server, depending on creator/joiner
     //===================================================
-
     //game code used by the joiner to join the game
     gameId: clientIsCreator ? null : joinerParams.gameId,
     //duration in minutes and increment in seconds
@@ -149,7 +169,6 @@ const GamePage = ({
     //===================================================
     //state that changes during the game and is common to both clients and synched
     //===================================================
-    turnCount: 0,
     playerPos: initialPlayerPos,
     //grid contains the locations of all the built walls, labeled by who built them
     //0: empty wall, 1: player built by creator, 2: player built by joiner
@@ -160,6 +179,24 @@ const GamePage = ({
     ],
     winner: "", //'' if game is ongoing, else 'creator', 'joiner', or 'draw'
     finishReason: "", //'' if game is ongoing, else 'time', 'goal', or 'resign'
+
+    moveHistory: [
+      {
+        index: 0,
+        actions: [],
+        grid: emptyGrid(dims),
+        playerPos: initialPlayerPos,
+        timeLeft: [
+          clientIsCreator ? creatorParams.timeControl.duration * 60 : null,
+          clientIsCreator ? creatorParams.timeControl.duration * 60 : null,
+        ],
+        distances: [
+          distance(emptyGrid(dims), initialPlayerPos[0], goals[0]),
+          distance(emptyGrid(dims), initialPlayerPos[1], goals[1]),
+        ],
+        wallCounts: [0, 0],
+      },
+    ],
 
     //life cycle of the game
     //-2. Before sending 'createGame'/'joinGame' (for creator/joiner) to the server
@@ -181,6 +218,8 @@ const GamePage = ({
 
     isVolumeOn: false,
     showBackButtonWarning: false,
+    //index of the move that the client is looking at, which may not be the last one
+    viewIndex: 0,
   });
 
   //handle browser back arrow
@@ -254,6 +293,10 @@ const GamePage = ({
           timeControl.duration * 60,
           timeControl.duration * 60,
         ];
+        draftState.moveHistory[0].timeLeft = [
+          timeControl.duration * 60,
+          timeControl.duration * 60,
+        ];
         draftState.lifeCycleStage = 1;
       });
     });
@@ -270,16 +313,33 @@ const GamePage = ({
       updateState((draftState) => {
         draftState.gameId = gameId;
         draftState.creatorStarts = !draftState.creatorStarts;
-        draftState.turnCount = 0;
         draftState.playerPos = initialPlayerPos;
         draftState.grid = emptyGrid(dims);
         draftState.timeLeft = [
           draftState.timeControl.duration * 60,
           draftState.timeControl.duration * 60,
         ];
+        draftState.moveHistory = [
+          {
+            index: 0,
+            actions: [],
+            grid: emptyGrid(dims),
+            playerPos: initialPlayerPos,
+            timeLeft: [
+              draftState.timeControl.duration * 60,
+              draftState.timeControl.duration * 60,
+            ],
+            distances: [
+              distance(emptyGrid(dims), initialPlayerPos[0], goals[0]),
+              distance(emptyGrid(dims), initialPlayerPos[1], goals[1]),
+            ],
+            wallCounts: [0, 0],
+          },
+        ];
         draftState.winner = "";
         draftState.finishReason = "";
         draftState.lifeCycleStage = 1;
+        draftState.viewIndex = 0;
         draftState.ghostAction = null;
       });
     });
@@ -290,13 +350,13 @@ const GamePage = ({
         draftState.finishReason = "resign";
       });
     });
-    socket.on("move", (actions, turnCount, receivedTime) => {
+    socket.on("move", (actions, moveIndex, receivedTime) => {
       updateState((draftState) => {
-        console.log(`move ${turnCount} received ${receivedTime}`);
+        console.log(`move ${moveIndex} received ${receivedTime}`);
         makeMove(
           draftState,
           actions,
-          turnCount,
+          moveIndex,
           receivedTime,
           state.isVolumeOn
         );
@@ -313,7 +373,7 @@ const GamePage = ({
       updateState((draftState) => {
         //clocks only run after each player have made the first move, and the game has not ended
         if (draftState.lifeCycleStage !== 3) return;
-        const idx = indexToMove(draftState.turnCount, draftState.creatorStarts);
+        const idx = indexToMove(draftState);
         draftState.timeLeft[idx] -= 1;
         if (draftState.timeLeft[idx] === 0) {
           draftState.winner = idx === 0 ? "joiner" : "creator";
@@ -330,7 +390,7 @@ const GamePage = ({
   //number of actions (1 action: build 1 wall or move 1 step)
   //this function counts the number of actions for a clicked position
   const clickActionCount = (clickPos) => {
-    const idx = indexToMove(state.turnCount, state.creatorStarts);
+    const idx = indexToMove(state);
     const clickType = cellTypeByPos(clickPos);
     if (clickType === "Ground") {
       return distance(state.grid, state.playerPos[idx], clickPos);
@@ -357,11 +417,12 @@ const GamePage = ({
   //change the ghost action (which is only shown to this client),
   //or make a full move, in which case it is applied to both clients
   const handleClick = (clickPos) => {
-    const thisClientToMove =
-      clientIsCreator === creatorToMove(state.turnCount, state.creatorStarts);
+    const thisClientToMove = clientIsCreator === creatorToMove(state);
     if (!thisClientToMove) return; //can only move if it's your turn
     if (state.lifeCycleStage < 1) return; //cannot move til player 2 joins
     if (state.lifeCycleStage > 3) return; //cannot move if game finished
+    //can only move if looking at current position
+    if (state.viewIndex !== turnCount(state)) return;
 
     const clickType = cellTypeByPos(clickPos);
     //there's a rule that the first move by each player must be a move
@@ -418,7 +479,7 @@ const GamePage = ({
     }
 
     if (fullMoveActions) {
-      const idx = indexToMove(state.turnCount, state.creatorStarts);
+      const idx = indexToMove(state);
       let tLeft = state.timeLeft[idx];
       //we don't add the increment until the clocks start running (stage 3)
       if (state.lifeCycleStage === 3) tLeft += state.timeControl.increment;
@@ -427,7 +488,7 @@ const GamePage = ({
         makeMove(
           draftState,
           fullMoveActions,
-          state.turnCount + 1,
+          turnCount(state) + 1,
           tLeft,
           state.isVolumeOn
         );
@@ -448,8 +509,17 @@ const GamePage = ({
     socket.emit("rematch", state.gameId);
   };
   const handleOfferDraw = () => {};
+  const handleProposeTakeback = () => {};
   const handleResign = () => {
     socket.emit("resign", state.gameId);
+  };
+
+  const handleViewMove = (i) => {
+    updateState((draftState) => {
+      if (draftState.viewIndex === i) return;
+      draftState.viewIndex = i;
+      draftState.ghostAction = null;
+    });
   };
 
   return (
@@ -463,10 +533,10 @@ const GamePage = ({
       <StatusHeader
         lifeCycleStage={state.lifeCycleStage}
         names={state.names}
-        indexToMove={indexToMove(state.turnCount, state.creatorStarts)}
+        indexToMove={indexToMove(state)}
         winner={state.winner}
         finishReason={state.finishReason}
-        turnCount={state.turnCount}
+        turnCount={turnCount(state)}
         timeControl={state.timeControl}
         isVolumeOn={state.isVolumeOn}
         handleToggleVolume={handleToggleVolume}
@@ -474,19 +544,28 @@ const GamePage = ({
       <TimerHeader
         lifeCycleStage={state.lifeCycleStage}
         names={state.names}
-        indexToMove={indexToMove(state.turnCount, state.creatorStarts)}
+        indexToMove={indexToMove(state)}
         playerColors={playerColors}
         timeLeft={state.timeLeft}
       />
 
       <Row className="valign-wrapper">
-        <Col s={3} />
+        <Col s={3}>
+          <MoveHistory
+            moveHistory={state.moveHistory}
+            playerColors={playerColors}
+            creatorStarts={state.creatorStarts}
+            tableHeight={300}
+            handleViewMove={handleViewMove}
+            viewIndex={state.viewIndex}
+          />
+        </Col>
         <Col s={6}>
           <Board
-            creatorToMove={creatorToMove(state.turnCount, state.creatorStarts)}
+            creatorToMove={creatorToMove(state)}
             playerColors={playerColors}
-            grid={state.grid}
-            playerPos={state.playerPos}
+            grid={state.moveHistory[state.viewIndex].grid}
+            playerPos={state.moveHistory[state.viewIndex].playerPos}
             goals={goals}
             ghostAction={state.ghostAction}
             handleClick={handleClick}
@@ -498,9 +577,10 @@ const GamePage = ({
               className="container teal darken-2"
               style={{ padding: "0.2rem" }}
             >
-              <Row className="valign-wrapper" style={{ paddingTop: "1rem" }}>
+              <Row className="valign-wrapper" style={{ paddingTop: "1.2rem" }}>
                 <Col s={12}>
                   <Button
+                    style={{ width: "90%" }}
                     className="red"
                     node="button"
                     waves="light"
@@ -508,6 +588,20 @@ const GamePage = ({
                     onClick={handleOfferDraw}
                   >
                     Offer Draw
+                  </Button>
+                </Col>
+              </Row>
+              <Row className="valign-wrapper">
+                <Col s={12}>
+                  <Button
+                    style={{ width: "90%" }}
+                    className="red"
+                    node="button"
+                    waves="light"
+                    disabled
+                    onClick={handleProposeTakeback}
+                  >
+                    Propose takeback
                   </Button>
                 </Col>
               </Row>
@@ -557,7 +651,12 @@ const GamePage = ({
                       startingTop: "4%",
                     }}
                     trigger={
-                      <Button className="red" node="button" waves="light">
+                      <Button
+                        className="red"
+                        node="button"
+                        waves="light"
+                        style={{ width: "90%" }}
+                      >
                         Resign
                       </Button>
                     }

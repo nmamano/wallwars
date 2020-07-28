@@ -13,8 +13,8 @@ const randPlayerName = () =>
 
 const LobbyPage = ({ socket }) => {
   const [playerName, setPlayerName] = useState(randPlayerName());
-  const [duration, setDuration] = useState(3);
-  const [increment, setIncrement] = useState(2);
+  const [duration, setDuration] = useState(5);
+  const [increment, setIncrement] = useState(5);
   const [joinGameId, setJoinGameId] = useState("");
   const [isOngoingGame, setIsOngoingGame] = useState(false);
   const [creatorParams, setCreatorParams] = useState(null);
@@ -31,13 +31,13 @@ const LobbyPage = ({ socket }) => {
   const handleCreateGame = () => {
     let [dur, inc] = [parseFloat(duration), parseFloat(increment)];
     if (isNaN(dur) || dur < 0.1) {
-      dur = 3;
+      dur = 5 / 60;
       console.log(
         "given duration is not a number, using default value instead"
       );
     }
     if (isNaN(inc) || inc < 0) {
-      inc = 2;
+      inc = 0;
       console.log(
         "given increment is not a number, using default value instead"
       );
