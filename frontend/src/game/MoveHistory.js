@@ -17,10 +17,10 @@ const moveToString = (move) => {
 };
 
 const MoveHistory = ({
+  height,
   moveHistory,
   playerColors,
   creatorStarts,
-  tableHeight,
   handleViewMove,
   viewIndex,
 }) => {
@@ -31,14 +31,26 @@ const MoveHistory = ({
       if (scroll) scroll.scrollIntoView();
     };
   });
+
+  const thStyle = {
+    position: "sticky",
+    top: "0px",
+    paddingTop: "0.15rem",
+    paddingBottom: "0.15rem",
+    borderRadius: "0",
+  };
+  const tdStyle = {
+    paddingTop: "0.15rem",
+    paddingBottom: "0.15rem",
+    borderRadius: "0",    
+  }
   return (
     <div
       className={"center"}
       style={{
         overflowY: "scroll",
         display: "block",
-        height: tableHeight,
-        marginLeft: "3rem",
+        height: height,
       }}
     >
       <Table centered style={{ width: "100%" }}>
@@ -46,25 +58,25 @@ const MoveHistory = ({
           <tr>
             <th
               className={"teal darken-2"}
-              style={{ position: "sticky", top: "0px" }}
+              style={thStyle}
             >
               Move
             </th>
             <th
               className={"teal darken-2"}
-              style={{ position: "sticky", top: "0px" }}
+              style={thStyle}
             >
               Actions
             </th>
             <th
               className={"teal darken-2"}
-              style={{ position: "sticky", top: "0px" }}
+              style={thStyle}
             >
               Distance
             </th>
             <th
               className={"teal darken-2"}
-              style={{ position: "sticky", top: "0px" }}
+              style={thStyle}
             >
               # Walls
             </th>
@@ -95,38 +107,22 @@ const MoveHistory = ({
                 }}
               >
                 <td
-                  style={{
-                    paddingTop: "0.15rem",
-                    paddingBottom: "0.15rem",
-                    borderRadius: "0",
-                  }}
+                  style={tdStyle}
                 >
                   {i}
                 </td>
                 <td
-                  style={{
-                    paddingTop: "0",
-                    paddingBottom: "0",
-                    borderRadius: "0",
-                  }}
+                  style={tdStyle}
                 >
                   {moveToString(move)}
                 </td>
                 <td
-                  style={{
-                    paddingTop: "0",
-                    paddingBottom: "0",
-                    borderRadius: "0",
-                  }}
+                  style={tdStyle}
                 >
                   {move.distances[0] + " - " + move.distances[1]}
                 </td>
                 <td
-                  style={{
-                    paddingTop: "0",
-                    paddingBottom: "0",
-                    borderRadius: "0",
-                  }}
+                  style={tdStyle}
                 >
                   {move.wallCounts[0] + " - " + move.wallCounts[1]}
                 </td>

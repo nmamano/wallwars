@@ -20,14 +20,14 @@ It is inspired by a board game I played once as a kid, of which I don't remember
 
 #### Frontend
 
-- React as framework
-- [Materialize](https://materializecss.com/) for styling (with the [react-materialize](http://react-materialize.github.io/react-materialize/?path=/story/react-materialize--welcome) wrapper)
+- React as the framework.
+- [Materialize](https://materializecss.com/) for styling.
 - [gh-pages module](https://www.npmjs.com/package/gh-pages) to host the client directly from the github repo (it uses the gh-pages branch).
 
 #### Backend
 
-- Node.js and express for the server
-- [Socket.io](https://socket.io/) for real-time two-way communication with the clients
+- Node.js and express for the server.
+- [Socket.io](https://socket.io/) for real-time two-way communication with the clients.
 - Heroku to deploy the backend server with Git integration.
 
 ## License

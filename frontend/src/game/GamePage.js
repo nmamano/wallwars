@@ -16,7 +16,7 @@ import Header from "../shared/Header";
 import StatusHeader from "./StatusHeader";
 import TimerHeader from "./TimerHeader";
 import GameHelp from "./GameHelp";
-import MoveHistory from "./MoveHistory";
+import ControlPanel from "./ControlPanel";
 
 //===================================================
 //settings that never change, so they don't need to be inside the component
@@ -217,10 +217,13 @@ const GamePage = ({
     ghostAction: null,
 
     isVolumeOn: false,
+    isDarkModeOn: false,
     showBackButtonWarning: false,
     isKeyPressed: false,
     //index of the move that the client is looking at, which may not be the last one
     viewIndex: 0,
+    cellSize: 37, //in pixels
+    wallWidth: 12, //in pixels
   });
 
   //handle browser back arrow
@@ -250,6 +253,11 @@ const GamePage = ({
   const handleToggleVolume = () => {
     updateState((draftState) => {
       draftState.isVolumeOn = !draftState.isVolumeOn;
+    });
+  };
+  const handleToggleDarkMode = () => {
+    updateState((draftState) => {
+      draftState.isDarkModeOn = !draftState.isDarkModeOn;
     });
   };
 
@@ -564,14 +572,27 @@ const GamePage = ({
   const handleResign = () => {
     socket.emit("resign", state.gameId);
   };
+  const handleIncreaseOpponentTime = () => {};
 
   const handleViewMove = (i) => {
+    if (i < 0 || i > turnCount(state)) return;
     updateState((draftState) => {
       if (draftState.viewIndex === i) return;
+      if (i > turnCount(draftState)) return;
       draftState.viewIndex = i;
       draftState.ghostAction = null;
     });
   };
+  const handleSeeFirstMove = () => handleViewMove(0);
+  const handleSeePreviousMove = () => handleViewMove(state.viewIndex - 1);
+  const handleSeeNextMove = () => handleViewMove(state.viewIndex + 1);
+  const handleSeeLastMove = () => handleViewMove(turnCount(state));
+
+  const handleIncreaseBoardSize = () => {};
+  const handleDecreaseBoardSize = () => {};
+
+  const boardHeight =
+    (state.wallWidth * (dims.h - 1)) / 2 + (state.cellSize * (dims.h + 1)) / 2;
 
   return (
     <div>
@@ -589,8 +610,6 @@ const GamePage = ({
         finishReason={state.finishReason}
         turnCount={turnCount(state)}
         timeControl={state.timeControl}
-        isVolumeOn={state.isVolumeOn}
-        handleToggleVolume={handleToggleVolume}
       />
       <TimerHeader
         lifeCycleStage={state.lifeCycleStage}
@@ -599,16 +618,30 @@ const GamePage = ({
         playerColors={playerColors}
         timeLeft={state.timeLeft}
       />
-
       <Row className="valign-wrapper">
         <Col s={3}>
-          <MoveHistory
+          <ControlPanel
+            height={boardHeight}
+            lifeCycleStage={state.lifeCycleStage}
+            handleResign={handleResign}
+            handleOfferDraw={handleOfferDraw}
+            handleProposeTakeback={handleProposeTakeback}
+            handleIncreaseOpponentTime={handleIncreaseOpponentTime}
             moveHistory={state.moveHistory}
             playerColors={playerColors}
             creatorStarts={state.creatorStarts}
-            tableHeight={300}
             handleViewMove={handleViewMove}
             viewIndex={state.viewIndex}
+            handleSeeFirstMove={handleSeeFirstMove}
+            handleSeePreviousMove={handleSeePreviousMove}
+            handleSeeNextMove={handleSeeNextMove}
+            handleSeeLastMove={handleSeeLastMove}
+            handleToggleVolume={handleToggleVolume}
+            isVolumeOn={state.isVolumeOn}
+            handleToggleDarkMode={handleToggleDarkMode}
+            isDarkModeOn={state.isDarkModeOn}
+            handleIncreaseBoardSize={handleIncreaseBoardSize}
+            handleDecreaseBoardSize={handleDecreaseBoardSize}
           />
         </Col>
         <Col s={6}>
@@ -620,105 +653,11 @@ const GamePage = ({
             goals={goals}
             ghostAction={state.ghostAction}
             handleClick={handleClick}
+            cellSize={state.cellSize}
+            wallWidth={state.wallWidth}
           />
         </Col>
-        <Col s={3} className="center">
-          {state.lifeCycleStage === 3 && (
-            <div
-              className="container teal darken-2"
-              style={{ padding: "0.2rem" }}
-            >
-              <Row className="valign-wrapper" style={{ paddingTop: "1.2rem" }}>
-                <Col s={12}>
-                  <Button
-                    style={{ width: "90%" }}
-                    className="red"
-                    node="button"
-                    waves="light"
-                    disabled
-                    onClick={handleOfferDraw}
-                  >
-                    Offer Draw
-                  </Button>
-                </Col>
-              </Row>
-              <Row className="valign-wrapper">
-                <Col s={12}>
-                  <Button
-                    style={{ width: "90%" }}
-                    className="red"
-                    node="button"
-                    waves="light"
-                    disabled
-                    onClick={handleProposeTakeback}
-                  >
-                    Propose takeback
-                  </Button>
-                </Col>
-              </Row>
-              <Row className="valign-wrapper">
-                <Col s={12}>
-                  <Modal
-                    style={{ color: "black" }}
-                    actions={[
-                      <Button
-                        style={{
-                          backgroundColor: "#009688",
-                          color: "white",
-                          marginRight: "1rem",
-                        }}
-                        flat
-                        modal="close"
-                        node="button"
-                        waves="green"
-                        onClick={handleResign}
-                      >
-                        Resign
-                      </Button>,
-                      <Button
-                        style={{
-                          backgroundColor: "#009688",
-                          color: "white",
-                        }}
-                        flat
-                        modal="close"
-                        node="button"
-                        waves="green"
-                      >
-                        Close
-                      </Button>,
-                    ]}
-                    bottomSheet={false}
-                    fixedFooter={false}
-                    header="Resign"
-                    open={false}
-                    options={{
-                      dismissible: true,
-                      endingTop: "10%",
-                      inDuration: 250,
-                      opacity: 0.4,
-                      outDuration: 250,
-                      preventScrolling: true,
-                      startingTop: "4%",
-                    }}
-                    trigger={
-                      <Button
-                        className="red"
-                        node="button"
-                        waves="light"
-                        style={{ width: "90%" }}
-                      >
-                        Resign
-                      </Button>
-                    }
-                  >
-                    {<p>Are you sure you want to resign?</p>}
-                  </Modal>
-                </Col>
-              </Row>
-            </div>
-          )}
-        </Col>
+        <Col s={3}></Col>
       </Row>
       {state.lifeCycleStage === 4 && (
         <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>

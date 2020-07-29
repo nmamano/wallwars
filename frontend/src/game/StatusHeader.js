@@ -1,5 +1,5 @@
 import React from "react";
-import { Row, Col, Button, Icon } from "react-materialize";
+import { Row, Col } from "react-materialize";
 
 const StatusHeader = ({
   names,
@@ -9,8 +9,6 @@ const StatusHeader = ({
   turnCount,
   indexToMove,
   timeControl,
-  isVolumeOn,
-  handleToggleVolume,
 }) => {
   let msg;
   const nameToMove = names[indexToMove];
@@ -24,7 +22,7 @@ const StatusHeader = ({
       msg = "Haven't tried to connect to the server yet";
       break;
     case -1:
-      msg = "Waiting for server response";
+      msg = "Waking the server up...";
       break;
     case 0:
       msg = "Waiting for player 2 to join";
@@ -47,7 +45,6 @@ const StatusHeader = ({
       console.error("stage should be in range [-2..4]");
   }
 
-  const [volumeOnIcon, volumeOffIcon] = ["volume_up", "volume_off"];
   return (
     <Row
       className="container valign-wrapper"
@@ -66,18 +63,7 @@ const StatusHeader = ({
       <Col s={1}>
         <h6>{turnCount}</h6>
       </Col>
-      <Col s={1}>
-        <Button
-          className="teal"
-          node="button"
-          onClick={handleToggleVolume}
-          icon={
-            <Icon className="large">
-              {isVolumeOn ? volumeOnIcon : volumeOffIcon}
-            </Icon>
-          }
-        ></Button>
-      </Col>
+      <Col s={1}></Col>
     </Row>
   );
 };
