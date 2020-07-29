@@ -6,9 +6,9 @@ const StatusHeader = ({
   lifeCycleStage,
   winner,
   finishReason,
-  turnCount,
   indexToMove,
   timeControl,
+  creatorStarts,
 }) => {
   let msg;
   const nameToMove = names[indexToMove];
@@ -51,19 +51,22 @@ const StatusHeader = ({
       style={{ marginTop: "10px", marginBottom: "10px" }}
     >
       <Col s={4}>
-        <h6>{msg}</h6>
+        <h6 className="left-align">{msg}</h6>
       </Col>
-      <Col s={6}>
+      <Col s={4}>
         {timeControl && (
-          <h6>
+          <h6 className="center-align">
             Time control: {timeControl.duration}+{timeControl.increment}
           </h6>
         )}
       </Col>
-      <Col s={1}>
-        <h6>{turnCount}</h6>
+      <Col s={4} className="right">
+        {lifeCycleStage > 1 && (
+          <h6 className="right-align">
+            {names[creatorStarts ? 0 : 1] + " started"}
+          </h6>
+        )}
       </Col>
-      <Col s={1}></Col>
     </Row>
   );
 };

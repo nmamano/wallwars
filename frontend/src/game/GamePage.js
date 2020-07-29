@@ -608,8 +608,8 @@ const GamePage = ({
         indexToMove={indexToMove(state)}
         winner={state.winner}
         finishReason={state.finishReason}
-        turnCount={turnCount(state)}
         timeControl={state.timeControl}
+        creatorStarts={state.creatorStarts}
       />
       <TimerHeader
         lifeCycleStage={state.lifeCycleStage}
