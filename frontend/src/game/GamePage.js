@@ -516,21 +516,34 @@ const GamePage = ({
 
   const downHandler = ({ key }) => {
     if (state.isKeyPressed) return;
-    let p;
-    if (state.ghostAction && ghostType(state.ghostAction) === "Ground")
-      p = state.ghostAction;
-    else p = state.playerPos[indexToMove(state)];
-    if (key === "ArrowDown") p = { r: p.r + 2, c: p.c };
-    else if (key === "ArrowUp") p = { r: p.r - 2, c: p.c };
-    else if (key === "ArrowLeft") p = { r: p.r, c: p.c - 2 };
-    else if (key === "ArrowRight") p = { r: p.r, c: p.c + 2 };
-    else return;
-
     updateState((draftState) => {
       draftState.isKeyPressed = true;
     });
 
-    handleSelectedPosition(p);
+    if (state.viewIndex < turnCount(state)) {
+      if (key === "ArrowDown" || key === "ArrowRight") {
+        updateState((draftState) => {
+          draftState.viewIndex += 1;
+        });
+      } else if (key === "ArrowUp" || key === "ArrowLeft") {
+        if (state.viewIndex > 0) {
+          updateState((draftState) => {
+            draftState.viewIndex -= 1;
+          });
+        }
+      }
+    } else {
+      let p;
+      if (state.ghostAction && ghostType(state.ghostAction) === "Ground")
+        p = state.ghostAction;
+      else p = state.playerPos[indexToMove(state)];
+      if (key === "ArrowDown") p = { r: p.r + 2, c: p.c };
+      else if (key === "ArrowUp") p = { r: p.r - 2, c: p.c };
+      else if (key === "ArrowLeft") p = { r: p.r, c: p.c - 2 };
+      else if (key === "ArrowRight") p = { r: p.r, c: p.c + 2 };
+      else return;
+      handleSelectedPosition(p);
+    }
   };
   const upHandler = () => {
     updateState((draftState) => {
