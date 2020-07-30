@@ -4,7 +4,7 @@ const LobbyHelp = () => (
   <div>
     <h6>
       This is the lobby. Here, you can create games that your friends can join,
-      or join a friend's game.
+      or join a friend's game. Click on the code to copy it to the clipboard.
     </h6>
     <h6>
       When you create a game, you can choose the <em>duration</em> (the time

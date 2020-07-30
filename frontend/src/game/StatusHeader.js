@@ -1,5 +1,4 @@
 import React from "react";
-import { Row, Col } from "react-materialize";
 
 const StatusHeader = ({
   names,
@@ -45,29 +44,38 @@ const StatusHeader = ({
       console.error("stage should be in range [-2..4]");
   }
 
+  const roundNum = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
+
   return (
-    <Row
-      className="container valign-wrapper"
-      style={{ marginTop: "10px", marginBottom: "10px" }}
+    <div
+      className={"teal darken-2"}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "auto",
+        gridTemplateRows: "1fr 1fr 1fr",
+        alignItems: "center",
+        padding: "15px",
+        gridArea: "status",
+      }}
     >
-      <Col s={4}>
-        <h6 className="left-align">{msg}</h6>
-      </Col>
-      <Col s={4}>
+      <div>
+        <p>{msg}</p>
+      </div>
+      <div>
         {timeControl && (
-          <h6 className="center-align">
-            Time control: {timeControl.duration}+{timeControl.increment}
-          </h6>
+          <p>
+            Time control: {roundNum(timeControl.duration)}+
+            {roundNum(timeControl.increment)}
+          </p>
         )}
-      </Col>
-      <Col s={4} className="right">
-        {lifeCycleStage > 1 && (
-          <h6 className="right-align">
-            {names[creatorStarts ? 0 : 1] + " started"}
-          </h6>
-        )}
-      </Col>
-    </Row>
+      </div>
+      <div>
+        <p>
+          {"First move:" +
+            (lifeCycleStage > 1 ? ` ${names[creatorStarts ? 0 : 1]}` : "")}
+        </p>
+      </div>
+    </div>
   );
 };
 

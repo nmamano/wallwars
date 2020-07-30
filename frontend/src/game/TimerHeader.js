@@ -1,5 +1,4 @@
 import React from "react";
-import { Row, Col } from "react-materialize";
 
 const TimerHeader = ({
   lifeCycleStage,
@@ -32,7 +31,7 @@ const TimerHeader = ({
 
   const highlightLowTime = ["", ""];
   const lowTime = 15;
-  const lowTimeColor = "orange lighten-2 z-depth-3";
+  const lowTimeColor = "orange lighten-2 z-depth-2";
   if (lifeCycleStage === 3) {
     if (indexToMove === 0) {
       if (timeLeft[0] < lowTime) highlightLowTime[0] = ` ${lowTimeColor}`;
@@ -41,30 +40,42 @@ const TimerHeader = ({
     }
   }
 
+  const pStyle = { padding: "15px", fontSize: "18px" };
+
   return (
-    <Row className="valign-wrapper container">
-      <Col className={"center" + highlightNameToMove[0]} s={2}>
-        <h5>{names[0]}</h5>
-      </Col>
-      <Col
-        className={"center" + highlightLowTime[0]}
-        s={2}
-        style={{ margin: "0rem 1rem" }}
-      >
-        <h5>{timesAsStrings[0]}</h5>
-      </Col>
-      <Col s={4}></Col>
-      <Col
-        className={"center" + highlightLowTime[1]}
-        s={2}
-        style={{ margin: "0rem 1rem" }}
-      >
-        <h5>{timesAsStrings[1]}</h5>
-      </Col>
-      <Col className={"center" + highlightNameToMove[1]} s={2}>
-        <h5>{names[1] === null ? "______" : names[1]}</h5>
-      </Col>
-    </Row>
+    <div
+      className={"teal darken-2"}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1.7fr 1fr 1fr 1.7fr",
+        gridTemplateRows: "auto",
+        alignContent: "center",
+        columnGap: "15px",
+        padding: "15px",
+        gridArea: "timer",
+      }}
+    >
+      <div className="truncate">
+        <p style={pStyle} className={highlightNameToMove[0] + " center"}>
+          {names[0]}
+        </p>
+      </div>
+      <div>
+        <p style={pStyle} className={highlightLowTime[0] + " center"}>
+          {timesAsStrings[0]}
+        </p>
+      </div>
+      <div>
+        <p style={pStyle} className={highlightLowTime[1] + " center"}>
+          {timesAsStrings[1]}
+        </p>
+      </div>
+      <div className="truncate">
+        <p style={pStyle} className={highlightNameToMove[1] + " center"}>
+          {names[1] === null ? "______" : names[1]}
+        </p>
+      </div>
+    </div>
   );
 };
 

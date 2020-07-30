@@ -17,3 +17,7 @@ select,
 textarea {
   color: white;
 }
+
+p {
+  margin: 0;
+}

@@ -5,7 +5,7 @@ import { CopyToClipboard } from "react-copy-to-clipboard";
 import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-function Header({ gameName, showLobby, endGame, helpText }) {
+function Header({ gameName, showLobby, endGame, helpText, isLargeScreen }) {
   let brand;
   if (!gameName) {
     brand = (
@@ -14,7 +14,7 @@ function Header({ gameName, showLobby, endGame, helpText }) {
   } else {
     brand = (
       <span style={{ marginLeft: "1rem", marginRight: "1rem" }}>
-        <span>WallWars&nbsp;&nbsp;</span>
+        {isLargeScreen && <span>WallWars&nbsp;&nbsp;</span>}
         <CopyToClipboard
           style={{ cursor: "pointer" }}
           text={gameName}

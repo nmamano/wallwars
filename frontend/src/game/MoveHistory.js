@@ -17,7 +17,6 @@ const moveToString = (move) => {
 };
 
 const MoveHistory = ({
-  height,
   moveHistory,
   playerColors,
   creatorStarts,
@@ -42,42 +41,30 @@ const MoveHistory = ({
   const tdStyle = {
     paddingTop: "0.15rem",
     paddingBottom: "0.15rem",
-    borderRadius: "0",    
-  }
+    borderRadius: "0",
+  };
   return (
     <div
       className={"center"}
       style={{
         overflowY: "scroll",
         display: "block",
-        height: height,
+        height: "100%",
       }}
     >
       <Table centered style={{ width: "100%" }}>
         <thead>
           <tr>
-            <th
-              className={"teal darken-2"}
-              style={thStyle}
-            >
+            <th className={"teal darken-2"} style={thStyle}>
               Move
             </th>
-            <th
-              className={"teal darken-2"}
-              style={thStyle}
-            >
+            <th className={"teal darken-2"} style={thStyle}>
               Actions
             </th>
-            <th
-              className={"teal darken-2"}
-              style={thStyle}
-            >
+            <th className={"teal darken-2"} style={thStyle}>
               Distance
             </th>
-            <th
-              className={"teal darken-2"}
-              style={thStyle}
-            >
+            <th className={"teal darken-2"} style={thStyle}>
               # Walls
             </th>
           </tr>
@@ -106,24 +93,12 @@ const MoveHistory = ({
                   if (isLast) setScroll(e);
                 }}
               >
-                <td
-                  style={tdStyle}
-                >
-                  {i}
-                </td>
-                <td
-                  style={tdStyle}
-                >
-                  {moveToString(move)}
-                </td>
-                <td
-                  style={tdStyle}
-                >
+                <td style={tdStyle}>{i}</td>
+                <td style={tdStyle}>{moveToString(move)}</td>
+                <td style={tdStyle}>
                   {move.distances[0] + " - " + move.distances[1]}
                 </td>
-                <td
-                  style={tdStyle}
-                >
+                <td style={tdStyle}>
                   {move.wallCounts[0] + " - " + move.wallCounts[1]}
                 </td>
               </tr>

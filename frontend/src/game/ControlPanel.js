@@ -3,7 +3,6 @@ import MoveHistory from "./MoveHistory";
 import ControlPanelButton from "./ControlPanelButton";
 
 const GameControlPanel = ({
-  height,
   lifeCycleStage,
   handleResign,
   handleOfferDraw,
@@ -24,26 +23,25 @@ const GameControlPanel = ({
   isDarkModeOn,
   handleIncreaseBoardSize,
   handleDecreaseBoardSize,
+  zoomLevel,
 }) => {
   const padding = 5;
   const gapHeight = 5;
   const buttonHeight = 36;
-  const moveHistoryHeight =
-    height - buttonHeight * 3 - gapHeight * 3 - padding * 2;
   const disableUnimplemented = true;
   return (
     <div
       className="teal darken-2"
       style={{
         width: "100%",
-        height: height,
+        height: "100%",
         display: "grid",
         padding: `${padding}px`,
-        marginLeft: "2.2rem",
         gridTemplateColumns: "repeat(4, 1fr)",
-        gridTemplateRows: `${buttonHeight}px ${moveHistoryHeight}px ${buttonHeight}px ${buttonHeight}px`,
+        gridTemplateRows: `${buttonHeight}px 1fr ${buttonHeight}px ${buttonHeight}px`,
         columnGap: `${gapHeight}px`,
         rowGap: `${gapHeight}px`,
+        gridArea: "panel",
       }}
     >
       <ControlPanelButton
@@ -76,7 +74,6 @@ const GameControlPanel = ({
       />
       <div style={{ gridColumnStart: "1", gridColumnEnd: "5" }}>
         <MoveHistory
-          height={moveHistoryHeight}
           moveHistory={moveHistory}
           playerColors={playerColors}
           creatorStarts={creatorStarts}
@@ -118,16 +115,16 @@ const GameControlPanel = ({
         disabled={disableUnimplemented}
       />
       <ControlPanelButton
-        icon={"zoom_in"}
-        tooltip={"Increase board size"}
-        onClick={handleIncreaseBoardSize}
-        disabled={disableUnimplemented}
-      />
-      <ControlPanelButton
         icon={"zoom_out"}
         tooltip={"Decrease board size"}
         onClick={handleDecreaseBoardSize}
-        disabled={disableUnimplemented}
+        disabled={zoomLevel === 0}
+      />
+      <ControlPanelButton
+        icon={"zoom_in"}
+        tooltip={"Increase board size"}
+        onClick={handleIncreaseBoardSize}
+        disabled={zoomLevel === 10}
       />
     </div>
   );

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Icon } from "react-materialize";
 
 import { cellTypeByPos, posEq } from "../gameLogic/mainLogic";
 
@@ -23,7 +22,7 @@ const Board = ({
   goals: [g1, g2],
   handleClick,
   creatorToMove,
-  cellSize,
+  groundSize,
   wallWidth,
 }) => {
   const dims = { h: grid.length, w: grid[0].length };
@@ -43,13 +42,15 @@ const Board = ({
     setHoveredCell(null);
   };
 
+  const iconSize = 0.8 * groundSize;
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: `repeat(${repCols}, ${cellSize}px ${wallWidth}px) ${cellSize}px`,
-        gridTemplateRows: `repeat(${repRows}, ${cellSize}px ${wallWidth}px) ${cellSize}px`,
+        gridTemplateColumns: `repeat(${repCols}, ${groundSize}px ${wallWidth}px) ${groundSize}px`,
+        gridTemplateRows: `repeat(${repRows}, ${groundSize}px ${wallWidth}px) ${groundSize}px`,
         justifyContent: "center",
+        gridArea: "board",
       }}
     >
       {allPos.map((pos) => {
@@ -121,23 +122,53 @@ const Board = ({
                 pos.c === dims.w - 1 ? displayParams.borderStyle : "",
             }}
           >
-            {p1Here && <Icon className={`${color1}-text small`}>{icon1}</Icon>}
-            {p2Here && <Icon className={`${color2}-text small`}>{icon2}</Icon>}
+            {p1Here && (
+              <i
+                className={`material-icons ${color1}-text`}
+                style={{ fontSize: `${iconSize}px` }}
+              >
+                {icon1}
+              </i>
+            )}
+            {p2Here && (
+              <i
+                className={`material-icons ${color2}-text`}
+                style={{ fontSize: `${iconSize}px` }}
+              >
+                {icon2}
+              </i>
+            )}
             {goal1Here && !anyIconHere && (
-              <Icon className="white-text small">{icon1}</Icon>
+              <i
+                className={`material-icons white-text`}
+                style={{ fontSize: `${iconSize}px` }}
+              >
+                {icon1}
+              </i>
             )}
             {goal2Here && !anyIconHere && (
-              <Icon className="white-text small">{icon2}</Icon>
+              <i
+                className={`material-icons white-text`}
+                style={{ fontSize: `${iconSize}px` }}
+              >
+                {icon2}
+              </i>
             )}
             {p1GhostHere && cellType === "Ground" && (
-              <Icon className={`${color1}-text small text-lighten-4`}>
+              <i
+                className={`material-icons ${color1}-text text-lighten-4`}
+                style={{ fontSize: `${iconSize}px` }}
+              >
                 {icon1}
-              </Icon>
+              </i>
             )}
             {p2GhostHere && cellType === "Ground" && (
-              <Icon className={`${color2}-text small text-lighten-4`}>
+              <i
+                className={`material-icons ${color2}-text text-lighten-4`}
+                style={{ fontSize: `${iconSize}px` }}
+              >
                 {icon2}
-              </Icon>
+              </i>
             )}
           </div>
         );

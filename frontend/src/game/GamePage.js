@@ -4,6 +4,7 @@ import cloneDeep from "lodash.clonedeep";
 import { useImmer } from "use-immer";
 import UIfx from "uifx";
 import moveSoundAudio from "./../static/moveSound.mp3";
+import { useMediaQuery } from "react-responsive";
 
 import {
   cellTypeByPos,
@@ -36,6 +37,8 @@ const [creatorIndex, joinerIndex] = [0, 1];
 const initialPlayerPos = [corners.tl, corners.tr];
 const goals = [corners.br, corners.bl];
 const playerColors = ["red", "indigo"];
+const groundSize = 37; //in pixels
+const wallWidth = 12; //in pixels
 
 //===================================================
 //utility functions that don't require any state
@@ -222,8 +225,7 @@ const GamePage = ({
     isKeyPressed: false,
     //index of the move that the client is looking at, which may not be the last one
     viewIndex: 0,
-    cellSize: 37, //in pixels
-    wallWidth: 12, //in pixels
+    zoomLevel: 5, //number from 0 to 10
   });
 
   //handle browser back arrow
@@ -588,11 +590,43 @@ const GamePage = ({
   const handleSeeNextMove = () => handleViewMove(state.viewIndex + 1);
   const handleSeeLastMove = () => handleViewMove(turnCount(state));
 
-  const handleIncreaseBoardSize = () => {};
-  const handleDecreaseBoardSize = () => {};
+  const handleIncreaseBoardSize = () => {
+    updateState((draftState) => {
+      if (draftState.zoomLevel < 10) draftState.zoomLevel += 1;
+    });
+  };
+  const handleDecreaseBoardSize = () => {
+    updateState((draftState) => {
+      if (draftState.zoomLevel > 0) draftState.zoomLevel -= 1;
+    });
+  };
 
+  const scalingFactor = Math.pow(1.1, state.zoomLevel - 5);
+  const scaledGroundSize = groundSize * scalingFactor;
+  const scaledWallWidth = wallWidth * scalingFactor;
   const boardHeight =
-    (state.wallWidth * (dims.h - 1)) / 2 + (state.cellSize * (dims.h + 1)) / 2;
+    (scaledWallWidth * (dims.h - 1)) / 2 +
+    (scaledGroundSize * (dims.h + 1)) / 2;
+  const boardWidth =
+    (scaledWallWidth * (dims.w - 1)) / 2 +
+    (scaledGroundSize * (dims.w + 1)) / 2;
+  const gapSize = 15;
+
+  let isLargeScreen = useMediaQuery({
+    query: "(min-width: 990px)",
+  });
+  console.log(isLargeScreen);
+
+  let gridTemplateRows, gridTemplateColumns, gridTemplateAreas;
+  if (isLargeScreen) {
+    gridTemplateRows = `100px ${boardHeight}px`;
+    gridTemplateColumns = `${boardWidth}px 360px`;
+    gridTemplateAreas = "'timer status' 'board panel'";
+  } else {
+    gridTemplateRows = `repeat(2, 100px ${boardHeight}px)`;
+    gridTemplateColumns = `${boardWidth}px`;
+    gridTemplateAreas = "'timer' 'board' 'status' 'panel'";
+  }
 
   return (
     <div>
@@ -601,68 +635,75 @@ const GamePage = ({
         showLobby
         endGame={handleEndSession}
         helpText={GameHelp()}
+        isLargeScreen={isLargeScreen}
       />
-      <StatusHeader
-        lifeCycleStage={state.lifeCycleStage}
-        names={state.names}
-        indexToMove={indexToMove(state)}
-        winner={state.winner}
-        finishReason={state.finishReason}
-        timeControl={state.timeControl}
-        creatorStarts={state.creatorStarts}
-      />
-      <TimerHeader
-        lifeCycleStage={state.lifeCycleStage}
-        names={state.names}
-        indexToMove={indexToMove(state)}
-        playerColors={playerColors}
-        timeLeft={state.timeLeft}
-      />
-      <Row className="valign-wrapper">
-        <Col s={3}>
-          <ControlPanel
-            height={boardHeight}
-            lifeCycleStage={state.lifeCycleStage}
-            handleResign={handleResign}
-            handleOfferDraw={handleOfferDraw}
-            handleProposeTakeback={handleProposeTakeback}
-            handleIncreaseOpponentTime={handleIncreaseOpponentTime}
-            moveHistory={state.moveHistory}
-            playerColors={playerColors}
-            creatorStarts={state.creatorStarts}
-            handleViewMove={handleViewMove}
-            viewIndex={state.viewIndex}
-            handleSeeFirstMove={handleSeeFirstMove}
-            handleSeePreviousMove={handleSeePreviousMove}
-            handleSeeNextMove={handleSeeNextMove}
-            handleSeeLastMove={handleSeeLastMove}
-            handleToggleVolume={handleToggleVolume}
-            isVolumeOn={state.isVolumeOn}
-            handleToggleDarkMode={handleToggleDarkMode}
-            isDarkModeOn={state.isDarkModeOn}
-            handleIncreaseBoardSize={handleIncreaseBoardSize}
-            handleDecreaseBoardSize={handleDecreaseBoardSize}
-          />
-        </Col>
-        <Col s={6}>
-          <Board
-            creatorToMove={creatorToMove(state)}
-            playerColors={playerColors}
-            grid={state.moveHistory[state.viewIndex].grid}
-            playerPos={state.moveHistory[state.viewIndex].playerPos}
-            goals={goals}
-            ghostAction={state.ghostAction}
-            handleClick={handleClick}
-            cellSize={state.cellSize}
-            wallWidth={state.wallWidth}
-          />
-        </Col>
-        <Col s={3}></Col>
-      </Row>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateRows: gridTemplateRows,
+          gridTemplateColumns: gridTemplateColumns,
+          gridTemplateAreas: gridTemplateAreas,
+          columnGap: `${gapSize}px`,
+          rowGap: `${gapSize}px`,
+          margin: `${gapSize}px`,
+          justifyContent: "center",
+          alignContent: "center",
+        }}
+      >
+        <TimerHeader
+          lifeCycleStage={state.lifeCycleStage}
+          names={state.names}
+          indexToMove={indexToMove(state)}
+          playerColors={playerColors}
+          timeLeft={state.timeLeft}
+        />
+        <StatusHeader
+          lifeCycleStage={state.lifeCycleStage}
+          names={state.names}
+          indexToMove={indexToMove(state)}
+          winner={state.winner}
+          finishReason={state.finishReason}
+          timeControl={state.timeControl}
+          creatorStarts={state.creatorStarts}
+        />
+        <Board
+          creatorToMove={creatorToMove(state)}
+          playerColors={playerColors}
+          grid={state.moveHistory[state.viewIndex].grid}
+          playerPos={state.moveHistory[state.viewIndex].playerPos}
+          goals={goals}
+          ghostAction={state.ghostAction}
+          handleClick={handleClick}
+          groundSize={scaledGroundSize}
+          wallWidth={scaledWallWidth}
+        />
+        <ControlPanel
+          lifeCycleStage={state.lifeCycleStage}
+          handleResign={handleResign}
+          handleOfferDraw={handleOfferDraw}
+          handleProposeTakeback={handleProposeTakeback}
+          handleIncreaseOpponentTime={handleIncreaseOpponentTime}
+          moveHistory={state.moveHistory}
+          playerColors={playerColors}
+          creatorStarts={state.creatorStarts}
+          handleViewMove={handleViewMove}
+          viewIndex={state.viewIndex}
+          handleSeeFirstMove={handleSeeFirstMove}
+          handleSeePreviousMove={handleSeePreviousMove}
+          handleSeeNextMove={handleSeeNextMove}
+          handleSeeLastMove={handleSeeLastMove}
+          handleToggleVolume={handleToggleVolume}
+          isVolumeOn={state.isVolumeOn}
+          handleToggleDarkMode={handleToggleDarkMode}
+          isDarkModeOn={state.isDarkModeOn}
+          handleIncreaseBoardSize={handleIncreaseBoardSize}
+          handleDecreaseBoardSize={handleDecreaseBoardSize}
+          zoomLevel={state.zoomLevel}
+        />
+      </div>
       {state.lifeCycleStage === 4 && (
         <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
-          <Col s={4} />
-          <Col className="center" s={4}>
+          <Col className="center" s={12}>
             <Button
               large
               className="red"
@@ -673,7 +714,6 @@ const GamePage = ({
               Rematch
             </Button>
           </Col>
-          <Col s={4} />
         </Row>
       )}
       <Modal
