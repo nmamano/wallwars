@@ -24,17 +24,20 @@ const GameControlPanel = ({
   handleIncreaseBoardSize,
   handleDecreaseBoardSize,
   zoomLevel,
+  boardHeight,
 }) => {
   const padding = 5;
   const gapHeight = 5;
   const buttonHeight = 36;
   const disableUnimplemented = true;
+  const moveHistoryHeight =
+    boardHeight - buttonHeight * 3 - gapHeight * 3 - padding * 2;
   return (
     <div
       className="teal darken-2"
       style={{
         width: "100%",
-        height: "100%",
+        height: "auto",
         display: "grid",
         padding: `${padding}px`,
         gridTemplateColumns: "repeat(4, 1fr)",
@@ -79,6 +82,7 @@ const GameControlPanel = ({
           creatorStarts={creatorStarts}
           handleViewMove={handleViewMove}
           viewIndex={viewIndex}
+          height={moveHistoryHeight}
         />
       </div>
       <ControlPanelButton
@@ -112,7 +116,6 @@ const GameControlPanel = ({
         icon={isDarkModeOn ? "brightness_2" : "brightness_4"}
         tooltip={isDarkModeOn ? "Turn off dark mode" : "Turn on dark mode"}
         onClick={handleToggleDarkMode}
-        disabled={disableUnimplemented}
       />
       <ControlPanelButton
         icon={"zoom_out"}

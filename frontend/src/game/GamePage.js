@@ -257,9 +257,17 @@ const GamePage = ({
       draftState.isVolumeOn = !draftState.isVolumeOn;
     });
   };
+  const backgroundColors = {
+    dark: "#004d40",
+    light: "#009688",
+  };
   const handleToggleDarkMode = () => {
     updateState((draftState) => {
       draftState.isDarkModeOn = !draftState.isDarkModeOn;
+      //temporary hack -- not a proper way to change the bg color
+      if (draftState.isDarkModeOn)
+        document.body.style.backgroundColor = backgroundColors.dark;
+      else document.body.style.backgroundColor = backgroundColors.light;
     });
   };
 
@@ -359,6 +367,7 @@ const GamePage = ({
         draftState.lifeCycleStage = 4;
         draftState.winner = resignerIsCreator ? "joiner" : "creator";
         draftState.finishReason = "resign";
+        draftState.ghostAction = null;
       });
     });
     socket.on("move", (actions, moveIndex, receivedTime) => {
@@ -601,9 +610,16 @@ const GamePage = ({
     });
   };
 
+  let isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
+  let [gSize, wWidth] = [groundSize, wallWidth];
+  if (!isLargeScreen) {
+    //make it easier to click on walls
+    gSize -= 3;
+    wWidth += 3;
+  }
   const scalingFactor = Math.pow(1.1, state.zoomLevel - 5);
-  const scaledGroundSize = groundSize * scalingFactor;
-  const scaledWallWidth = wallWidth * scalingFactor;
+  const scaledGroundSize = gSize * scalingFactor;
+  const scaledWallWidth = wWidth * scalingFactor;
   const boardHeight =
     (scaledWallWidth * (dims.h - 1)) / 2 +
     (scaledGroundSize * (dims.h + 1)) / 2;
@@ -611,11 +627,6 @@ const GamePage = ({
     (scaledWallWidth * (dims.w - 1)) / 2 +
     (scaledGroundSize * (dims.w + 1)) / 2;
   const gapSize = 15;
-
-  let isLargeScreen = useMediaQuery({
-    query: "(min-width: 990px)",
-  });
-  console.log(isLargeScreen);
 
   let gridTemplateRows, gridTemplateColumns, gridTemplateAreas;
   if (isLargeScreen) {
@@ -629,13 +640,14 @@ const GamePage = ({
   }
 
   return (
-    <div>
+    <div className={state.isDarkModeOn ? "teal darken-4" : undefined}>
       <Header
         gameName={state.gameId}
         showLobby
         endGame={handleEndSession}
         helpText={GameHelp()}
         isLargeScreen={isLargeScreen}
+        isDarkModeOn={state.isDarkModeOn}
       />
       <div
         style={{
@@ -676,6 +688,7 @@ const GamePage = ({
           handleClick={handleClick}
           groundSize={scaledGroundSize}
           wallWidth={scaledWallWidth}
+          isDarkModeOn={state.isDarkModeOn}
         />
         <ControlPanel
           lifeCycleStage={state.lifeCycleStage}
@@ -699,6 +712,7 @@ const GamePage = ({
           handleIncreaseBoardSize={handleIncreaseBoardSize}
           handleDecreaseBoardSize={handleDecreaseBoardSize}
           zoomLevel={state.zoomLevel}
+          boardHeight={boardHeight}
         />
       </div>
       {state.lifeCycleStage === 4 && (

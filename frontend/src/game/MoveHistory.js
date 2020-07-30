@@ -22,6 +22,7 @@ const MoveHistory = ({
   creatorStarts,
   handleViewMove,
   viewIndex,
+  height,
 }) => {
   const [scroll, setScroll] = useState(null);
 
@@ -49,7 +50,7 @@ const MoveHistory = ({
       style={{
         overflowY: "scroll",
         display: "block",
-        height: "100%",
+        height: height,
       }}
     >
       <Table centered style={{ width: "100%" }}>

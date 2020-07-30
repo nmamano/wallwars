@@ -1,16 +1,17 @@
 import React, { useState } from "react";
+import invert from "invert-color";
 
 import { cellTypeByPos, posEq } from "../gameLogic/mainLogic";
 
 //cosmetic parameters of the board
 const displayParams = {
-  groundColor: "#ffffff",
+  groundColor: "#d2d2d2",
   groundHoverColor: "#fbe4D6",
   emptyWallColor: "#eaeaea",
   emptyWallHoverColor: "#f1bfa0",
   pillarColor: "#cccccc",
   playerIcons: ["face", "outlet"],
-  borderStyle: "1px solid black",
+  borderStyle: "1px solid #00796d",
 };
 
 //stateless component to display the board. all the state is at GamePage
@@ -24,6 +25,7 @@ const Board = ({
   creatorToMove,
   groundSize,
   wallWidth,
+  isDarkModeOn,
 }) => {
   const dims = { h: grid.length, w: grid[0].length };
   const allPos = [];
@@ -41,7 +43,6 @@ const Board = ({
   const handleMouseLeave = () => {
     setHoveredCell(null);
   };
-
   const iconSize = 0.8 * groundSize;
   return (
     <div
@@ -74,6 +75,7 @@ const Board = ({
             color = displayParams.emptyWallHoverColor;
           else color = displayParams.emptyWallColor;
         } else color = displayParams.pillarColor;
+        if (isDarkModeOn) color = invert(color);
 
         let className = "";
         //add waves cosmetic effect when clicking a cell
@@ -83,18 +85,20 @@ const Board = ({
         const anyIconHere = p1Here || p2Here || p1GhostHere || p2GhostHere;
 
         //special coloring for Ground cells containing the goals goals
-        if (goal1Here) className = color1 + " lighten-4";
-        if (goal2Here) className = color2 + " lighten-4";
+        if (goal1Here || goal2Here) {
+          className = goal1Here ? color1 : color2;
+          className += isDarkModeOn ? " darken-4" : " lighten-4";
+        }
         //wall coloring for built walls (depending on builder)
         if (cellType === "Wall") {
           const solidWallHere = grid[pos.r][pos.c] !== 0;
           if (solidWallHere || ghostHere) {
             if (solidWallHere) {
               className = grid[pos.r][pos.c] === 1 ? color1 : color2;
-              className += " darken-3";
+              className += isDarkModeOn ? "" : " darken-3";
             } else {
               className = creatorToMove ? color1 : color2;
-              className += " lighten-3";
+              className += isDarkModeOn ? " lighten-2" : " lighten-3";
             }
           }
         }

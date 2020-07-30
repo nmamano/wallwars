@@ -5,15 +5,20 @@ import { CopyToClipboard } from "react-copy-to-clipboard";
 import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-function Header({ gameName, showLobby, endGame, helpText, isLargeScreen }) {
+function Header({
+  gameName,
+  showLobby,
+  endGame,
+  helpText,
+  isLargeScreen,
+  isDarkModeOn,
+}) {
   let brand;
   if (!gameName) {
-    brand = (
-      <span style={{ marginLeft: "1rem", marginRight: "1rem" }}>WallWars</span>
-    );
+    brand = <span>WallWars</span>;
   } else {
     brand = (
-      <span style={{ marginLeft: "1rem", marginRight: "1rem" }}>
+      <span>
         {isLargeScreen && <span>WallWars&nbsp;&nbsp;</span>}
         <CopyToClipboard
           style={{ cursor: "pointer" }}
@@ -58,8 +63,10 @@ function Header({ gameName, showLobby, endGame, helpText, isLargeScreen }) {
     <div>
       <ToastContainer />
       <Navbar
+        className={isDarkModeOn ? "red darken-4" : undefined}
         alignLinks="right"
         brand={brand}
+        centerLogo
         menuIcon={<Icon>menu</Icon>}
         options={{
           draggable: true,
