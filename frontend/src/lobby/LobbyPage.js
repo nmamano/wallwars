@@ -5,11 +5,14 @@ import GamePage from "../game/GamePage";
 import Header from "../shared/Header";
 import LobbyForm from "./LobbyForm";
 import LobbyHelp from "./LobbyHelp";
+
+const maxPlayerNameLen = 9;
+
 const randPlayerName = () =>
   uniqueNamesGenerator({
     dictionaries: [names],
     length: 1,
-  }).slice(0, 6);
+  }).slice(0, maxPlayerNameLen);
 
 const LobbyPage = ({ socket }) => {
   const [playerName, setPlayerName] = useState(randPlayerName());
@@ -21,8 +24,11 @@ const LobbyPage = ({ socket }) => {
   const [joinerParams, setJoinerParams] = useState(null);
 
   const handlePlayerName = (props) => {
-    const maxNameLen = 8;
-    setPlayerName(props.target.value.slice(0, maxNameLen));
+    setPlayerName(props.target.value.slice(0, maxPlayerNameLen));
+  };
+
+  const handleRefreshName = () => {
+    setPlayerName(randPlayerName());
   };
   const handleDuration = (props) => setDuration(props.target.value);
   const handleIncrement = (props) => setIncrement(props.target.value);
@@ -90,6 +96,7 @@ const LobbyPage = ({ socket }) => {
             handleJoinGameId={handleJoinGameId}
             handleCreateGame={handleCreateGame}
             handleJoinGame={handleJoinGame}
+            handleRefreshName={handleRefreshName}
           />
         </div>
       )}

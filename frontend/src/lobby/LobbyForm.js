@@ -1,5 +1,5 @@
 import React from "react";
-import { Row, Col, TextInput, Button } from "react-materialize";
+import { Row, Col, TextInput, Button, Icon } from "react-materialize";
 
 const LobbyForm = ({
   playerName,
@@ -12,6 +12,7 @@ const LobbyForm = ({
   handleJoinGameId,
   handleCreateGame,
   handleJoinGame,
+  handleRefreshName,
 }) => {
   return (
     <div className="container teal darken-2" style={{ marginTop: "2rem" }}>
@@ -26,7 +27,20 @@ const LobbyForm = ({
             onChange={handlePlayerName}
           />
         </Col>
-        <Col s={6}></Col>
+        <Col s={1}>
+          <Button
+            className="teal lighten-2"
+            node="button"
+            waves="light"
+            small
+            floating
+            style={{ color: "white" }}
+            icon={<Icon>refresh</Icon>}
+            onClick={handleRefreshName}
+            tooltip={"Get a new name"}
+          />
+        </Col>
+        <Col s={5}></Col>
       </Row>
       <Row className="valign-wrapper">
         <Col className="center" s={3}>

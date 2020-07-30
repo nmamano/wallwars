@@ -23,20 +23,19 @@ const TimerHeader = ({
   const highlightNameToMove = ["", ""];
   if (lifeCycleStage < 4) {
     //only if the game has not ended yet
-    const turnHighlight = "lighten-1 z-depth-2";
-    highlightNameToMove[
-      indexToMove
-    ] = ` ${playerColors[indexToMove]} ${turnHighlight}`;
+    const turnHighlight = " lighten-1 z-depth-2";
+    highlightNameToMove[indexToMove] =
+      playerColors[indexToMove] + turnHighlight;
   }
 
   const highlightLowTime = ["", ""];
   const lowTime = 15;
-  const lowTimeColor = "orange lighten-2 z-depth-2";
+  const lowTimeColor = " orange lighten-2 z-depth-2";
   if (lifeCycleStage === 3) {
     if (indexToMove === 0) {
-      if (timeLeft[0] < lowTime) highlightLowTime[0] = ` ${lowTimeColor}`;
+      if (timeLeft[0] < lowTime) highlightLowTime[0] = lowTimeColor;
     } else if (indexToMove === 1) {
-      if (timeLeft[1] < lowTime) highlightLowTime[1] = ` ${lowTimeColor}`;
+      if (timeLeft[1] < lowTime) highlightLowTime[1] = lowTimeColor;
     }
   }
 
@@ -55,25 +54,23 @@ const TimerHeader = ({
         gridArea: "timer",
       }}
     >
-      <div className="truncate">
-        <p style={pStyle} className={highlightNameToMove[0] + " center"}>
-          {names[0]}
-        </p>
+      <div
+        style={pStyle}
+        className={highlightNameToMove[0] + " center truncate"}
+      >
+        {names[0]}
       </div>
-      <div>
-        <p style={pStyle} className={highlightLowTime[0] + " center"}>
-          {timesAsStrings[0]}
-        </p>
+      <div style={pStyle} className={highlightLowTime[0] + " center"}>
+        {timesAsStrings[0]}
       </div>
-      <div>
-        <p style={pStyle} className={highlightLowTime[1] + " center"}>
-          {timesAsStrings[1]}
-        </p>
+      <div style={pStyle} className={highlightLowTime[1] + " center"}>
+        {timesAsStrings[1]}
       </div>
-      <div className="truncate">
-        <p style={pStyle} className={highlightNameToMove[1] + " center"}>
-          {names[1] === null ? "______" : names[1]}
-        </p>
+      <div
+        style={pStyle}
+        className={highlightNameToMove[1] + " center truncate"}
+      >
+        {names[1] === null ? "______" : names[1]}
       </div>
     </div>
   );
