@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Row, Col, TextInput, Button, Icon } from "react-materialize";
 
 const LobbyForm = ({
@@ -14,6 +14,20 @@ const LobbyForm = ({
   handleJoinGame,
   handleRefreshName,
 }) => {
+  useEffect(() => {
+    window.addEventListener("keydown", downHandler);
+
+    return () => {
+      window.removeEventListener("keydown", downHandler);
+    };
+  });
+
+  const downHandler = ({ key }) => {
+    if (key !== "Enter") return;
+    if (joinGameId.length > 0) handleJoinGame();
+    else handleCreateGame();
+  };
+
   return (
     <div className="container teal darken-2" style={{ marginTop: "2rem" }}>
       <Row className="valign-wrapper">
