@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Table } from "react-materialize";
 
 import { cellTypeByPos } from "../gameLogic/mainLogic";
@@ -24,14 +24,6 @@ const MoveHistory = ({
   viewIndex,
   height,
 }) => {
-  const [scroll, setScroll] = useState(null);
-
-  useEffect(() => {
-    return () => {
-      if (scroll) scroll.scrollIntoView();
-    };
-  });
-
   const thStyle = {
     position: "sticky",
     top: "0px",
@@ -46,6 +38,7 @@ const MoveHistory = ({
   };
   return (
     <div
+      id={"movehistory"}
       className={"center"}
       style={{
         overflowY: "scroll",
@@ -81,7 +74,6 @@ const MoveHistory = ({
             }
             if (viewIndex === i && i < moveHistory.length - 1)
               color = "amber darken-1";
-            const isLast = i === moveHistory.length - 1;
             return (
               <tr
                 onClick={() => handleViewMove(i)}
@@ -90,9 +82,6 @@ const MoveHistory = ({
                 }}
                 key={i}
                 className={color}
-                ref={(e) => {
-                  if (isLast) setScroll(e);
-                }}
               >
                 <td style={tdStyle}>{i}</td>
                 <td style={tdStyle}>{moveToString(move)}</td>

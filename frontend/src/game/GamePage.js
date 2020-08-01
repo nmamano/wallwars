@@ -594,11 +594,27 @@ const GamePage = ({
       draftState.ghostAction = null;
     });
   };
-  const handleSeeFirstMove = () => handleViewMove(0);
+
+  //move the inner scroll bar on move history to the end after each move
+  useEffect(() => {
+    const moveHistoryDiv = document.getElementById("movehistory");
+    moveHistoryDiv.scrollTop = moveHistoryDiv.scrollHeight;
+  }, [state.moveHistory]);
+
   const handleSeePreviousMove = () => handleViewMove(state.viewIndex - 1);
   const handleSeeNextMove = () => handleViewMove(state.viewIndex + 1);
-  const handleSeeLastMove = () => handleViewMove(turnCount(state));
-
+  const handleSeeFirstMove = () => {
+    handleViewMove(0);
+    //move the inner scroll bar to the beginning
+    const moveHistoryDiv = document.getElementById("movehistory");
+    moveHistoryDiv.scrollTop = 0;
+  };
+  const handleSeeLastMove = () => {
+    handleViewMove(turnCount(state));
+    //move the inner scroll bar to the end
+    const moveHistoryDiv = document.getElementById("movehistory");
+    moveHistoryDiv.scrollTop = moveHistoryDiv.scrollHeight;
+  };
   const handleIncreaseBoardSize = () => {
     updateState((draftState) => {
       if (draftState.zoomLevel < 10) draftState.zoomLevel += 1;
