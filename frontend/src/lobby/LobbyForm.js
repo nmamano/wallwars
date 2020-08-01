@@ -17,17 +17,17 @@ const LobbyForm = ({
   return (
     <div className="container teal darken-2" style={{ marginTop: "2rem" }}>
       <Row className="valign-wrapper">
-        <Col className="center" s={3}>
+        <Col className="center" s={5} m={4}>
           <h5>Your name:</h5>
         </Col>
-        <Col s={3}>
+        <Col s={5} m={3}>
           <TextInput
             id="nameInput"
             value={playerName}
             onChange={handlePlayerName}
           />
         </Col>
-        <Col s={1}>
+        <Col s={1} m={1}>
           <Button
             className="teal lighten-2"
             node="button"
@@ -40,15 +40,15 @@ const LobbyForm = ({
             tooltip={"Get a new name"}
           />
         </Col>
-        <Col s={5}></Col>
+        <Col s={1} m={4}></Col>
       </Row>
       <Row className="valign-wrapper">
-        <Col className="center" s={3}>
+        <Col className="center" s={5} m={4}>
           <Button node="button" waves="light" onClick={handleCreateGame}>
             Create game
           </Button>
         </Col>
-        <Col s={1} style={{ paddingRight: "0" }}>
+        <Col s={2} m={1} style={{ paddingRight: "0" }}>
           <TextInput
             id="durationInput"
             label="Duration"
@@ -56,10 +56,10 @@ const LobbyForm = ({
             onChange={handleDuration}
           />
         </Col>
-        <Col s={1} style={{ paddingLeft: "0" }}>
+        <Col s={1} m={1} style={{ paddingLeft: "0" }}>
           m
         </Col>
-        <Col s={1} style={{ paddingRight: "0" }}>
+        <Col s={2} m={1} style={{ paddingRight: "0" }}>
           <TextInput
             id="incrementInput"
             label="Increment"
@@ -67,18 +67,18 @@ const LobbyForm = ({
             onChange={handleIncrement}
           />
         </Col>
-        <Col s={1} style={{ paddingLeft: "0" }}>
+        <Col s={1} m={1} style={{ paddingLeft: "0" }}>
           s
         </Col>
-        <Col s={5}></Col>
+        <Col s={1} m={4}></Col>
       </Row>
       <Row className="valign-wrapper">
-        <Col className="center" s={3}>
+        <Col className="center" s={5} m={4}>
           <Button node="button" waves="light" onClick={handleJoinGame}>
             Join game
           </Button>
         </Col>
-        <Col s={5}>
+        <Col s={6} m={5}>
           <TextInput
             id="joinInput"
             placeholder="Write game code here..."
@@ -86,7 +86,7 @@ const LobbyForm = ({
             onChange={handleJoinGameId}
           />
         </Col>
-        <Col s={4}></Col>
+        <Col s={1} m={3}></Col>
       </Row>
     </div>
   );
