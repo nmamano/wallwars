@@ -4,7 +4,6 @@ import cloneDeep from "lodash.clonedeep";
 import { useImmer } from "use-immer";
 import UIfx from "uifx";
 import moveSoundAudio from "./../static/moveSound.mp3";
-import { useMediaQuery } from "react-responsive";
 
 import {
   cellTypeByPos,
@@ -39,6 +38,8 @@ const goals = [corners.br, corners.bl];
 const playerColors = ["red", "indigo"];
 const groundSize = 37; //in pixels
 const wallWidth = 12; //in pixels
+const smallScreenGroundSize = 23;
+const smallScreenWallWidth = 10;
 
 //===================================================
 //utility functions that don't require any state
@@ -146,6 +147,7 @@ const GamePage = ({
   creatorParams, //timeControl and creatorName
   joinerParams, //gameId and joinerName
   returnToLobby, //call this to return to lobby
+  isLargeScreen,
 }) => {
   //===================================================
   //state that depends on the props, but is otherwise constant
@@ -573,6 +575,9 @@ const GamePage = ({
   const handleEndSession = () => {
     //tell the server to stop listening to moves for this game
     socket.emit("endGame", state.gameId);
+    //undo dark mode background change
+    if (state.isDarkModeOn)
+      document.body.style.backgroundColor = backgroundColors.light;
     returnToLobby();
   };
   const handleRematch = () => {
@@ -626,13 +631,9 @@ const GamePage = ({
     });
   };
 
-  let isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
-  let [gSize, wWidth] = [groundSize, wallWidth];
-  if (!isLargeScreen) {
-    //make it easier to click on walls
-    gSize -= 3;
-    wWidth += 3;
-  }
+  let [gSize, wWidth] = isLargeScreen
+    ? [groundSize, wallWidth]
+    : [smallScreenGroundSize, smallScreenWallWidth];
   const scalingFactor = Math.pow(1.1, state.zoomLevel - 5);
   const scaledGroundSize = gSize * scalingFactor;
   const scaledWallWidth = wWidth * scalingFactor;

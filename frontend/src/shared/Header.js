@@ -1,9 +1,11 @@
 import React from "react";
 import "materialize-css";
-import { Navbar, Icon, NavItem, Modal, Button } from "react-materialize";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
+import "./IconButton";
+import IconButton from "./IconButton";
 
 function Header({
   gameName,
@@ -59,143 +61,75 @@ function Header({
     </div>
   );
 
+  const color = isDarkModeOn ? "red darken-4" : "red lighten-1";
+  const padding = isLargeScreen ? 20 : 10;
+
   return (
     <div>
       <ToastContainer />
-      <Navbar
-        className={isDarkModeOn ? "red darken-4" : undefined}
-        alignLinks="right"
-        brand={brand}
-        centerLogo
-        menuIcon={<Icon>menu</Icon>}
-        options={{
-          draggable: true,
-          edge: "left",
-          inDuration: 250,
-          onCloseEnd: null,
-          onCloseStart: null,
-          onOpenEnd: null,
-          onOpenStart: null,
-          outDuration: 200,
-          preventScrolling: true,
+      <div
+        className={color}
+        style={{
+          height: "50px",
+          display: "grid",
+          gridTemplateRows: "1fr",
+          gridTemplateColumns: "auto auto",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
-        {showLobby && (
-          <Modal
-            style={{ color: "black" }}
-            actions={[
-              <Button
-                style={{
-                  backgroundColor: "#009688",
-                  color: "white",
-                  marginRight: "1rem",
-                }}
-                flat
-                modal="close"
-                node="button"
-                waves="green"
-                onClick={endGame}
-              >
-                Quit game
-              </Button>,
-              <Button
-                style={{
-                  backgroundColor: "#009688",
-                  color: "white",
-                }}
-                flat
-                modal="close"
-                node="button"
-                waves="green"
-              >
-                Close
-              </Button>,
-            ]}
-            bottomSheet={false}
-            fixedFooter={false}
-            header="Resign"
-            open={false}
-            options={{
-              dismissible: true,
-              endingTop: "10%",
-              inDuration: 250,
-              opacity: 0.4,
-              outDuration: 250,
-              preventScrolling: true,
-              startingTop: "4%",
-            }}
-            trigger={<NavItem>Lobby</NavItem>}
-          >
-            {
-              <p>
-                Are you sure you want to return to the lobby? You will not be
-                able to rejoin this game.
-              </p>
-            }
-          </Modal>
-        )}
-        <Modal
-          style={{ color: "black" }}
-          actions={[
-            <Button
-              style={{ backgroundColor: "#009688", color: "white" }}
-              flat
-              modal="close"
-              node="button"
-              waves="green"
-            >
-              Close
-            </Button>,
-          ]}
-          bottomSheet={false}
-          fixedFooter={false}
-          header="Help"
-          open={false}
-          options={{
-            dismissible: true,
-            endingTop: "10%",
-            inDuration: 250,
-            opacity: 0.4,
-            outDuration: 250,
-            preventScrolling: true,
-            startingTop: "4%",
+        <div
+          style={{
+            fontSize: isLargeScreen ? "30px" : "25px",
+            marginLeft: isLargeScreen ? "15px" : "5px",
           }}
-          trigger={<NavItem>Help</NavItem>}
         >
-          {helpText}
-        </Modal>
-
-        <Modal
-          style={{ color: "black" }}
-          actions={[
-            <Button
-              style={{ backgroundColor: "#009688", color: "white" }}
-              flat
-              modal="close"
-              node="button"
-              waves="green"
-            >
-              Close
-            </Button>,
-          ]}
-          bottomSheet={false}
-          fixedFooter={false}
-          header="About"
-          open={false}
-          options={{
-            dismissible: true,
-            endingTop: "10%",
-            inDuration: 250,
-            opacity: 0.4,
-            outDuration: 250,
-            preventScrolling: true,
-            startingTop: "4%",
+          {brand}
+        </div>
+        <div
+          style={{
+            height: "auto",
+            display: "grid",
+            padding: "5px",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateRows: `auto`,
+            columnGap: "5px",
+            rowGap: "5px",
+            marginRight: isLargeScreen ? "15px" : "5px",
           }}
-          trigger={<NavItem>About</NavItem>}
         >
-          {aboutText}
-        </Modal>
-      </Navbar>
+          {showLobby ? (
+            <IconButton
+              icon="home"
+              tooltip="Quit game"
+              onClick={endGame}
+              modalTitle="Return to lobby"
+              modalBody="Are you sure you want to return to the lobby? You will not be able to rejoin this game."
+              modalConfirmButtonText="Quit game"
+              bgColor="red darken-1"
+              padding={padding}
+            />
+          ) : (
+            <div></div>
+          )}
+          <IconButton
+            icon="help"
+            tooltip="Help"
+            modalTitle="Help"
+            modalBody={helpText}
+            bgColor="red darken-1"
+            padding={padding}
+          />
+          <IconButton
+            icon="info"
+            tooltip="About"
+            modalTitle="About"
+            modalBody={aboutText}
+            bgColor="red darken-1"
+            padding={padding}
+          />
+        </div>
+      </div>
     </div>
   );
 }

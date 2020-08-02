@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { uniqueNamesGenerator, names } from "unique-names-generator";
+import { useMediaQuery } from "react-responsive";
 
 import GamePage from "../game/GamePage";
 import Header from "../shared/Header";
@@ -72,6 +73,8 @@ const LobbyPage = ({ socket }) => {
     setJoinGameId("");
   };
 
+  let isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
+
   return (
     <div style={{ marginBottom: "2rem" }}>
       {isOngoingGame && (
@@ -80,11 +83,16 @@ const LobbyPage = ({ socket }) => {
           creatorParams={creatorParams}
           joinerParams={joinerParams}
           returnToLobby={returnToLobby}
+          isLargeScreen={isLargeScreen}
         />
       )}
       {!isOngoingGame && (
         <div>
-          <Header gameName={""} helpText={LobbyHelp()} />
+          <Header
+            gameName={""}
+            helpText={LobbyHelp()}
+            isLargeScreen={isLargeScreen}
+          />
           <LobbyForm
             playerName={playerName}
             handlePlayerName={handlePlayerName}
