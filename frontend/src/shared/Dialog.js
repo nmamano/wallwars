@@ -1,33 +1,16 @@
 import React from "react";
-import { Button, Icon, Modal } from "react-materialize";
+import { Button, Modal } from "react-materialize";
 
-const IconButton = ({
-  icon,
-  tooltip,
+const Dialog = ({
   onClick,
-  modalTitle,
-  modalBody,
-  modalConfirmButtonText,
-  bgColor,
-  padding,
-  disabled,
+  title,
+  body,
+  confirmButtonText,
+  isOpen,
+  onClose,
 }) => {
-  if (!modalBody) {
-    return (
-      <Button
-        className="teal"
-        node="button"
-        waves="light"
-        icon={<Icon className="large">{icon}</Icon>}
-        onClick={onClick}
-        tooltip={tooltip}
-        disabled={disabled}
-      />
-    );
-  }
-
   let actions;
-  if (modalConfirmButtonText) {
+  if (confirmButtonText) {
     actions = [
       <Button
         style={{
@@ -41,7 +24,7 @@ const IconButton = ({
         waves="green"
         onClick={onClick}
       >
-        {modalConfirmButtonText}
+        {confirmButtonText}
       </Button>,
       <Button
         style={{
@@ -73,40 +56,26 @@ const IconButton = ({
     );
   }
 
-  const trigger = (
-    <Button
-      style={{ padding: `0px ${padding}px` }}
-      className={bgColor ? bgColor : "teal"}
-      node="button"
-      waves="light"
-      icon={<Icon className="large">{icon}</Icon>}
-      tooltip={tooltip}
-      disabled={disabled}
-    />
-  );
-
   return (
     <Modal
       style={{ color: "black", backgroundColor: "white" }}
-      bottomSheet={false}
-      fixedFooter={false}
-      header={modalTitle}
-      open={false}
+      header={title}
+      open={isOpen}
       options={{
         dismissible: true,
         endingTop: "10%",
         inDuration: 250,
         opacity: 0.4,
         outDuration: 250,
+        onCloseEnd: onClose,
         preventScrolling: true,
         startingTop: "4%",
       }}
-      trigger={trigger}
       actions={actions}
     >
-      {<div>{modalBody}</div>}
+      {<div>{body}</div>}
     </Modal>
   );
 };
 
-export default IconButton;
+export default Dialog;

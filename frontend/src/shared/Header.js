@@ -62,7 +62,7 @@ function Header({
   );
 
   const color = isDarkModeOn ? "red darken-4" : "red lighten-1";
-  const padding = isLargeScreen ? 20 : 10;
+  const padding = isLargeScreen ? 20 : 11;
 
   return (
     <div>

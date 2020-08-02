@@ -13,6 +13,7 @@ import {
 } from "../gameLogic/mainLogic";
 import Board from "./Board";
 import Header from "../shared/Header";
+import Dialog from "../shared/Dialog";
 import StatusHeader from "./StatusHeader";
 import TimerHeader from "./TimerHeader";
 import GameHelp from "./GameHelp";
@@ -228,6 +229,8 @@ const GamePage = ({
     //index of the move that the client is looking at, which may not be the last one
     viewIndex: 0,
     zoomLevel: 5, //number from 0 to 10
+    showRematchOfferSentDialog: false,
+    showRematchOfferReceivedDialog: false,
   });
 
   //handle browser back arrow
@@ -241,7 +244,7 @@ const GamePage = ({
     updateState((draftState) => {
       draftState.showBackButtonWarning = false;
     });
-    handleEndSession();
+    handleLeaveGame();
   };
   const handleCancelBackButton = () => {
     updateState((draftState) => {
@@ -329,6 +332,11 @@ const GamePage = ({
         draftState.lifeCycleStage = 1;
       });
     });
+    socket.on("rematchOfferReceived", () => {
+      updateState((draftState) => {
+        draftState.showRematchOfferReceivedDialog = true;
+      });
+    });
     socket.on("rematchStarted", (gameId) => {
       console.log("rematch started");
       updateState((draftState) => {
@@ -362,6 +370,8 @@ const GamePage = ({
         draftState.lifeCycleStage = 1;
         draftState.viewIndex = 0;
         draftState.ghostAction = null;
+        draftState.showRematchOfferReceivedDialog = false;
+        draftState.showRematchOfferSentDialog = false;
       });
     });
     socket.on("playerResigned", (resignerIsCreator) => {
@@ -572,21 +582,28 @@ const GamePage = ({
     });
   };
 
-  const handleEndSession = () => {
+  const handleLeaveGame = () => {
     //tell the server to stop listening to moves for this game
-    socket.emit("endGame", state.gameId);
+    socket.emit("leaveGame");
     //undo dark mode background change
     if (state.isDarkModeOn)
       document.body.style.backgroundColor = backgroundColors.light;
     returnToLobby();
   };
-  const handleRematch = () => {
-    socket.emit("rematch", state.gameId);
+  const handleSendRematchOffer = () => {
+    socket.emit("rematchOffer");
+    updateState((draftState) => {
+      draftState.showRematchOfferSentDialog = true;
+    });
   };
+  const handleAcceptRematchOffer = () => {
+    socket.emit("rematchAccepted");
+  };
+
   const handleOfferDraw = () => {};
   const handleProposeTakeback = () => {};
   const handleResign = () => {
-    socket.emit("resign", state.gameId);
+    socket.emit("resign");
   };
   const handleIncreaseOpponentTime = () => {};
 
@@ -658,10 +675,33 @@ const GamePage = ({
 
   return (
     <div className={state.isDarkModeOn ? "teal darken-4" : undefined}>
+      <Dialog
+        title="Rematch offered"
+        body="A rematch offer was sent to the opponent. The game will restart if they accept."
+        isOpen={state.showRematchOfferSentDialog}
+        onClose={() => {
+          updateState((draftState) => {
+            draftState.showRematchOfferSentDialog = false;
+          });
+        }}
+      />
+      <Dialog
+        title="Rematch?"
+        body="The opponent wants a rematch."
+        confirmButtonText="Accept"
+        isOpen={state.showRematchOfferReceivedDialog}
+        onClick={handleAcceptRematchOffer}
+        onClose={() => {
+          updateState((draftState) => {
+            draftState.showRematchOfferReceivedDialog = false;
+          });
+        }}
+      />
+
       <Header
         gameName={state.gameId}
         showLobby
-        endGame={handleEndSession}
+        endGame={handleLeaveGame}
         helpText={GameHelp()}
         isLargeScreen={isLargeScreen}
         isDarkModeOn={state.isDarkModeOn}
@@ -740,7 +780,7 @@ const GamePage = ({
               className="red"
               node="button"
               waves="light"
-              onClick={handleRematch}
+              onClick={handleSendRematchOffer}
             >
               Rematch
             </Button>
