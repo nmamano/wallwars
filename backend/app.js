@@ -75,7 +75,7 @@ io.on("connection", (socket) => {
   console.log(`new connection from client ${shortId}`);
 
   socket.on("createGame", (timeControl, creatorName) => {
-    purgeGamesOfClient();
+    purgeGamesOfClient(socketId);
     console.log(`${shortId}: createGame`);
     const gameParams = {
       gameId: randomGameId(),
@@ -94,7 +94,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("joinGame", (gameId, joinerName) => {
-    purgeGamesOfClient();
+    purgeGamesOfClient(socketId);
     console.log(`${shortId}: joinGame ${gameId}`);
     const i = unjoinedGameIndex(gameId);
     if (i === -1) {
@@ -246,12 +246,12 @@ io.on("connection", (socket) => {
 
   socket.on("leaveGame", () => {
     console.log(`${shortId}: leaveGame`);
-    purgeGamesOfClient();
+    purgeGamesOfClient(socketId);
   });
 
   socket.on("disconnect", () => {
     console.log(`socket ${socketId} disconnected`);
-    purgeGamesOfClient();
+    purgeGamesOfClient(socketId);
   });
 });
 
