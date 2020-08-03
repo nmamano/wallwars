@@ -7,6 +7,7 @@ const TimerHeader = ({
   timeLeft,
   indexToMove,
   isLargeScreen,
+  scores,
 }) => {
   const [min1, min2] = [
     Math.floor(timeLeft[0] / 60),
@@ -40,8 +41,14 @@ const TimerHeader = ({
     }
   }
 
-  const pStyle = {
-    padding: isLargeScreen ? "15px" : "8px",
+  const showScores = scores[0] !== 0 || scores[1] !== 0;
+  let sep;
+  if (isLargeScreen && !showScores) sep = "15px";
+  else if (isLargeScreen && showScores) sep = "12px";
+  else if (!isLargeScreen && !showScores) sep = "8px";
+  else sep = "6px";
+  const childStyle = {
+    padding: sep,
     fontSize: isLargeScreen ? "18px" : "14px",
   };
 
@@ -50,32 +57,44 @@ const TimerHeader = ({
       className={"teal darken-2"}
       style={{
         display: "grid",
-        gridTemplateColumns: "1.7fr 1fr 1fr 1.7fr",
+        gridTemplateColumns: showScores
+          ? "0.5fr 1.7fr 1fr 1fr 1.7fr 0.5fr"
+          : "1.7fr 1fr 1fr 1.7fr",
         gridTemplateRows: "auto",
         alignContent: "center",
-        columnGap: isLargeScreen ? "15px" : "8px",
-        padding: isLargeScreen ? "15px" : "8px",
+        columnGap: sep,
+        padding: sep,
         gridArea: "timer",
       }}
     >
+      {showScores && (
+        <div style={childStyle} className={"center"}>
+          {scores[0]}
+        </div>
+      )}
       <div
-        style={pStyle}
+        style={childStyle}
         className={highlightNameToMove[0] + " center truncate"}
       >
         {names[0]}
       </div>
-      <div style={pStyle} className={highlightLowTime[0] + " center"}>
+      <div style={childStyle} className={highlightLowTime[0] + " center"}>
         {timesAsStrings[0]}
       </div>
-      <div style={pStyle} className={highlightLowTime[1] + " center"}>
+      <div style={childStyle} className={highlightLowTime[1] + " center"}>
         {timesAsStrings[1]}
       </div>
       <div
-        style={pStyle}
+        style={childStyle}
         className={highlightNameToMove[1] + " center truncate"}
       >
         {names[1] === null ? "______" : names[1]}
       </div>
+      {showScores && (
+        <div style={childStyle} className={"center"}>
+          {scores[1]}
+        </div>
+      )}
     </div>
   );
 };

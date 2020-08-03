@@ -107,8 +107,14 @@ const applyMakeMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
           newPlayerPos[otherIdx],
           goals[otherIdx]
         );
-        if (pToMoveStarted && remainingDist <= 2) draftState.winner = "draw";
-        else draftState.winner = idxToMove === 0 ? "creator" : "joiner";
+        if (pToMoveStarted && remainingDist <= 2) {
+          draftState.winner = "draw";
+          draftState.gameWins[0] += 0.5;
+          draftState.gameWins[1] += 0.5;
+        } else {
+          draftState.winner = idxToMove === 0 ? "creator" : "joiner";
+          draftState.gameWins[idxToMove] += 1;
+        }
         draftState.finishReason = "goal";
         draftState.lifeCycleStage = 4;
       }
@@ -153,6 +159,8 @@ const applyDrawGame = (draftState, finishReason) => {
   if (draftState.isVolumeOn) moveSound.play();
   draftState.lifeCycleStage = 4;
   draftState.winner = "draw";
+  draftState.gameWins[0] += 0.5;
+  draftState.gameWins[1] += 0.5;
   draftState.finishReason = finishReason;
   draftState.ghostAction = null;
   closeDialogs(draftState);
@@ -161,6 +169,7 @@ const applyResignGame = (draftState, resignerIsCreator) => {
   if (draftState.lifeCycleStage !== 3) return;
   draftState.lifeCycleStage = 4;
   draftState.winner = resignerIsCreator ? "joiner" : "creator";
+  draftState.gameWins[resignerIsCreator ? 1 : 0] += 1;
   draftState.finishReason = "resign";
   draftState.ghostAction = null;
   closeDialogs(draftState);
@@ -170,6 +179,7 @@ const applyLeaveGame = (draftState, leaverIsCreator) => {
   if (draftState.lifeCycleStage === 4) return;
   draftState.lifeCycleStage = 4;
   draftState.winner = leaverIsCreator ? "joiner" : "creator";
+  draftState.gameWins[leaverIsCreator ? 1 : 0] += 1;
   draftState.finishReason = "disconnect";
   draftState.ghostAction = null;
   closeDialogs(draftState);
@@ -188,7 +198,6 @@ const applyTakeback = (draftState) => {
 const applySetupRematch = (draftState) => {
   if (draftState.lifeCycleStage !== 4) return;
   draftState.creatorStarts = !draftState.creatorStarts;
-  draftState.gameCount += 1;
   const newGrid = emptyGrid(dims);
   draftState.moveHistory = [
     {
@@ -228,6 +237,7 @@ const applyClockTick = (draftState) => {
   draftState.moveHistory[tc].timeLeft[idx] -= 1;
   if (draftState.moveHistory[tc].timeLeft[idx] === 0) {
     draftState.winner = idx === 0 ? "joiner" : "creator";
+    draftState.gameWins[idx === 0 ? 1 : 0] += 1;
     draftState.finishReason = "time";
     draftState.lifeCycleStage = 4;
     draftState.ghostAction = null;
@@ -903,6 +913,7 @@ const GamePage = ({
           playerColors={playerColors}
           timeLeft={[displayTime1, displayTime2]}
           isLargeScreen={isLargeScreen}
+          scores={state.gameWins}
         />
         <StatusHeader
           lifeCycleStage={state.lifeCycleStage}
