@@ -166,6 +166,7 @@ const applyResignGame = (draftState, resignerIsCreator) => {
   closeDialogs(draftState);
 };
 const applyLeaveGame = (draftState, leaverIsCreator) => {
+  draftState.opponentLeft = true;
   if (draftState.lifeCycleStage === 4) return;
   draftState.lifeCycleStage = 4;
   draftState.winner = leaverIsCreator ? "joiner" : "creator";
@@ -263,6 +264,7 @@ const GamePage = ({
     ],
     //how many games each player has won in this session (not implemented yet)
     gameWins: [0, 0],
+    opponentLeft: false,
 
     //===================================================
     //shared state of the current game
@@ -955,6 +957,7 @@ const GamePage = ({
                 );
                 handleSendRematchOffer();
               }}
+              disabled={state.opponentLeft}
             >
               Rematch
             </Button>
