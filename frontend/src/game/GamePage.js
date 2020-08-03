@@ -1,9 +1,10 @@
 import React, { useEffect } from "react";
-import { Button, Row, Col, Modal } from "react-materialize";
+import { Button, Row, Col } from "react-materialize";
 import cloneDeep from "lodash.clonedeep";
 import { useImmer } from "use-immer";
 import UIfx from "uifx";
 import moveSoundAudio from "./../static/moveSound.mp3";
+import showToastNotification from "../shared/showToastNotification";
 
 import {
   cellTypeByPos,
@@ -42,6 +43,11 @@ const wallWidth = 12; //in pixels
 const smallScreenGroundSize = 23;
 const smallScreenWallWidth = 10;
 
+const backgroundColors = {
+  dark: "#004d40",
+  light: "#009688",
+};
+
 //===================================================
 //utility functions that don't require any state
 //===================================================
@@ -72,20 +78,14 @@ const ghostType = (pos) => (pos === null ? "None" : cellTypeByPos(pos));
 //'draftState' is a copy of the actual state in the GamePage component, so it can be mutated
 //(see the definition of 'state' in GamePage)
 //'timeLeftAfterMove' is the time left by the player who made the move
-const makeMove = (
-  draftState,
-  actions,
-  moveIndex,
-  timeLeftAfterMove,
-  isVolumeOn
-) => {
+const makeMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
   //only in life cycle stages 1,2,3 players can make move
   if (draftState.lifeCycleStage < 1 || draftState.lifeCycleStage > 3) return;
   //make the move only if it is the next one (safety measure against desync issues)
   const tc = turnCount(draftState);
   if (tc !== moveIndex - 1) return;
 
-  if (isVolumeOn) moveSound.play();
+  if (draftState.isVolumeOn) moveSound.play();
 
   const idxToMove = indexToMove(draftState);
   const otherIdx = idxToMove === creatorIndex ? joinerIndex : creatorIndex;
@@ -102,15 +102,10 @@ const makeMove = (
           draftState.playerPos[otherIdx],
           goals[otherIdx]
         );
-        if (pToMoveStarted && remainingDist <= 2) {
-          draftState.winner = "draw";
-          draftState.finishReason = "goal";
-          draftState.lifeCycleStage = 4;
-        } else {
-          draftState.winner = idxToMove === 0 ? "creator" : "joiner";
-          draftState.finishReason = "goal";
-          draftState.lifeCycleStage = 4;
-        }
+        if (pToMoveStarted && remainingDist <= 2) draftState.winner = "draw";
+        else draftState.winner = idxToMove === 0 ? "creator" : "joiner";
+        draftState.finishReason = "goal";
+        draftState.lifeCycleStage = 4;
       }
     } else if (aType === "Wall") {
       draftState.grid[aPos.r][aPos.c] = idxToMove + 1;
@@ -141,6 +136,71 @@ const makeMove = (
   //if the player is looking at a previous move, when a move happens
   //they are automatically switched to viewing the new move
   draftState.viewIndex = tc + 1;
+};
+
+const drawGame = (draftState, finishReason) => {
+  if (draftState.lifeCycleStage === 4) return;
+  if (draftState.isVolumeOn) moveSound.play();
+  draftState.lifeCycleStage = 4;
+  draftState.winner = "draw";
+  draftState.finishReason = finishReason;
+  draftState.ghostAction = null;
+  draftState.showRematchDialog = false;
+  draftState.showDrawDialog = false;
+  draftState.showTakebackDialog = false;
+};
+
+const resignGame = (draftState, resignerIsCreator) => {
+  if (draftState.lifeCycleStage === 4) return;
+  if (draftState.isVolumeOn) moveSound.play();
+  draftState.lifeCycleStage = 4;
+  draftState.winner = resignerIsCreator ? "joiner" : "creator";
+  draftState.finishReason = "resign";
+  draftState.ghostAction = null;
+  draftState.showRematchDialog = false;
+  draftState.showDrawDialog = false;
+  draftState.showTakebackDialog = false;
+};
+
+const takebackLastMove = (draftState) => {
+  draftState.showTakebackDialog = false;
+  //todo: update state without the last move
+};
+
+const setupRematch = (draftState) => {
+  draftState.creatorStarts = !draftState.creatorStarts;
+  draftState.playerPos = initialPlayerPos;
+  draftState.grid = emptyGrid(dims);
+  draftState.timeLeft = [
+    draftState.timeControl.duration * 60,
+    draftState.timeControl.duration * 60,
+  ];
+  draftState.moveHistory = [
+    {
+      index: 0,
+      actions: [],
+      grid: emptyGrid(dims),
+      playerPos: initialPlayerPos,
+      timeLeft: [
+        draftState.timeControl.duration * 60,
+        draftState.timeControl.duration * 60,
+      ],
+      distances: [
+        distance(emptyGrid(dims), initialPlayerPos[0], goals[0]),
+        distance(emptyGrid(dims), initialPlayerPos[1], goals[1]),
+      ],
+      wallCounts: [0, 0],
+    },
+  ];
+  draftState.winner = "";
+  draftState.finishReason = "";
+  draftState.lifeCycleStage = 1;
+  draftState.viewIndex = 0;
+  draftState.ghostAction = null;
+  draftState.showRematchDialog = false;
+  draftState.showDrawDialog = false;
+  draftState.showTakebackDialog = false;
+  if (draftState.isVolumeOn) moveSound.play();
 };
 
 const GamePage = ({
@@ -229,72 +289,14 @@ const GamePage = ({
     //index of the move that the client is looking at, which may not be the last one
     viewIndex: 0,
     zoomLevel: 5, //number from 0 to 10
-    showRematchOfferSentDialog: false,
-    showRematchOfferReceivedDialog: false,
+    showDrawDialog: false,
+    showTakebackDialog: false,
+    showRematchDialog: false,
   });
 
-  //handle browser back arrow
-  const onBackButtonEvent = (e) => {
-    e.preventDefault();
-    updateState((draftState) => {
-      draftState.showBackButtonWarning = true;
-    });
-  };
-  const handleConfirmBackButton = () => {
-    updateState((draftState) => {
-      draftState.showBackButtonWarning = false;
-    });
-    handleLeaveGame();
-  };
-  const handleCancelBackButton = () => {
-    updateState((draftState) => {
-      draftState.showBackButtonWarning = false;
-    });
-  };
-  useEffect(() => {
-    window.history.pushState(null, null, window.location.pathname);
-    window.addEventListener("popstate", onBackButtonEvent);
-    return () => window.removeEventListener("popstate", onBackButtonEvent);
-  });
-
-  const handleToggleVolume = () => {
-    updateState((draftState) => {
-      draftState.isVolumeOn = !draftState.isVolumeOn;
-    });
-  };
-  const backgroundColors = {
-    dark: "#004d40",
-    light: "#009688",
-  };
-  const handleToggleDarkMode = () => {
-    updateState((draftState) => {
-      draftState.isDarkModeOn = !draftState.isDarkModeOn;
-      //temporary hack -- not a proper way to change the bg color
-      if (draftState.isDarkModeOn)
-        document.body.style.backgroundColor = backgroundColors.dark;
-      else document.body.style.backgroundColor = backgroundColors.light;
-    });
-  };
-
-  //first contact to server
-  useEffect(() => {
-    //first contact only from lifecycle stage -2
-    if (state.lifeCycleStage !== -2) return;
-    if (clientIsCreator) {
-      updateState((draftState) => {
-        draftState.lifeCycleStage = -1;
-      });
-      socket.emit("createGame", state.timeControl, state.names[creatorIndex]);
-    }
-    if (!clientIsCreator) {
-      updateState((draftState) => {
-        draftState.lifeCycleStage = -1;
-      });
-      socket.emit("joinGame", state.gameId, state.names[joinerIndex]);
-    }
-  });
-
-  //process server messages
+  //===================================================
+  //communication FROM the server
+  //===================================================
   useEffect(() => {
     socket.once("gameCreated", ({ gameId, creatorStarts }) => {
       updateState((draftState) => {
@@ -330,68 +332,80 @@ const GamePage = ({
         if (draftState.lifeCycleStage === 1) return;
         draftState.names[joinerIndex] = joinerName;
         draftState.lifeCycleStage = 1;
+        if (draftState.isVolumeOn) moveSound.play();
       });
     });
-    socket.on("rematchOfferReceived", () => {
+
+    socket.on("drawOffered", () => {
       updateState((draftState) => {
-        draftState.showRematchOfferReceivedDialog = true;
+        draftState.showDrawDialog = true;
       });
     });
-    socket.on("rematchStarted", (gameId) => {
-      console.log("rematch started");
+    socket.on("drawRejected", () => {
+      showToastNotification("The opponent declined the draw offer.", 5000);
+    });
+    socket.on("drawAccepted", () => {
+      showToastNotification("The opponent accepted the draw offer.", 5000);
       updateState((draftState) => {
-        draftState.gameId = gameId;
-        draftState.creatorStarts = !draftState.creatorStarts;
-        draftState.playerPos = initialPlayerPos;
-        draftState.grid = emptyGrid(dims);
-        draftState.timeLeft = [
-          draftState.timeControl.duration * 60,
-          draftState.timeControl.duration * 60,
-        ];
-        draftState.moveHistory = [
-          {
-            index: 0,
-            actions: [],
-            grid: emptyGrid(dims),
-            playerPos: initialPlayerPos,
-            timeLeft: [
-              draftState.timeControl.duration * 60,
-              draftState.timeControl.duration * 60,
-            ],
-            distances: [
-              distance(emptyGrid(dims), initialPlayerPos[0], goals[0]),
-              distance(emptyGrid(dims), initialPlayerPos[1], goals[1]),
-            ],
-            wallCounts: [0, 0],
-          },
-        ];
-        draftState.winner = "";
-        draftState.finishReason = "";
-        draftState.lifeCycleStage = 1;
-        draftState.viewIndex = 0;
-        draftState.ghostAction = null;
-        draftState.showRematchOfferReceivedDialog = false;
-        draftState.showRematchOfferSentDialog = false;
+        drawGame(draftState, "agreement");
       });
     });
-    socket.on("playerResigned", (resignerIsCreator) => {
+
+    socket.on("takebackRequested", () => {
       updateState((draftState) => {
-        draftState.lifeCycleStage = 4;
-        draftState.winner = resignerIsCreator ? "joiner" : "creator";
-        draftState.finishReason = "resign";
-        draftState.ghostAction = null;
+        draftState.showTakebackDialog = true;
       });
     });
-    socket.on("move", (actions, moveIndex, receivedTime) => {
+    socket.on("takebackRejected", () => {
+      showToastNotification(
+        "The opponent declined the takeback request.",
+        5000
+      );
+    });
+    socket.on("takebackAccepted", () => {
+      showToastNotification(
+        "The opponent agreed to the takeback. The last move played" +
+          " on the board has been undone.",
+        5000
+      );
+      updateState((draftState) => {
+        takebackLastMove(draftState);
+      });
+    });
+
+    socket.on("rematchOffered", () => {
+      updateState((draftState) => {
+        draftState.showRematchDialog = true;
+      });
+    });
+    socket.on("rematchRejected", () => {
+      showToastNotification("The opponent declined the rematch offer.", 5000);
+    });
+    socket.on("rematchAccepted", () => {
+      showToastNotification("The opponent accepted the rematch offer.", 5000);
+      updateState((draftState) => {
+        setupRematch(draftState);
+      });
+    });
+
+    socket.on("extraTimeReceived", () => {
+      showToastNotification("The opponent added 60s to your clock.", 5000);
+      updateState((draftState) => {
+        draftState.timeLeft[clientIsCreator ? 0 : 1] += 60;
+      });
+    });
+
+    socket.on("opponentResigned", () => {
+      showToastNotification("The opponent resigned.", 5000);
+      updateState((draftState) => {
+        resignGame(draftState, !clientIsCreator);
+      });
+    });
+
+    socket.on("opponentMoved", (actions, moveIndex, receivedTime) => {
       updateState((draftState) => {
         console.log(`move ${moveIndex} received ${receivedTime}`);
-        makeMove(
-          draftState,
-          actions,
-          moveIndex,
-          receivedTime,
-          state.isVolumeOn
-        );
+        makeMove(draftState, actions, moveIndex, receivedTime);
       });
     });
     return () => {
@@ -399,11 +413,108 @@ const GamePage = ({
     };
   }, [socket, updateState, clientIsCreator, state.gameId, state.isVolumeOn]);
 
+  //===================================================
+  //communication TO the server
+  //===================================================
+  //first contact to server
+  useEffect(() => {
+    //first contact only from lifecycle stage -2
+    if (state.lifeCycleStage !== -2) return;
+    if (clientIsCreator) {
+      updateState((draftState) => {
+        draftState.lifeCycleStage = -1;
+      });
+      socket.emit("createGame", state.timeControl, state.names[creatorIndex]);
+    }
+    if (!clientIsCreator) {
+      updateState((draftState) => {
+        draftState.lifeCycleStage = -1;
+      });
+      socket.emit("joinGame", state.gameId, state.names[joinerIndex]);
+    }
+  });
+
+  const handleLeaveGame = () => {
+    //tell the server to stop listening to events for this game
+    socket.emit("leaveGame");
+    //undo dark mode background change
+    if (state.isDarkModeOn)
+      document.body.style.backgroundColor = backgroundColors.light;
+    returnToLobby();
+  };
+
+  const handleSendRematchOffer = () => {
+    socket.emit("offerRematch");
+  };
+  const handleAnswerRematchOffer = (accepted) => {
+    if (accepted) {
+      socket.emit("acceptRematch");
+      updateState((draftState) => {
+        setupRematch(draftState);
+      });
+    } else {
+      socket.emit("rejectRematch");
+      updateState((draftState) => {
+        draftState.showRematchDialog = false;
+      });
+    }
+  };
+  const handleOfferDraw = () => {
+    socket.emit("offerDraw");
+  };
+  const handleAnswerDrawOffer = (accepted) => {
+    if (accepted) {
+      socket.emit("acceptDraw");
+      updateState((draftState) => {
+        drawGame(draftState, "agreement");
+      });
+    } else {
+      socket.emit("rejectDraw");
+      updateState((draftState) => {
+        draftState.showDrawDialog = false;
+      });
+    }
+  };
+  const handleRequestTakeback = () => {
+    socket.emit("requestTakeback");
+  };
+  const handleAnswerTakebackRequest = (accepted) => {
+    if (accepted) {
+      socket.emit("acceptTakeback");
+      updateState((draftState) => {
+        takebackLastMove(draftState);
+      });
+    } else {
+      socket.emit("rejectTakeback");
+      updateState((draftState) => {
+        draftState.showTakebackDialog = false;
+      });
+    }
+  };
+
+  const handleGiveExtraTime = () => {
+    socket.emit("giveExtraTime");
+    updateState((draftState) => {
+      draftState.timeLeft[clientIsCreator ? 1 : 0] += 60;
+    });
+  };
+
+  const handleResign = () => {
+    socket.emit("resign");
+    updateState((draftState) => {
+      resignGame(draftState, clientIsCreator);
+    });
+  };
+
+  //===================================================
+  //timers logic
+  //===================================================
   //timer interval to update clocks every second
   useEffect(() => {
     const interval = setInterval(() => {
       updateState((draftState) => {
-        //clocks only run after each player have made the first move, and the game has not ended
+        //clocks only run after each player have made the first move,
+        //and the game has not ended
         if (draftState.lifeCycleStage !== 3) return;
         const idx = indexToMove(draftState);
         draftState.timeLeft[idx] -= 1;
@@ -416,6 +527,10 @@ const GamePage = ({
     }, 1000);
     return () => clearInterval(interval);
   }, [updateState]);
+
+  //===================================================
+  //game logic when a player selects a position
+  //===================================================
 
   //part of the logic of handleSelectedPosition:
   //when the player selects / clicks a cell, it can trigger a different
@@ -518,13 +633,7 @@ const GamePage = ({
       if (state.lifeCycleStage === 3) tLeft += state.timeControl.increment;
       socket.emit("move", fullMoveActions, tLeft);
       updateState((draftState) => {
-        makeMove(
-          draftState,
-          fullMoveActions,
-          turnCount(state) + 1,
-          tLeft,
-          state.isVolumeOn
-        );
+        makeMove(draftState, fullMoveActions, turnCount(state) + 1, tLeft);
       });
     } else {
       updateState((draftState) => {
@@ -533,25 +642,29 @@ const GamePage = ({
     }
   };
 
-  const handleClick = (clickedPos) => handleSelectedPosition(clickedPos);
+  const handleBoardClick = (clickedPos) => handleSelectedPosition(clickedPos);
 
+  //===================================================
+  //handling keyboard inputs
+  //===================================================
   useEffect(() => {
     window.addEventListener("keydown", downHandler);
     window.addEventListener("keyup", upHandler);
-
     return () => {
       window.removeEventListener("keydown", downHandler);
       window.removeEventListener("keyup", upHandler);
     };
   });
-
   const downHandler = ({ key }) => {
+    //mechanism to avoid double-counting
     if (state.isKeyPressed) return;
     updateState((draftState) => {
       draftState.isKeyPressed = true;
     });
 
-    if (state.viewIndex < turnCount(state)) {
+    //if the user is not looking at the latest position,
+    //or if the game is over, arrows are used to navigate
+    if (state.viewIndex < turnCount(state) || state.lifeCycleStage === 4) {
       if (key === "ArrowDown" || key === "ArrowRight") {
         updateState((draftState) => {
           draftState.viewIndex += 1;
@@ -563,18 +676,19 @@ const GamePage = ({
           });
         }
       }
-    } else {
-      let p;
-      if (state.ghostAction && ghostType(state.ghostAction) === "Ground")
-        p = state.ghostAction;
-      else p = state.playerPos[indexToMove(state)];
-      if (key === "ArrowDown") p = { r: p.r + 2, c: p.c };
-      else if (key === "ArrowUp") p = { r: p.r - 2, c: p.c };
-      else if (key === "ArrowLeft") p = { r: p.r, c: p.c - 2 };
-      else if (key === "ArrowRight") p = { r: p.r, c: p.c + 2 };
-      else return;
-      handleSelectedPosition(p);
+      return;
     }
+    //normal case: use arrow keys to move the player token
+    let p;
+    if (state.ghostAction && ghostType(state.ghostAction) === "Ground")
+      p = state.ghostAction;
+    else p = state.playerPos[indexToMove(state)];
+    if (key === "ArrowDown") p = { r: p.r + 2, c: p.c };
+    else if (key === "ArrowUp") p = { r: p.r - 2, c: p.c };
+    else if (key === "ArrowLeft") p = { r: p.r, c: p.c - 2 };
+    else if (key === "ArrowRight") p = { r: p.r, c: p.c + 2 };
+    else return;
+    handleSelectedPosition(p);
   };
   const upHandler = () => {
     updateState((draftState) => {
@@ -582,31 +696,9 @@ const GamePage = ({
     });
   };
 
-  const handleLeaveGame = () => {
-    //tell the server to stop listening to moves for this game
-    socket.emit("leaveGame");
-    //undo dark mode background change
-    if (state.isDarkModeOn)
-      document.body.style.backgroundColor = backgroundColors.light;
-    returnToLobby();
-  };
-  const handleSendRematchOffer = () => {
-    socket.emit("rematchOffer");
-    updateState((draftState) => {
-      draftState.showRematchOfferSentDialog = true;
-    });
-  };
-  const handleAcceptRematchOffer = () => {
-    socket.emit("rematchAccepted");
-  };
-
-  const handleOfferDraw = () => {};
-  const handleProposeTakeback = () => {};
-  const handleResign = () => {
-    socket.emit("resign");
-  };
-  const handleIncreaseOpponentTime = () => {};
-
+  //===================================================
+  //logic related to navigating through the move history
+  //===================================================
   const handleViewMove = (i) => {
     if (i < 0 || i > turnCount(state)) return;
     updateState((draftState) => {
@@ -637,6 +729,24 @@ const GamePage = ({
     const moveHistoryDiv = document.getElementById("movehistory");
     moveHistoryDiv.scrollTop = moveHistoryDiv.scrollHeight;
   };
+
+  //===================================================
+  //cosmetics logic
+  //===================================================
+  const handleToggleVolume = () => {
+    updateState((draftState) => {
+      draftState.isVolumeOn = !draftState.isVolumeOn;
+    });
+  };
+  const handleToggleDarkMode = () => {
+    updateState((draftState) => {
+      draftState.isDarkModeOn = !draftState.isDarkModeOn;
+      //temporary hack -- not a proper way to change the bg color
+      if (draftState.isDarkModeOn)
+        document.body.style.backgroundColor = backgroundColors.dark;
+      else document.body.style.backgroundColor = backgroundColors.light;
+    });
+  };
   const handleIncreaseBoardSize = () => {
     updateState((draftState) => {
       if (draftState.zoomLevel < 10) draftState.zoomLevel += 1;
@@ -648,6 +758,30 @@ const GamePage = ({
     });
   };
 
+  //===================================================
+  //handle browser's back arrow / history
+  //===================================================
+  const onBackButtonEvent = (e) => {
+    e.preventDefault();
+    updateState((draftState) => {
+      draftState.showBackButtonWarning = true;
+    });
+  };
+  const handleConfirmBackButton = () => {
+    updateState((draftState) => {
+      draftState.showBackButtonWarning = false;
+    });
+    handleLeaveGame();
+  };
+  useEffect(() => {
+    window.history.pushState(null, null, window.location.pathname);
+    window.addEventListener("popstate", onBackButtonEvent);
+    return () => window.removeEventListener("popstate", onBackButtonEvent);
+  });
+
+  //===================================================
+  //preparing props and rendering
+  //===================================================
   let [gSize, wWidth] = isLargeScreen
     ? [groundSize, wallWidth]
     : [smallScreenGroundSize, smallScreenWallWidth];
@@ -660,8 +794,9 @@ const GamePage = ({
   const boardWidth =
     (scaledWallWidth * (dims.w - 1)) / 2 +
     (scaledGroundSize * (dims.w + 1)) / 2;
-  const gapSize = 15;
 
+  //some hard-coded constants here could be moved to const variables
+  const gapSize = 15;
   let gridTemplateRows, gridTemplateColumns, gridTemplateAreas;
   if (isLargeScreen) {
     gridTemplateRows = `100px ${boardHeight}px`;
@@ -676,26 +811,46 @@ const GamePage = ({
   return (
     <div className={state.isDarkModeOn ? "teal darken-4" : undefined}>
       <Dialog
-        title="Rematch offered"
-        body="A rematch offer was sent to the opponent. The game will restart if they accept."
-        isOpen={state.showRematchOfferSentDialog}
+        isOpen={state.showBackButtonWarning}
+        title="Return to lobby"
+        body={
+          "Are you sure you want to return to the lobby? You will " +
+          "not be able to rejoin this game."
+        }
+        acceptButtonText="Quit game"
+        onAccept={handleConfirmBackButton}
         onClose={() => {
           updateState((draftState) => {
-            draftState.showRematchOfferSentDialog = false;
+            draftState.showBackButtonWarning = false;
           });
         }}
       />
       <Dialog
-        title="Rematch?"
-        body="The opponent wants a rematch."
-        confirmButtonText="Accept"
-        isOpen={state.showRematchOfferReceivedDialog}
-        onClick={handleAcceptRematchOffer}
-        onClose={() => {
-          updateState((draftState) => {
-            draftState.showRematchOfferReceivedDialog = false;
-          });
-        }}
+        isOpen={state.showDrawDialog}
+        title="Draw offer received"
+        body="The opponent offered a draw."
+        acceptButtonText="Accept"
+        rejectButtonText="Decline"
+        callback={handleAnswerDrawOffer}
+      />
+      <Dialog
+        isOpen={state.showRematchDialog}
+        title="Rematch offer received"
+        body="The opponent would like a rematch."
+        acceptButtonText="Accept"
+        rejectButtonText="Decline"
+        callback={handleAnswerRematchOffer}
+      />
+      <Dialog
+        isOpen={state.showTakebackDialog}
+        title="Takeback request received"
+        body={
+          "The opponent requested a takeback. If you accept, the " +
+          "last move will be undone."
+        }
+        acceptButtonText="Accept"
+        rejectButtonText="Decline"
+        callback={handleAnswerTakebackRequest}
       />
 
       <Header
@@ -742,7 +897,7 @@ const GamePage = ({
           playerPos={state.moveHistory[state.viewIndex].playerPos}
           goals={goals}
           ghostAction={state.ghostAction}
-          handleClick={handleClick}
+          handleClick={handleBoardClick}
           groundSize={scaledGroundSize}
           wallWidth={scaledWallWidth}
           isDarkModeOn={state.isDarkModeOn}
@@ -751,8 +906,8 @@ const GamePage = ({
           lifeCycleStage={state.lifeCycleStage}
           handleResign={handleResign}
           handleOfferDraw={handleOfferDraw}
-          handleProposeTakeback={handleProposeTakeback}
-          handleIncreaseOpponentTime={handleIncreaseOpponentTime}
+          handleRequestTakeback={handleRequestTakeback}
+          handleGiveExtraTime={handleGiveExtraTime}
           moveHistory={state.moveHistory}
           playerColors={playerColors}
           creatorStarts={state.creatorStarts}
@@ -780,65 +935,20 @@ const GamePage = ({
               className="red"
               node="button"
               waves="light"
-              onClick={handleSendRematchOffer}
+              onClick={() => {
+                showToastNotification(
+                  "A rematch offer was sent to the opponent. A new game " +
+                    "will start if they accept.",
+                  5000
+                );
+                handleSendRematchOffer();
+              }}
             >
               Rematch
             </Button>
           </Col>
         </Row>
       )}
-      <Modal
-        style={{ color: "black" }}
-        actions={[
-          <Button
-            style={{
-              backgroundColor: "#009688",
-              color: "white",
-              marginRight: "1rem",
-            }}
-            flat
-            modal="close"
-            node="button"
-            waves="green"
-            onClick={handleConfirmBackButton}
-          >
-            Quit game
-          </Button>,
-          <Button
-            style={{
-              backgroundColor: "#009688",
-              color: "white",
-            }}
-            flat
-            modal="close"
-            node="button"
-            waves="green"
-            onClick={handleCancelBackButton}
-          >
-            Close
-          </Button>,
-        ]}
-        bottomSheet={false}
-        fixedFooter={false}
-        header="Return to lobby"
-        open={state.showBackButtonWarning}
-        options={{
-          dismissible: false,
-          endingTop: "10%",
-          inDuration: 250,
-          opacity: 0.4,
-          outDuration: 250,
-          preventScrolling: true,
-          startingTop: "4%",
-        }}
-      >
-        {
-          <p>
-            Are you sure you want to return to the lobby? You will not be able
-            to rejoin this game.
-          </p>
-        }
-      </Modal>
     </div>
   );
 };

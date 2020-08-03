@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { uniqueNamesGenerator, names } from "unique-names-generator";
 import { useMediaQuery } from "react-responsive";
+import { ToastContainer } from "react-toastify";
 
 import GamePage from "../game/GamePage";
 import Header from "../shared/Header";
@@ -77,6 +78,8 @@ const LobbyPage = ({ socket }) => {
 
   return (
     <div style={{ marginBottom: "2rem" }}>
+      <ToastContainer />
+
       {isOngoingGame && (
         <GamePage
           socket={socket}

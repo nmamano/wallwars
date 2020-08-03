@@ -27,7 +27,7 @@ const IconButton = ({
   }
 
   let actions;
-  if (modalConfirmButtonText) {
+  if (modalConfirmButtonText && modalConfirmButtonText !== "") {
     actions = [
       <Button
         style={{

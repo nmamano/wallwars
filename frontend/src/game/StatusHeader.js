@@ -16,6 +16,10 @@ const StatusHeader = ({
     goal: "by reaching the goal",
     resign: "by resignation",
   };
+  const drawFinishMessage = {
+    goal: "by the one-move-left rule",
+    agreement: "by agreement",
+  };
   switch (lifeCycleStage) {
     case -2:
       msg = "Haven't tried to connect to the server yet";
@@ -34,7 +38,8 @@ const StatusHeader = ({
       msg = `${nameToMove} to move`;
       break;
     case 4:
-      if (winner === "draw") msg = "The game ended in a draw";
+      if (winner === "draw")
+        msg = "The game ended in a draw " + drawFinishMessage[finishReason];
       else
         msg = `${names[winner === "creator" ? 0 : 1]} won ${
           finishMessage[finishReason]

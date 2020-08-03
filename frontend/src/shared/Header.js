@@ -1,11 +1,10 @@
 import React from "react";
 import "materialize-css";
 import { CopyToClipboard } from "react-copy-to-clipboard";
-import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import "./IconButton";
 import IconButton from "./IconButton";
+import showToastNotification from "./showToastNotification";
 
 function Header({
   gameName,
@@ -25,14 +24,7 @@ function Header({
         <CopyToClipboard
           style={{ cursor: "pointer" }}
           text={gameName}
-          onCopy={() =>
-            toast("Game code copied to clipboard!", {
-              autoClose: 2500,
-              hideProgressBar: true,
-              transition: Slide,
-              pauseOnFocusLoss: false,
-            })
-          }
+          onCopy={() => showToastNotification("Game code copied to clipboard!")}
         >
           <span>Game {gameName}</span>
         </CopyToClipboard>
@@ -66,7 +58,6 @@ function Header({
 
   return (
     <div>
-      <ToastContainer />
       <div
         className={color}
         style={{

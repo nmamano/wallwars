@@ -1,13 +1,14 @@
 import React from "react";
 import MoveHistory from "./MoveHistory";
 import IconButton from "./../shared/IconButton";
+import showToastNotification from "../shared/showToastNotification";
 
 const GameControlPanel = ({
   lifeCycleStage,
   handleResign,
   handleOfferDraw,
-  handleProposeTakeback,
-  handleIncreaseOpponentTime,
+  handleRequestTakeback,
+  handleGiveExtraTime,
   moveHistory,
   playerColors,
   creatorStarts,
@@ -29,7 +30,6 @@ const GameControlPanel = ({
   const padding = 5;
   const gapHeight = 5;
   const buttonHeight = 36;
-  const disableUnimplemented = true;
   const moveHistoryHeight =
     boardHeight - buttonHeight * 3 - gapHeight * 3 - padding * 2;
   return (
@@ -63,19 +63,28 @@ const GameControlPanel = ({
         modalBody={"Are you sure you want to offer a draw?"}
         modalConfirmButtonText={"Offer draw"}
         onClick={handleOfferDraw}
-        disabled={disableUnimplemented || lifeCycleStage !== 3}
+        disabled={lifeCycleStage !== 3}
       />
       <IconButton
         icon={"replay"}
         tooltip={"Propose takeback"}
-        onClick={handleProposeTakeback}
-        disabled={disableUnimplemented || lifeCycleStage !== 3}
+        onClick={() => {
+          showToastNotification(
+            "A takeback request was sent to the opponent. If they accept, the last move will be undone.",
+            5000
+          );
+          handleRequestTakeback();
+        }}
+        disabled={lifeCycleStage !== 3}
       />
       <IconButton
         icon={"add_alarm"}
         tooltip={"Give 60 seconds"}
-        onClick={handleIncreaseOpponentTime}
-        disabled={disableUnimplemented || lifeCycleStage !== 3}
+        onClick={() => {
+          showToastNotification("You added 60s to the opponent's clock.", 5000);
+          handleGiveExtraTime();
+        }}
+        disabled={lifeCycleStage !== 3}
       />
       <div style={{ gridColumnStart: "1", gridColumnEnd: "5" }}>
         <MoveHistory

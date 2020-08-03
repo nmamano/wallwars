@@ -22,14 +22,6 @@ const unjoinedGameIndex = (gameId) => {
   return -1;
 };
 
-// const ongoingGameIndex = (gameId) => {
-//   for (let i = 0; i < ongoingGames.length; i += 1) {
-//     const game = ongoingGames[i];
-//     if (game.gameId === gameId) return i;
-//   }
-//   return -1;
-// };
-
 const ongoingGameIndexOfClient = (socketId) => {
   for (let i = 0; i < ongoingGames.length; i += 1) {
     const game = ongoingGames[i];
@@ -79,11 +71,12 @@ const purgeGamesOfClient = (socketId) => {
 
 io.on("connection", (socket) => {
   const socketId = socket.id;
-  console.log(`new connection from socket ${socketId}`);
+  const shortId = socketId.substring(0, 6);
+  console.log(`new connection from client ${shortId}`);
 
   socket.on("createGame", (timeControl, creatorName) => {
     purgeGamesOfClient();
-    console.log(`client ${socketId}: createGame`);
+    console.log(`${shortId}: createGame`);
     const gameParams = {
       gameId: randomGameId(),
       socketIds: [socketId, null],
@@ -102,14 +95,13 @@ io.on("connection", (socket) => {
 
   socket.on("joinGame", (gameId, joinerName) => {
     purgeGamesOfClient();
-    console.log(`client ${socketId}: joinGame ${gameId}`);
+    console.log(`${shortId}: joinGame ${gameId}`);
     const i = unjoinedGameIndex(gameId);
     if (i === -1) {
       console.log("game not found");
       socket.emit("gameNotFound");
       return;
     }
-    console.log("game found");
     const game = unjoinedGames[i];
     game.socketIds[1] = socketId;
     game.playerNames[1] = joinerName;
@@ -126,41 +118,51 @@ io.on("connection", (socket) => {
   });
 
   socket.on("move", (actions, remainingTime) => {
-    console.log(`client ${socketId}: move ${actions}`);
+    console.log(`${shortId}: move`);
     const i = ongoingGameIndexOfClient(socketId);
     if (i === -1) {
       console.error("game not found");
       return;
     }
     const game = ongoingGames[i];
-    const opp = getOpponent(socketId);
-    io.to(opp).emit("move", actions, game.turnCount + 1, remainingTime);
+    io.to(getOpponent(socketId)).emit(
+      "opponentMoved",
+      actions,
+      game.turnCount + 1,
+      remainingTime
+    );
     game.turnCount += 1;
   });
 
-  socket.on("rematchOffer", () => {
-    console.log(`client ${socketId}: rematchOffer`);
-    const i = ongoingGameIndexOfClient(socketId);
-    if (i === -1) {
+  socket.on("offerRematch", () => {
+    console.log(`${shortId}: offerRematch`);
+    if (ongoingGameIndexOfClient(socketId) === -1) {
       console.error("game not found");
       return;
     }
-    console.log("game found");
-    const opp = getOpponent(socketId);
-    io.to(opp).emit("rematchOfferReceived");
+    io.to(getOpponent(socketId)).emit("rematchOffered");
   });
 
-  socket.on("rematchAccepted", () => {
-    console.log(`client ${socketId}: rematchAccepted`);
+  socket.on("rejectRematch", () => {
+    console.log(`${shortId}: rejectRematch`);
+    if (ongoingGameIndexOfClient(socketId) === -1) {
+      console.error("game not found");
+      return;
+    }
+    io.to(getOpponent(socketId)).emit("rematchRejected");
+  });
+
+  socket.on("acceptRematch", () => {
+    console.log(`${shortId}: acceptRematch`);
     const i = ongoingGameIndexOfClient(socketId);
     if (i === -1) {
       console.error("game not found");
       return;
     }
-    console.log("game found");
     const game = ongoingGames.splice(i, 1)[0]; //remove the finished game
     const newGame = {
-      gameId: randomGameId(),
+      gameId: game.gameId,
+      gameCount: game.gameCount + 1,
       socketIds: game.socketIds,
       playerNames: game.playerNames,
       timeControl: game.timeControl,
@@ -168,28 +170,79 @@ io.on("connection", (socket) => {
       turnCount: 0,
     };
     ongoingGames.push(newGame);
-    io.to(game.socketIds[0])
-      .to(game.socketIds[1])
-      .emit("rematchStarted", newGame.gameId);
+    io.to(getOpponent(socketId)).emit("rematchAccepted", newGame.gameId);
   });
 
   socket.on("resign", () => {
-    console.log(`client ${socketId}: resign`);
-    const i = ongoingGameIndexOfClient(socketId);
-    if (i === -1) {
+    console.log(`${shortId}: resign`);
+    if (ongoingGameIndexOfClient(socketId) === -1) {
       console.error("game not found");
       return;
     }
-    console.log("game found");
-    const game = ongoingGames[i];
-    const resignerIsCreator = game.socketIds[0] === socketId;
-    io.to(game.socketIds[0])
-      .to(game.socketIds[1])
-      .emit("playerResigned", resignerIsCreator);
+    io.to(getOpponent(socketId)).emit("opponentResigned");
+  });
+
+  socket.on("offerDraw", () => {
+    console.log(`${shortId}: offerDraw`);
+    if (ongoingGameIndexOfClient(socketId) === -1) {
+      console.error("game not found");
+      return;
+    }
+    io.to(getOpponent(socketId)).emit("drawOffered");
+  });
+  socket.on("acceptDraw", () => {
+    console.log(`${shortId}: acceptDraw`);
+    if (ongoingGameIndexOfClient(socketId) === -1) {
+      console.error("game not found");
+      return;
+    }
+    io.to(getOpponent(socketId)).emit("drawAccepted");
+  });
+  socket.on("rejectDraw", () => {
+    console.log(`${shortId}: rejectDraw`);
+    if (ongoingGameIndexOfClient(socketId) === -1) {
+      console.error("game not found");
+      return;
+    }
+    io.to(getOpponent(socketId)).emit("drawRejected");
+  });
+
+  socket.on("requestTakeback", () => {
+    console.log(`${shortId}: requestTakeback`);
+    if (ongoingGameIndexOfClient(socketId) === -1) {
+      console.error("game not found");
+      return;
+    }
+    io.to(getOpponent(socketId)).emit("takebackRequested");
+  });
+  socket.on("acceptTakeback", () => {
+    console.log(`${shortId}: acceptTakeback`);
+    if (ongoingGameIndexOfClient(socketId) === -1) {
+      console.error("game not found");
+      return;
+    }
+    io.to(getOpponent(socketId)).emit("takebackAccepted");
+  });
+  socket.on("rejectTakeback", () => {
+    console.log(`${shortId}: rejectTakeback`);
+    if (ongoingGameIndexOfClient(socketId) === -1) {
+      console.error("game not found");
+      return;
+    }
+    io.to(getOpponent(socketId)).emit("takebackRejected");
+  });
+
+  socket.on("giveExtraTime", () => {
+    console.log(`${shortId}: giveExtraTime`);
+    if (ongoingGameIndexOfClient(socketId) === -1) {
+      console.error("game not found");
+      return;
+    }
+    io.to(getOpponent(socketId)).emit("extraTimeReceived");
   });
 
   socket.on("leaveGame", () => {
-    console.log(`client ${socketId}: leaveGame`);
+    console.log(`${shortId}: leaveGame`);
     purgeGamesOfClient();
   });
 
