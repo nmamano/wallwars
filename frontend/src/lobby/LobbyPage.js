@@ -53,12 +53,18 @@ const LobbyPage = ({ socket }) => {
     if (isNaN(dur) || dur < 0.1) {
       dur = 5 / 60;
       showToastNotification("Invalid duration, using 5s instead", 5000);
+    } else if (dur > 120) {
+      dur = 120;
+      showToastNotification("Duration too long, using 2h instead", 5000);
     } else {
       setCookie("duration", dur, { path: "/" });
     }
     if (isNaN(inc) || inc < 0) {
       inc = 0;
       showToastNotification("Invalid increment, using 0s instead", 5000);
+    } else if (inc > 300) {
+      inc = 300;
+      showToastNotification("Increment too large, using 5m instead", 5000);
     } else {
       setCookie("increment", inc, { path: "/" });
     }

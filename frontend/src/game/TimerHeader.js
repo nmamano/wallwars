@@ -6,6 +6,7 @@ const TimerHeader = ({
   playerColors,
   timeLeft,
   indexToMove,
+  isLargeScreen,
 }) => {
   const [min1, min2] = [
     Math.floor(timeLeft[0] / 60),
@@ -39,7 +40,10 @@ const TimerHeader = ({
     }
   }
 
-  const pStyle = { padding: "15px", fontSize: "18px" };
+  const pStyle = {
+    padding: isLargeScreen ? "15px" : "8px",
+    fontSize: isLargeScreen ? "18px" : "14px",
+  };
 
   return (
     <div
@@ -49,8 +53,8 @@ const TimerHeader = ({
         gridTemplateColumns: "1.7fr 1fr 1fr 1.7fr",
         gridTemplateRows: "auto",
         alignContent: "center",
-        columnGap: "15px",
-        padding: "15px",
+        columnGap: isLargeScreen ? "15px" : "8px",
+        padding: isLargeScreen ? "15px" : "8px",
         gridArea: "timer",
       }}
     >

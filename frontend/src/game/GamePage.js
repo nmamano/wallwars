@@ -844,16 +844,18 @@ const GamePage = ({
     (scaledWallWidth * (dims.w - 1)) / 2 +
     (scaledGroundSize * (dims.w + 1)) / 2;
 
-  const gapSize = 15;
-  const timersHeight = 100;
-  const controlPanelWidth = 360;
+  const gapSize = isLargeScreen ? 15 : 6;
   let gridTemplateRows, gridTemplateColumns, gridTemplateAreas;
   if (isLargeScreen) {
+    const timersHeight = 100;
+    const controlPanelWidth = 360;
     gridTemplateRows = `${timersHeight}px ${boardHeight}px`;
     gridTemplateColumns = `${boardWidth}px ${controlPanelWidth}px`;
     gridTemplateAreas = "'timer status' 'board panel'";
   } else {
-    gridTemplateRows = `repeat(2, ${timersHeight}px ${boardHeight}px)`;
+    const timersHeight = 50;
+    const statusHeaderHeight = 80;
+    gridTemplateRows = `${timersHeight}px ${boardHeight}px ${statusHeaderHeight}px ${boardHeight}px`;
     gridTemplateColumns = `${boardWidth}px`;
     gridTemplateAreas = "'timer' 'board' 'status' 'panel'";
   }
@@ -900,6 +902,7 @@ const GamePage = ({
           indexToMove={indexToMove(state)}
           playerColors={playerColors}
           timeLeft={[displayTime1, displayTime2]}
+          isLargeScreen={isLargeScreen}
         />
         <StatusHeader
           lifeCycleStage={state.lifeCycleStage}
@@ -909,6 +912,7 @@ const GamePage = ({
           finishReason={state.finishReason}
           timeControl={state.timeControl}
           creatorStarts={state.creatorStarts}
+          isLargeScreen={isLargeScreen}
         />
         <Board
           creatorToMove={creatorToMove(state)}

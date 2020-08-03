@@ -8,6 +8,7 @@ const StatusHeader = ({
   indexToMove,
   timeControl,
   creatorStarts,
+  isLargeScreen,
 }) => {
   let msg;
   const nameToMove = names[indexToMove];
@@ -15,7 +16,7 @@ const StatusHeader = ({
     time: "on time",
     goal: "by reaching the goal",
     resign: "by resignation",
-    disconnect: "by disconnection"
+    disconnect: "by disconnection",
   };
   const drawFinishMessage = {
     goal: "by the one-move-left rule",
@@ -60,7 +61,7 @@ const StatusHeader = ({
         gridTemplateColumns: "auto",
         gridTemplateRows: "1fr 1fr 1fr",
         alignItems: "center",
-        padding: "15px",
+        padding: isLargeScreen ? "15px 15px" : "5px 15px",
         gridArea: "status",
       }}
     >
