@@ -810,11 +810,17 @@ const GamePage = ({
       draftState.showBackButtonWarning = true;
     });
   };
-  const handleConfirmBackButton = () => {
-    updateState((draftState) => {
-      draftState.showBackButtonWarning = false;
-    });
-    handleLeaveGame();
+  const handleAnswerConfirmBackButton = (confirmed) => {
+    if (confirmed) {
+      updateState((draftState) => {
+        draftState.showBackButtonWarning = false;
+      });
+      handleLeaveGame();
+    } else {
+      updateState((draftState) => {
+        draftState.showBackButtonWarning = false;
+      });
+    }
   };
   useEffect(() => {
     window.history.pushState(null, null, window.location.pathname);
@@ -972,12 +978,8 @@ const GamePage = ({
           "not be able to rejoin this game."
         }
         acceptButtonText="Quit game"
-        onAccept={handleConfirmBackButton}
-        onClose={() => {
-          updateState((draftState) => {
-            draftState.showBackButtonWarning = false;
-          });
-        }}
+        rejectButtonText="Stay in game"
+        callback={handleAnswerConfirmBackButton}
       />
       <Dialog
         isOpen={state.showDrawDialog}
