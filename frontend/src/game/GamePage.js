@@ -34,7 +34,6 @@ const corners = {
 };
 //most data structures related to the players use an array
 //of length 2, with the data for the creator first
-const [creatorIndex, joinerIndex] = [0, 1];
 const initialPlayerPos = [corners.tl, corners.tr];
 const goals = [corners.br, corners.bl];
 const playerColors = ["red", "indigo"];
@@ -56,8 +55,7 @@ const turnCount = (state) => state.moveHistory.length - 1;
 const creatorToMove = (state) =>
   turnCount(state) % 2 === (state.creatorStarts ? 0 : 1);
 
-const indexToMove = (state) =>
-  creatorToMove(state) ? creatorIndex : joinerIndex;
+const indexToMove = (state) => (creatorToMove(state) ? 0 : 1);
 
 const emptyGrid = (dims) => {
   let grid = [];
@@ -71,14 +69,17 @@ const emptyGrid = (dims) => {
 //one of 'None', 'Ground', 'Wall'
 const ghostType = (pos) => (pos === null ? "None" : cellTypeByPos(pos));
 
+//===================================================
+//functions that modify a copy of the state
+//===================================================
+//they are a bit out of context here before the component, but they don't need
+//to be inside. the state itself should be immutable, but we can make changes
+//to the copy 'draftState'
+
 //function that updates the state of the game when a move happens
-//(it's a bit out of context out here, but it doesn't need to be inside the component)
 //it applied the move number 'moveIndex', consisting of the action(s) in 'actions',
-//to the state 'draftState'
-//'draftState' is a copy of the actual state in the GamePage component, so it can be mutated
-//(see the definition of 'state' in GamePage)
 //'timeLeftAfterMove' is the time left by the player who made the move
-const makeMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
+const applyMakeMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
   //only in life cycle stages 1,2,3 players can make move
   if (draftState.lifeCycleStage < 1 || draftState.lifeCycleStage > 3) return;
   //make the move only if it is the next one (safety measure against desync issues)
@@ -88,18 +89,22 @@ const makeMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
   if (draftState.isVolumeOn) moveSound.play();
 
   const idxToMove = indexToMove(draftState);
-  const otherIdx = idxToMove === creatorIndex ? joinerIndex : creatorIndex;
-  let wallCount = 0;
+  const otherIdx = idxToMove === 0 ? 1 : 0;
+  const newPlayerPos = cloneDeep(draftState.moveHistory[tc].playerPos);
+  const newGrid = cloneDeep(draftState.moveHistory[tc].grid);
+  const newTimeLeft = cloneDeep(draftState.moveHistory[tc].timeLeft);
+  const wallCounts = cloneDeep(draftState.moveHistory[tc].wallCounts);
+  newTimeLeft[idxToMove] = timeLeftAfterMove;
   for (let k = 0; k < actions.length; k++) {
     const aPos = actions[k];
     const aType = cellTypeByPos(aPos);
     if (aType === "Ground") {
-      draftState.playerPos[idxToMove] = aPos;
+      newPlayerPos[idxToMove] = aPos;
       if (posEq(aPos, goals[idxToMove])) {
         const pToMoveStarted = tc % 2 === 0;
         const remainingDist = distance(
-          draftState.grid,
-          draftState.playerPos[otherIdx],
+          newGrid,
+          newPlayerPos[otherIdx],
           goals[otherIdx]
         );
         if (pToMoveStarted && remainingDist <= 2) draftState.winner = "draw";
@@ -108,86 +113,87 @@ const makeMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
         draftState.lifeCycleStage = 4;
       }
     } else if (aType === "Wall") {
-      draftState.grid[aPos.r][aPos.c] = idxToMove + 1;
-      wallCount += 1;
+      newGrid[aPos.r][aPos.c] = idxToMove + 1;
+      wallCounts[idxToMove] += 1;
     } else console.error("unexpected action type", aType);
   }
-  if (timeLeftAfterMove) draftState.timeLeft[idxToMove] = timeLeftAfterMove;
-  draftState.ghostAction = null; //ghost actions are cleared when a move actually happens
-  const wallCounts = cloneDeep(draftState.moveHistory[tc].wallCounts);
-  wallCounts[idxToMove] += wallCount;
   draftState.moveHistory.push({
     index: tc + 1,
     actions: actions,
-    grid: draftState.grid,
-    playerPos: draftState.playerPos,
-    timeLeft: draftState.timeLeft,
+    grid: newGrid,
+    playerPos: newPlayerPos,
+    timeLeft: newTimeLeft,
     distances: [
-      distance(draftState.grid, draftState.playerPos[0], goals[0]),
-      distance(draftState.grid, draftState.playerPos[1], goals[1]),
+      distance(newGrid, newPlayerPos[0], goals[0]),
+      distance(newGrid, newPlayerPos[1], goals[1]),
     ],
     wallCounts: wallCounts,
   });
+
   if (draftState.lifeCycleStage === 1 && tc === 0)
     draftState.lifeCycleStage = 2;
   else if (draftState.lifeCycleStage === 2 && tc === 1)
     draftState.lifeCycleStage = 3;
+
+  //ghost actions are cleared when a move actually happens
+  draftState.ghostAction = null;
 
   //if the player is looking at a previous move, when a move happens
   //they are automatically switched to viewing the new move
   draftState.viewIndex = tc + 1;
 };
 
-const drawGame = (draftState, finishReason) => {
-  if (draftState.lifeCycleStage === 4) return;
+const closeDialogs = (draftState) => {
+  draftState.showRematchDialog = false;
+  draftState.showDrawDialog = false;
+  draftState.showTakebackDialog = false;
+};
+const applyDrawGame = (draftState, finishReason) => {
+  if (draftState.lifeCycleStage !== 3) return;
   if (draftState.isVolumeOn) moveSound.play();
   draftState.lifeCycleStage = 4;
   draftState.winner = "draw";
   draftState.finishReason = finishReason;
   draftState.ghostAction = null;
-  draftState.showRematchDialog = false;
-  draftState.showDrawDialog = false;
-  draftState.showTakebackDialog = false;
+  closeDialogs(draftState);
 };
-
-const resignGame = (draftState, resignerIsCreator) => {
-  if (draftState.lifeCycleStage === 4) return;
-  if (draftState.isVolumeOn) moveSound.play();
+const applyResignGame = (draftState, resignerIsCreator) => {
+  if (draftState.lifeCycleStage !== 3) return;
   draftState.lifeCycleStage = 4;
   draftState.winner = resignerIsCreator ? "joiner" : "creator";
   draftState.finishReason = "resign";
   draftState.ghostAction = null;
-  draftState.showRematchDialog = false;
-  draftState.showDrawDialog = false;
-  draftState.showTakebackDialog = false;
+  closeDialogs(draftState);
 };
-
-const takebackLastMove = (draftState) => {
+const applyTakeback = (draftState) => {
   draftState.showTakebackDialog = false;
-  //todo: update state without the last move
+  if (draftState.lifeCycleStage !== 2 && draftState.lifeCycleStage !== 3)
+    return;
+  draftState.moveHistory.pop();
+  draftState.ghostAction = null;
+  const tc = turnCount(draftState);
+  draftState.viewIndex = tc;
+  if (tc === 0) draftState.lifeCycleStage = 1;
+  else if (tc === 1) draftState.lifeCycleStage = 2;
 };
-
-const setupRematch = (draftState) => {
+const applySetupRematch = (draftState) => {
+  if (draftState.lifeCycleStage !== 4) return;
   draftState.creatorStarts = !draftState.creatorStarts;
-  draftState.playerPos = initialPlayerPos;
-  draftState.grid = emptyGrid(dims);
-  draftState.timeLeft = [
-    draftState.timeControl.duration * 60,
-    draftState.timeControl.duration * 60,
-  ];
+  draftState.gameCount += 1;
+  const newGrid = emptyGrid(dims);
   draftState.moveHistory = [
     {
       index: 0,
       actions: [],
-      grid: emptyGrid(dims),
+      grid: newGrid,
       playerPos: initialPlayerPos,
       timeLeft: [
         draftState.timeControl.duration * 60,
         draftState.timeControl.duration * 60,
       ],
       distances: [
-        distance(emptyGrid(dims), initialPlayerPos[0], goals[0]),
-        distance(emptyGrid(dims), initialPlayerPos[1], goals[1]),
+        distance(newGrid, initialPlayerPos[0], goals[0]),
+        distance(newGrid, initialPlayerPos[1], goals[1]),
       ],
       wallCounts: [0, 0],
     },
@@ -197,10 +203,27 @@ const setupRematch = (draftState) => {
   draftState.lifeCycleStage = 1;
   draftState.viewIndex = 0;
   draftState.ghostAction = null;
-  draftState.showRematchDialog = false;
-  draftState.showDrawDialog = false;
-  draftState.showTakebackDialog = false;
-  if (draftState.isVolumeOn) moveSound.play();
+  closeDialogs(draftState);
+};
+const applyAddExtraTime = (draftState, playerIndex) => {
+  if (draftState.lifeCycleStage !== 3) return;
+  const tc = turnCount(draftState);
+  draftState.moveHistory[tc].timeLeft[playerIndex] += 60;
+};
+const applyClockTick = (draftState) => {
+  //clocks only run after each player have made the first move,
+  //and the game has not ended
+  if (draftState.lifeCycleStage !== 3) return;
+  const idx = indexToMove(draftState);
+  const tc = turnCount(draftState);
+  draftState.moveHistory[tc].timeLeft[idx] -= 1;
+  if (draftState.moveHistory[tc].timeLeft[idx] === 0) {
+    draftState.winner = idx === 0 ? "joiner" : "creator";
+    draftState.finishReason = "time";
+    draftState.lifeCycleStage = 4;
+    draftState.ghostAction = null;
+    closeDialogs(draftState);
+  }
 };
 
 const GamePage = ({
@@ -220,7 +243,7 @@ const GamePage = ({
   //===================================================
   const [state, updateState] = useImmer({
     //===================================================
-    //state initialized from the props OR the server, depending on creator/joiner
+    //state about the session (sequence of games played by rematching)
     //===================================================
     //game code used by the joiner to join the game
     gameId: clientIsCreator ? null : joinerParams.gameId,
@@ -230,26 +253,32 @@ const GamePage = ({
       clientIsCreator ? creatorParams.creatorName : null,
       clientIsCreator ? null : joinerParams.joinerName,
     ],
-    creatorStarts: null, //who starts is decided by the server
+    //how many games each player has won in this session (not implemented yet)
+    gameWins: [0, 0],
 
     //===================================================
-    //state that changes during the game and is common to both clients and synched
+    //shared state of the current game
     //===================================================
-    playerPos: initialPlayerPos,
-    //grid contains the locations of all the built walls, labeled by who built them
-    //0: empty wall, 1: player built by creator, 2: player built by joiner
-    grid: emptyGrid(dims),
-    timeLeft: [
-      clientIsCreator ? creatorParams.timeControl.duration * 60 : null,
-      clientIsCreator ? creatorParams.timeControl.duration * 60 : null,
-    ],
+    creatorStarts: null, //who starts is decided by the server
     winner: "", //'' if game is ongoing, else 'creator', 'joiner', or 'draw'
     finishReason: "", //'' if game is ongoing, else 'time', 'goal', or 'resign'
+
+    //life cycle of the game
+    //-2. Before sending 'createGame'/'joinGame' (for creator/joiner) to the server
+    //-1. Before receiving 'gameCreated'/'gameJoined' (for creator/joiner) from the server
+    //0. game created on server, but joiner not joined yet (only creator goes into this stage).
+    //1. joiner joined, but no moves made yet. Clocks not ticking.
+    //2. One player moved. Clocks still not ticking.
+    //3. Both players made at least 1 move and game has not ended. Clocks are ticking.
+    //4. Game ended because a win/draw condition is reached.
+    lifeCycleStage: -2,
 
     moveHistory: [
       {
         index: 0,
         actions: [],
+        //grid contains the locations of all the built walls, labeled by who built them
+        //0: empty wall, 1: player built by creator, 2: player built by joiner
         grid: emptyGrid(dims),
         playerPos: initialPlayerPos,
         timeLeft: [
@@ -264,22 +293,12 @@ const GamePage = ({
       },
     ],
 
-    //life cycle of the game
-    //-2. Before sending 'createGame'/'joinGame' (for creator/joiner) to the server
-    //-1. Before receiving 'gameCreated'/'gameJoined' (for creator/joiner) from the server
-    //0. game created on server, but joiner not joined yet (only creator goes into this stage).
-    //1. joiner joined, but no moves made yet. Clocks not ticking.
-    //2. One player moved. Clocks still not ticking.
-    //3. Both players made at least 1 move and game has not ended. Clocks are ticking.
-    //4. Game ended because a win/draw condition is reached.
-    lifeCycleStage: -2,
-
     //===================================================
-    //state that changes during the game AND is unique to this client
+    //state unique to this client
     //===================================================
     //the ghost action is a single action that is shown only to this client
-    //it can be combined with another action to make a full move, or undone in order to
-    //choose a different action
+    //it can be combined with another action to make a full move, or undone
+    //in order to choose a different action
     ghostAction: null,
 
     isVolumeOn: false,
@@ -289,6 +308,7 @@ const GamePage = ({
     //index of the move that the client is looking at, which may not be the last one
     viewIndex: 0,
     zoomLevel: 5, //number from 0 to 10
+    //various dialogs where the player needs to make a decision
     showDrawDialog: false,
     showTakebackDialog: false,
     showRematchDialog: false,
@@ -313,12 +333,8 @@ const GamePage = ({
         //if life cycle stage is already 1, it means we already joined
         if (draftState.lifeCycleStage === 1) return;
         draftState.creatorStarts = creatorStarts;
-        draftState.names[creatorIndex] = creatorName;
+        draftState.names[0] = creatorName;
         draftState.timeControl = timeControl;
-        draftState.timeLeft = [
-          timeControl.duration * 60,
-          timeControl.duration * 60,
-        ];
         draftState.moveHistory[0].timeLeft = [
           timeControl.duration * 60,
           timeControl.duration * 60,
@@ -330,9 +346,9 @@ const GamePage = ({
       updateState((draftState) => {
         //if life cycle stage is already 1, it means the joiner already joined
         if (draftState.lifeCycleStage === 1) return;
-        draftState.names[joinerIndex] = joinerName;
-        draftState.lifeCycleStage = 1;
         if (draftState.isVolumeOn) moveSound.play();
+        draftState.names[1] = joinerName;
+        draftState.lifeCycleStage = 1;
       });
     });
 
@@ -347,10 +363,9 @@ const GamePage = ({
     socket.on("drawAccepted", () => {
       showToastNotification("The opponent accepted the draw offer.", 5000);
       updateState((draftState) => {
-        drawGame(draftState, "agreement");
+        applyDrawGame(draftState, "agreement");
       });
     });
-
     socket.on("takebackRequested", () => {
       updateState((draftState) => {
         draftState.showTakebackDialog = true;
@@ -369,10 +384,9 @@ const GamePage = ({
         5000
       );
       updateState((draftState) => {
-        takebackLastMove(draftState);
+        applyTakeback(draftState);
       });
     });
-
     socket.on("rematchOffered", () => {
       updateState((draftState) => {
         draftState.showRematchDialog = true;
@@ -384,34 +398,33 @@ const GamePage = ({
     socket.on("rematchAccepted", () => {
       showToastNotification("The opponent accepted the rematch offer.", 5000);
       updateState((draftState) => {
-        setupRematch(draftState);
+        if (draftState.isVolumeOn) moveSound.play();
+        applySetupRematch(draftState);
       });
     });
-
     socket.on("extraTimeReceived", () => {
       showToastNotification("The opponent added 60s to your clock.", 5000);
       updateState((draftState) => {
-        draftState.timeLeft[clientIsCreator ? 0 : 1] += 60;
+        applyAddExtraTime(draftState, clientIsCreator ? 0 : 1);
       });
     });
-
     socket.on("opponentResigned", () => {
       showToastNotification("The opponent resigned.", 5000);
       updateState((draftState) => {
-        resignGame(draftState, !clientIsCreator);
+        if (draftState.isVolumeOn) moveSound.play();
+        applyResignGame(draftState, !clientIsCreator);
       });
     });
-
     socket.on("opponentMoved", (actions, moveIndex, receivedTime) => {
       updateState((draftState) => {
         console.log(`move ${moveIndex} received ${receivedTime}`);
-        makeMove(draftState, actions, moveIndex, receivedTime);
+        applyMakeMove(draftState, actions, moveIndex, receivedTime);
       });
     });
     return () => {
       socket.removeAllListeners();
     };
-  }, [socket, updateState, clientIsCreator, state.gameId, state.isVolumeOn]);
+  }, [socket, updateState, clientIsCreator]);
 
   //===================================================
   //communication TO the server
@@ -424,13 +437,13 @@ const GamePage = ({
       updateState((draftState) => {
         draftState.lifeCycleStage = -1;
       });
-      socket.emit("createGame", state.timeControl, state.names[creatorIndex]);
+      socket.emit("createGame", state.timeControl, state.names[0]);
     }
     if (!clientIsCreator) {
       updateState((draftState) => {
         draftState.lifeCycleStage = -1;
       });
-      socket.emit("joinGame", state.gameId, state.names[joinerIndex]);
+      socket.emit("joinGame", state.gameId, state.names[1]);
     }
   });
 
@@ -442,7 +455,6 @@ const GamePage = ({
       document.body.style.backgroundColor = backgroundColors.light;
     returnToLobby();
   };
-
   const handleSendRematchOffer = () => {
     socket.emit("offerRematch");
   };
@@ -450,7 +462,7 @@ const GamePage = ({
     if (accepted) {
       socket.emit("acceptRematch");
       updateState((draftState) => {
-        setupRematch(draftState);
+        applySetupRematch(draftState);
       });
     } else {
       socket.emit("rejectRematch");
@@ -466,7 +478,7 @@ const GamePage = ({
     if (accepted) {
       socket.emit("acceptDraw");
       updateState((draftState) => {
-        drawGame(draftState, "agreement");
+        applyDrawGame(draftState, "agreement");
       });
     } else {
       socket.emit("rejectDraw");
@@ -480,9 +492,13 @@ const GamePage = ({
   };
   const handleAnswerTakebackRequest = (accepted) => {
     if (accepted) {
+      showToastNotification(
+        "The last move played on the board has been undone.",
+        5000
+      );
       socket.emit("acceptTakeback");
       updateState((draftState) => {
-        takebackLastMove(draftState);
+        applyTakeback(draftState);
       });
     } else {
       socket.emit("rejectTakeback");
@@ -491,18 +507,16 @@ const GamePage = ({
       });
     }
   };
-
   const handleGiveExtraTime = () => {
     socket.emit("giveExtraTime");
     updateState((draftState) => {
-      draftState.timeLeft[clientIsCreator ? 1 : 0] += 60;
+      applyAddExtraTime(draftState, clientIsCreator ? 1 : 0);
     });
   };
-
   const handleResign = () => {
     socket.emit("resign");
     updateState((draftState) => {
-      resignGame(draftState, clientIsCreator);
+      applyResignGame(draftState, clientIsCreator);
     });
   };
 
@@ -513,16 +527,7 @@ const GamePage = ({
   useEffect(() => {
     const interval = setInterval(() => {
       updateState((draftState) => {
-        //clocks only run after each player have made the first move,
-        //and the game has not ended
-        if (draftState.lifeCycleStage !== 3) return;
-        const idx = indexToMove(draftState);
-        draftState.timeLeft[idx] -= 1;
-        if (draftState.timeLeft[idx] === 0) {
-          draftState.winner = idx === 0 ? "joiner" : "creator";
-          draftState.finishReason = "time";
-          draftState.lifeCycleStage = 4;
-        }
+        applyClockTick(draftState);
       });
     }, 1000);
     return () => clearInterval(interval);
@@ -539,14 +544,19 @@ const GamePage = ({
   const clickActionCount = (clickPos) => {
     const idx = indexToMove(state);
     const clickType = cellTypeByPos(clickPos);
+    const tc = turnCount(state);
     if (clickType === "Ground") {
-      return distance(state.grid, state.playerPos[idx], clickPos);
+      return distance(
+        state.moveHistory[tc].grid,
+        state.moveHistory[tc].playerPos[idx],
+        clickPos
+      );
     }
     if (clickType === "Wall") {
       //copy to preserve immutability of state, since we may need to modify the
       //grid / player positions to account for ghost actions
-      const gridCopy = cloneDeep(state.grid);
-      const playerPosCopy = cloneDeep(state.playerPos);
+      const gridCopy = cloneDeep(state.moveHistory[tc].grid);
+      const playerPosCopy = cloneDeep(state.moveHistory[tc].playerPos);
       const gType = ghostType(state.ghostAction);
       if (gType === "Wall") {
         //block ghost wall for the check
@@ -628,12 +638,13 @@ const GamePage = ({
 
     if (fullMoveActions) {
       const idx = indexToMove(state);
-      let tLeft = state.timeLeft[idx];
+      const tc = turnCount(state);
+      let tLeft = state.moveHistory[tc].timeLeft[idx];
       //we don't add the increment until the clocks start running (stage 3)
       if (state.lifeCycleStage === 3) tLeft += state.timeControl.increment;
       socket.emit("move", fullMoveActions, tLeft);
       updateState((draftState) => {
-        makeMove(draftState, fullMoveActions, turnCount(state) + 1, tLeft);
+        applyMakeMove(draftState, fullMoveActions, turnCount(state) + 1, tLeft);
       });
     } else {
       updateState((draftState) => {
@@ -682,7 +693,10 @@ const GamePage = ({
     let p;
     if (state.ghostAction && ghostType(state.ghostAction) === "Ground")
       p = state.ghostAction;
-    else p = state.playerPos[indexToMove(state)];
+    else {
+      const tc = turnCount(state);
+      p = state.moveHistory[tc].playerPos[indexToMove(state)];
+    }
     if (key === "ArrowDown") p = { r: p.r + 2, c: p.c };
     else if (key === "ArrowUp") p = { r: p.r - 2, c: p.c };
     else if (key === "ArrowLeft") p = { r: p.r, c: p.c - 2 };
@@ -780,7 +794,7 @@ const GamePage = ({
   });
 
   //===================================================
-  //preparing props and rendering
+  //preparing props for rendering
   //===================================================
   let [gSize, wWidth] = isLargeScreen
     ? [groundSize, wallWidth]
@@ -795,64 +809,35 @@ const GamePage = ({
     (scaledWallWidth * (dims.w - 1)) / 2 +
     (scaledGroundSize * (dims.w + 1)) / 2;
 
-  //some hard-coded constants here could be moved to const variables
   const gapSize = 15;
+  const timersHeight = 100;
+  const controlPanelWidth = 360;
   let gridTemplateRows, gridTemplateColumns, gridTemplateAreas;
   if (isLargeScreen) {
-    gridTemplateRows = `100px ${boardHeight}px`;
-    gridTemplateColumns = `${boardWidth}px 360px`;
+    gridTemplateRows = `${timersHeight}px ${boardHeight}px`;
+    gridTemplateColumns = `${boardWidth}px ${controlPanelWidth}px`;
     gridTemplateAreas = "'timer status' 'board panel'";
   } else {
-    gridTemplateRows = `repeat(2, 100px ${boardHeight}px)`;
+    gridTemplateRows = `repeat(2, ${timersHeight}px ${boardHeight}px)`;
     gridTemplateColumns = `${boardWidth}px`;
     gridTemplateAreas = "'timer' 'board' 'status' 'panel'";
   }
 
+  //after the game is over, the players can see how much time they
+  //had left at each move. During the game, they ALWAYS see the current time
+  let displayTime1, displayTime2;
+  if (state.lifeCycleStage === 4) {
+    [displayTime1, displayTime2] = state.moveHistory[state.viewIndex].timeLeft;
+  } else {
+    const tc = turnCount(state);
+    [displayTime1, displayTime2] = state.moveHistory[tc].timeLeft;
+  }
+
+  //===================================================
+  //rendering (dialogs only shown on occasion)
+  //===================================================
   return (
     <div className={state.isDarkModeOn ? "teal darken-4" : undefined}>
-      <Dialog
-        isOpen={state.showBackButtonWarning}
-        title="Return to lobby"
-        body={
-          "Are you sure you want to return to the lobby? You will " +
-          "not be able to rejoin this game."
-        }
-        acceptButtonText="Quit game"
-        onAccept={handleConfirmBackButton}
-        onClose={() => {
-          updateState((draftState) => {
-            draftState.showBackButtonWarning = false;
-          });
-        }}
-      />
-      <Dialog
-        isOpen={state.showDrawDialog}
-        title="Draw offer received"
-        body="The opponent offered a draw."
-        acceptButtonText="Accept"
-        rejectButtonText="Decline"
-        callback={handleAnswerDrawOffer}
-      />
-      <Dialog
-        isOpen={state.showRematchDialog}
-        title="Rematch offer received"
-        body="The opponent would like a rematch."
-        acceptButtonText="Accept"
-        rejectButtonText="Decline"
-        callback={handleAnswerRematchOffer}
-      />
-      <Dialog
-        isOpen={state.showTakebackDialog}
-        title="Takeback request received"
-        body={
-          "The opponent requested a takeback. If you accept, the " +
-          "last move will be undone."
-        }
-        acceptButtonText="Accept"
-        rejectButtonText="Decline"
-        callback={handleAnswerTakebackRequest}
-      />
-
       <Header
         gameName={state.gameId}
         showLobby
@@ -879,7 +864,7 @@ const GamePage = ({
           names={state.names}
           indexToMove={indexToMove(state)}
           playerColors={playerColors}
-          timeLeft={state.timeLeft}
+          timeLeft={[displayTime1, displayTime2]}
         />
         <StatusHeader
           lifeCycleStage={state.lifeCycleStage}
@@ -949,6 +934,48 @@ const GamePage = ({
           </Col>
         </Row>
       )}
+      <Dialog
+        isOpen={state.showBackButtonWarning}
+        title="Return to lobby"
+        body={
+          "Are you sure you want to return to the lobby? You will " +
+          "not be able to rejoin this game."
+        }
+        acceptButtonText="Quit game"
+        onAccept={handleConfirmBackButton}
+        onClose={() => {
+          updateState((draftState) => {
+            draftState.showBackButtonWarning = false;
+          });
+        }}
+      />
+      <Dialog
+        isOpen={state.showDrawDialog}
+        title="Draw offer received"
+        body="The opponent offered a draw."
+        acceptButtonText="Accept"
+        rejectButtonText="Decline"
+        callback={handleAnswerDrawOffer}
+      />
+      <Dialog
+        isOpen={state.showRematchDialog}
+        title="Rematch offer received"
+        body="The opponent would like a rematch."
+        acceptButtonText="Accept"
+        rejectButtonText="Decline"
+        callback={handleAnswerRematchOffer}
+      />
+      <Dialog
+        isOpen={state.showTakebackDialog}
+        title="Takeback request received"
+        body={
+          "The opponent requested a takeback. If you accept, the " +
+          "last move will be undone."
+        }
+        acceptButtonText="Accept"
+        rejectButtonText="Decline"
+        callback={handleAnswerTakebackRequest}
+      />
     </div>
   );
 };

@@ -75,7 +75,7 @@ const GameControlPanel = ({
           );
           handleRequestTakeback();
         }}
-        disabled={lifeCycleStage !== 3}
+        disabled={lifeCycleStage !== 3 && lifeCycleStage !== 2}
       />
       <IconButton
         icon={"add_alarm"}

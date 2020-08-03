@@ -217,10 +217,13 @@ io.on("connection", (socket) => {
   });
   socket.on("acceptTakeback", () => {
     console.log(`${shortId}: acceptTakeback`);
-    if (ongoingGameIndexOfClient(socketId) === -1) {
+    const i = ongoingGameIndexOfClient(socketId);
+    if (i === -1) {
       console.error("game not found");
       return;
     }
+    const game = ongoingGames[i];
+    game.turnCount -= 1;
     io.to(getOpponent(socketId)).emit("takebackAccepted");
   });
   socket.on("rejectTakeback", () => {
