@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { Row, Col, TextInput, Button, Icon } from "react-materialize";
+import showToastNotification from "../shared/showToastNotification";
 
 const LobbyForm = ({
   playerName,
@@ -25,7 +26,10 @@ const LobbyForm = ({
   const downHandler = ({ key }) => {
     if (key !== "Enter") return;
     if (joinGameId.length > 0) handleJoinGame();
-    else handleCreateGame();
+    else {
+      showToastNotification("Created new game", 5000);
+      handleCreateGame();
+    }
   };
 
   return (

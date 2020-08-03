@@ -693,6 +693,12 @@ const GamePage = ({
     updateState((draftState) => {
       draftState.isKeyPressed = true;
     });
+    if (key === "m") {
+      updateState((draftState) => {
+        draftState.isVolumeOn = !draftState.isVolumeOn;
+      });
+      return;
+    }
 
     //if the user is not looking at the latest position,
     //or if the game is over, arrows are used to navigate

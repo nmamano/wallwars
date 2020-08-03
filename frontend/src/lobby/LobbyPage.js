@@ -7,6 +7,7 @@ import GamePage from "../game/GamePage";
 import Header from "../shared/Header";
 import LobbyForm from "./LobbyForm";
 import LobbyHelp from "./LobbyHelp";
+import showToastNotification from "../shared/showToastNotification";
 
 const maxPlayerNameLen = 9;
 
@@ -40,15 +41,11 @@ const LobbyPage = ({ socket }) => {
     let [dur, inc] = [parseFloat(duration), parseFloat(increment)];
     if (isNaN(dur) || dur < 0.1) {
       dur = 5 / 60;
-      console.log(
-        "given duration is not a number, using default value instead"
-      );
+      showToastNotification("Invalid duration, using 5s instead", 5000);
     }
     if (isNaN(inc) || inc < 0) {
       inc = 0;
-      console.log(
-        "given increment is not a number, using default value instead"
-      );
+      showToastNotification("Invalid increment, using 0s instead", 5000);
     }
     setCreatorParams({
       timeControl: {
