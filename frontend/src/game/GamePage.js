@@ -165,6 +165,14 @@ const applyResignGame = (draftState, resignerIsCreator) => {
   draftState.ghostAction = null;
   closeDialogs(draftState);
 };
+const applyLeaveGame = (draftState, leaverIsCreator) => {
+  if (draftState.lifeCycleStage === 4) return;
+  draftState.lifeCycleStage = 4;
+  draftState.winner = leaverIsCreator ? "joiner" : "creator";
+  draftState.finishReason = "disconnect";
+  draftState.ghostAction = null;
+  closeDialogs(draftState);
+};
 const applyTakeback = (draftState) => {
   draftState.showTakebackDialog = false;
   if (draftState.lifeCycleStage !== 2 && draftState.lifeCycleStage !== 3)
@@ -261,7 +269,7 @@ const GamePage = ({
     //===================================================
     creatorStarts: null, //who starts is decided by the server
     winner: "", //'' if game is ongoing, else 'creator', 'joiner', or 'draw'
-    finishReason: "", //'' if game is ongoing, else 'time', 'goal', or 'resign'
+    finishReason: "", //'' if game is ongoing, else 'time', 'goal', or 'resign', 'disconnect'
 
     //life cycle of the game
     //-2. Before sending 'createGame'/'joinGame' (for creator/joiner) to the server
@@ -342,6 +350,13 @@ const GamePage = ({
         draftState.lifeCycleStage = 1;
       });
     });
+    socket.once("gameJoinFailed", () => {
+      showToastNotification(
+        "There is no game with this code waiting for someone to join.",
+        5000
+      );
+      returnToLobby();
+    });
     socket.once("joinerJoined", (joinerName) => {
       updateState((draftState) => {
         //if life cycle stage is already 1, it means the joiner already joined
@@ -417,14 +432,20 @@ const GamePage = ({
     });
     socket.on("opponentMoved", (actions, moveIndex, receivedTime) => {
       updateState((draftState) => {
-        console.log(`move ${moveIndex} received ${receivedTime}`);
+        console.log(`move ${moveIndex} received (${receivedTime}s)`);
         applyMakeMove(draftState, actions, moveIndex, receivedTime);
+      });
+    });
+    socket.on("opponentLeft", () => {
+      showToastNotification("The opponent left the game.", 5000);
+      updateState((draftState) => {
+        applyLeaveGame(draftState, clientIsCreator ? false : true);
       });
     });
     return () => {
       socket.removeAllListeners();
     };
-  }, [socket, updateState, clientIsCreator]);
+  }, [socket, updateState, clientIsCreator, returnToLobby]);
 
   //===================================================
   //communication TO the server

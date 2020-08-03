@@ -15,6 +15,7 @@ const StatusHeader = ({
     time: "on time",
     goal: "by reaching the goal",
     resign: "by resignation",
+    disconnect: "by disconnection"
   };
   const drawFinishMessage = {
     goal: "by the one-move-left rule",

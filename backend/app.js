@@ -72,7 +72,7 @@ const purgeGamesOfClient = (socketId) => {
 io.on("connection", (socket) => {
   const socketId = socket.id;
   const shortId = socketId.substring(0, 6);
-  console.log(`new connection from client ${shortId}`);
+  console.log(`new connection: ${shortId}`);
 
   socket.on("createGame", (timeControl, creatorName) => {
     purgeGamesOfClient(socketId);
@@ -99,7 +99,7 @@ io.on("connection", (socket) => {
     const i = unjoinedGameIndex(gameId);
     if (i === -1) {
       console.log("game not found");
-      socket.emit("gameNotFound");
+      socket.emit("gameJoinFailed");
       return;
     }
     const game = unjoinedGames[i];
@@ -246,11 +246,19 @@ io.on("connection", (socket) => {
 
   socket.on("leaveGame", () => {
     console.log(`${shortId}: leaveGame`);
+    if (ongoingGameIndexOfClient(socketId) === -1) {
+      return;
+    }
+    io.to(getOpponent(socketId)).emit("opponentLeft");
     purgeGamesOfClient(socketId);
   });
 
   socket.on("disconnect", () => {
-    console.log(`socket ${socketId} disconnected`);
+    console.log(`closed connection: ${shortId}`);
+    if (ongoingGameIndexOfClient(socketId) === -1) {
+      return;
+    }
+    io.to(getOpponent(socketId)).emit("opponentLeft");
     purgeGamesOfClient(socketId);
   });
 });
