@@ -63,11 +63,13 @@ export function distance(grid, start, target) {
   const posToKey = (pos) => pos.r * C + pos.c;
 
   const queue = [];
+  let i = 0;
   queue.push(start);
   const dist = new Map();
   dist.set(posToKey(start), 0);
-  while (queue.length > 0) {
-    const pos = queue.shift(); //todo: inefficient, change for real queue
+  while (i < queue.length) {
+    const pos = queue[i];
+    i += 1;
     const nbrs = accessibleNeighbors(grid, pos);
     for (let k = 0; k < nbrs.length; k++) {
       let nbr = nbrs[k];
