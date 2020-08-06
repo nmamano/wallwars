@@ -19,7 +19,7 @@ const StatusHeader = ({
     disconnect: "by disconnection",
   };
   const drawFinishMessage = {
-    goal: "by the one-move-left rule",
+    goal: "by the 1-move rule",
     agreement: "by agreement",
   };
   switch (lifeCycleStage) {

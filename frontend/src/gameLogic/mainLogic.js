@@ -83,6 +83,36 @@ export function distance(grid, start, target) {
   return -1;
 }
 
+//same as distance, but with early termination
+export function isDistanceAtMost(grid, start, target, maxDistance) {
+  //implements bfs algorithm
+  if (posEq(start, target)) return 0;
+  const C = grid[0].length;
+  const posToKey = (pos) => pos.r * C + pos.c;
+
+  const queue = [];
+  let i = 0;
+  queue.push(start);
+  const dist = new Map();
+  dist.set(posToKey(start), 0);
+  while (i < queue.length) {
+    const pos = queue[i];
+    i += 1;
+    const dis = dist.get(posToKey(pos));
+    if (dis > maxDistance) return false;
+    const nbrs = accessibleNeighbors(grid, pos);
+    for (let k = 0; k < nbrs.length; k++) {
+      let nbr = nbrs[k];
+      if (!dist.has(posToKey(nbr))) {
+        if (posEq(nbr, target)) return dis + 1 <= maxDistance;
+        dist.set(posToKey(nbr), dis + 1);
+        queue.push(nbr);
+      }
+    }
+  }
+  return false;
+}
+
 function canReach(grid, start, target) {
   return distance(grid, start, target) !== -1;
 }

@@ -2,6 +2,8 @@ const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 
+const mongoRequests = require("./mongoose");
+
 const port = process.env.PORT || 4001;
 const app = express();
 //the server doesn't serve any HTML, but it needs a route to listen for incoming connections
@@ -10,8 +12,78 @@ app.use(index);
 const server = http.createServer(app);
 const io = socketIo(server);
 
-//this could be a map with gameIds as keys to avoid linear search, not needed for now
+const randomGameId = () => Math.random().toString(36).substring(2, 8);
+const randomBoolean = () => Math.random() < 0.5;
+
+class Game {
+  constructor() {
+    this.gameId = randomGameId(); //code used by the joiner to join
+    //number of wins of creator & joiner played with the given gameId code,
+    //excluding the current one. this is to distinguish consecutive games
+    //played with the same gameId
+    this.gameWins = [0, 0];
+    this.socketIds = [null, null]; //socked ids of creator & joiner
+    this.playerNames = [null, null];
+    //object with 2 attributes: duration (in minutes) and increment (in seconds)
+    this.timeControl = null;
+    this.creatorStarts = randomBoolean();
+    //array with the sequence of moves played on the board (if a takeback
+    //happens, the move is removed from this history as well). Each entry in
+    //moveHistory is an object with 2 attributes:
+    //actions (an array with the 1 or 2 actions for that move)
+    //remainingTime (the time left of the player who made this move)
+    this.moveHistory = [];
+    //'' if game is ongoing, else 'creator', 'joiner', or 'draw' (same as client)
+    this.winner = "";
+    //'' if game is ongoing, 'goal' or agreement' if drawn,
+    //'time', 'goal', 'resign', or 'disconnect' if someone won
+    this.finnishReason = "";
+    this.startDate = null;
+  }
+  addCreator(creatorSocketId, creatorName, timeControl) {
+    this.socketIds[0] = creatorSocketId;
+    this.playerNames[0] = creatorName;
+    this.timeControl = timeControl;
+  }
+  addJoiner(joinerSocketId, joinerName) {
+    this.socketIds[1] = joinerSocketId;
+    this.playerNames[1] = joinerName;
+  }
+  setupRematch() {
+    if (this.winner === "draw") {
+      this.gameWins[0] += 0.5;
+      this.gameWins[1] += 0.5;
+    } else if (this.winner === "creator") {
+      this.gameWins[0] += 1;
+    } else if (this.winner === "joiner") {
+      this.gameWins[1] += 1;
+    }
+    this.creatorStarts = !this.creatorStarts; //alternate who starts
+    this.moveHistory = [];
+    this.winner = "";
+    this.finnishReason = "";
+  }
+  addMove(actions, remainingTime) {
+    if (this.moveHistory.length === 0) this.startDate = Date.now();
+    this.moveHistory.push({ actions: actions, remainingTime: remainingTime });
+  }
+  removeMove() {
+    this.moveHistory.pop();
+  }
+  setGameResult(winner, reason) {
+    this.winner = winner;
+    this.finnishReason = reason;
+  }
+  turnCount() {
+    return this.moveHistory.length;
+  }
+}
+
+//if there were many concurrent users, this should be converted into a map
+//to avoid linear search. Not needed for now
 const unjoinedGames = [];
+//games stay in ongoingGames until a rematch starts or one of the players leaves
+//the game page, so they are not removed immediately when the game ends
 const ongoingGames = [];
 
 const unjoinedGameIndex = (gameId) => {
@@ -39,62 +111,59 @@ const getOpponent = (socketId) => {
   return socketId === socketId1 ? socketId2 : socketId1;
 };
 
-const randomGameId = () => Math.random().toString(36).substring(2, 8);
-const randomBoolean = () => Math.random() < 0.5;
-
-//remove games created or joined by a client
-const purgeGamesOfClient = (socketId) => {
+//in theory, clients can only have one unjoined game at a time,
+//but we check all to be sure
+const removeUnjoinedGamesOfClient = (socketId) => {
   for (let i = 0; i < unjoinedGames.length; i += 1) {
     const game = unjoinedGames[i];
     if (game.socketIds[0] === socketId) {
-      console.log(
-        "remove stale unjoined game: ",
-        JSON.stringify(unjoinedGames[i])
-      );
+      console.log("remove unjoined game: ", JSON.stringify(game));
+      //unjoined games are not stored in the database
       unjoinedGames.splice(i, 1);
       i -= 1;
     }
   }
-  //remove game(s) created by this client
+};
+
+//in theory, clients can only have one unjoined game at a time,
+//but we check all to be sure
+const removeOngoingGamesOfClient = (socketId) => {
   for (let i = 0; i < ongoingGames.length; i += 1) {
     const game = ongoingGames[i];
     if (game.socketIds[0] === socketId || game.socketIds[1] === socketId) {
-      console.log(
-        "remove stale ongoing game: ",
-        JSON.stringify(ongoingGames[i])
-      );
+      console.log("remove ongoing game: ", JSON.stringify(game));
       ongoingGames.splice(i, 1);
       i -= 1;
     }
   }
 };
 
+//remove any games associated with this client
+const removeGamesOfClient = (socketId) => {
+  removeUnjoinedGamesOfClient(socketId);
+  removeOngoingGamesOfClient(socketId);
+};
+
 io.on("connection", (socket) => {
   const socketId = socket.id;
-  const shortId = socketId.substring(0, 6);
+  const shortId = socketId.substring(0, 6); //shortened for printing console messages
   console.log(`new connection: ${shortId}`);
 
-  socket.on("createGame", (timeControl, creatorName) => {
-    purgeGamesOfClient(socketId);
+  socket.on("createGame", (creatorName, timeControl) => {
+    removeGamesOfClient(socketId); //ensure there's no other game for this client
     console.log(`${shortId}: createGame`);
-    const gameParams = {
-      gameId: randomGameId(),
-      socketIds: [socketId, null],
-      playerNames: [creatorName, null],
-      timeControl: timeControl,
-      creatorStarts: randomBoolean(),
-      turnCount: 0,
-    };
-    unjoinedGames.push(gameParams);
+    const game = new Game();
+    game.addCreator(socketId, creatorName, timeControl);
+    unjoinedGames.push(game);
     socket.emit("gameCreated", {
-      gameId: gameParams.gameId,
-      creatorStarts: gameParams.creatorStarts,
+      gameId: game.gameId,
+      creatorStarts: game.creatorStarts,
     });
     console.log("Unjoined games:", unjoinedGames);
   });
 
   socket.on("joinGame", (gameId, joinerName) => {
-    purgeGamesOfClient(socketId);
+    removeGamesOfClient(socketId); //ensure there's no other game for this client
     console.log(`${shortId}: joinGame ${gameId}`);
     const i = unjoinedGameIndex(gameId);
     if (i === -1) {
@@ -103,41 +172,49 @@ io.on("connection", (socket) => {
       return;
     }
     const game = unjoinedGames[i];
-    game.socketIds[1] = socketId;
-    game.playerNames[1] = joinerName;
+    game.addJoiner(socketId, joinerName);
     socket.emit("gameJoined", {
-      creatorStarts: game.creatorStarts,
       creatorName: game.playerNames[0],
       timeControl: game.timeControl,
+      creatorStarts: game.creatorStarts,
     });
     io.to(game.socketIds[0]).emit("joinerJoined", joinerName);
-    unjoinedGames.splice(i, 1); //move the game from unjoined to ongoing
+    //move the game from unjoined to ongoing
+    unjoinedGames.splice(i, 1);
     ongoingGames.push(game);
     // console.log("Unjoined games:", unjoinedGames);
     // console.log("Ongoing games:", ongoingGames);
   });
 
+  //if this move caused a draw or win, the winner is passed,
+  //for any other move, winner is ''
   socket.on("move", (actions, remainingTime) => {
     console.log(`${shortId}: move`);
     const i = ongoingGameIndexOfClient(socketId);
     if (i === -1) {
       console.error("game not found");
+      socket.emit("gameNotFoundError");
       return;
     }
     const game = ongoingGames[i];
+    if (game.winner !== "") {
+      console.error("move on finished game");
+      return;
+    }
+    game.addMove(actions, remainingTime);
     io.to(getOpponent(socketId)).emit(
       "opponentMoved",
       actions,
-      game.turnCount + 1,
+      game.turnCount(),
       remainingTime
     );
-    game.turnCount += 1;
   });
 
   socket.on("offerRematch", () => {
     console.log(`${shortId}: offerRematch`);
     if (ongoingGameIndexOfClient(socketId) === -1) {
       console.error("game not found");
+      socket.emit("gameNotFoundError");
       return;
     }
     io.to(getOpponent(socketId)).emit("rematchOffered");
@@ -147,6 +224,7 @@ io.on("connection", (socket) => {
     console.log(`${shortId}: rejectRematch`);
     if (ongoingGameIndexOfClient(socketId) === -1) {
       console.error("game not found");
+      socket.emit("gameNotFoundError");
       return;
     }
     io.to(getOpponent(socketId)).emit("rematchRejected");
@@ -157,51 +235,54 @@ io.on("connection", (socket) => {
     const i = ongoingGameIndexOfClient(socketId);
     if (i === -1) {
       console.error("game not found");
+      socket.emit("gameNotFoundError");
       return;
     }
-    const game = ongoingGames.splice(i, 1)[0]; //remove the finished game
-    const newGame = {
-      gameId: game.gameId,
-      gameCount: game.gameCount + 1,
-      socketIds: game.socketIds,
-      playerNames: game.playerNames,
-      timeControl: game.timeControl,
-      creatorStarts: !game.creatorStarts,
-      turnCount: 0,
-    };
-    ongoingGames.push(newGame);
-    io.to(getOpponent(socketId)).emit("rematchAccepted", newGame.gameId);
+    ongoingGames[i].setupRematch();
+    io.to(getOpponent(socketId)).emit("rematchAccepted");
   });
 
   socket.on("resign", () => {
     console.log(`${shortId}: resign`);
-    if (ongoingGameIndexOfClient(socketId) === -1) {
+    const i = ongoingGameIndexOfClient(socketId);
+    if (i === -1) {
       console.error("game not found");
+      socket.emit("gameNotFoundError");
       return;
     }
+    const game = ongoingGames[i];
+    const winner = socketId === game.socketIds[0] ? "joiner" : "creator";
+    game.setGameResult(winner, "resign");
     io.to(getOpponent(socketId)).emit("opponentResigned");
+    mongoRequests.storeGame(game);
   });
-
   socket.on("offerDraw", () => {
     console.log(`${shortId}: offerDraw`);
     if (ongoingGameIndexOfClient(socketId) === -1) {
       console.error("game not found");
+      socket.emit("gameNotFoundError");
       return;
     }
     io.to(getOpponent(socketId)).emit("drawOffered");
   });
   socket.on("acceptDraw", () => {
     console.log(`${shortId}: acceptDraw`);
-    if (ongoingGameIndexOfClient(socketId) === -1) {
+    const i = ongoingGameIndexOfClient(socketId);
+    if (i === -1) {
       console.error("game not found");
+      socket.emit("gameNotFoundError");
       return;
     }
+    const game = ongoingGames[i];
+    game.setGameResult("draw", "agreement");
     io.to(getOpponent(socketId)).emit("drawAccepted");
+    mongoRequests.storeGame(game);
   });
   socket.on("rejectDraw", () => {
     console.log(`${shortId}: rejectDraw`);
     if (ongoingGameIndexOfClient(socketId) === -1) {
       console.error("game not found");
+      socket.emit("gameNotFoundError");
       return;
     }
     io.to(getOpponent(socketId)).emit("drawRejected");
@@ -211,6 +292,7 @@ io.on("connection", (socket) => {
     console.log(`${shortId}: requestTakeback`);
     if (ongoingGameIndexOfClient(socketId) === -1) {
       console.error("game not found");
+      socket.emit("gameNotFoundError");
       return;
     }
     io.to(getOpponent(socketId)).emit("takebackRequested");
@@ -220,16 +302,17 @@ io.on("connection", (socket) => {
     const i = ongoingGameIndexOfClient(socketId);
     if (i === -1) {
       console.error("game not found");
+      socket.emit("gameNotFoundError");
       return;
     }
-    const game = ongoingGames[i];
-    game.turnCount -= 1;
+    ongoingGames[i].removeMove();
     io.to(getOpponent(socketId)).emit("takebackAccepted");
   });
   socket.on("rejectTakeback", () => {
     console.log(`${shortId}: rejectTakeback`);
     if (ongoingGameIndexOfClient(socketId) === -1) {
       console.error("game not found");
+      socket.emit("gameNotFoundError");
       return;
     }
     io.to(getOpponent(socketId)).emit("takebackRejected");
@@ -239,27 +322,68 @@ io.on("connection", (socket) => {
     console.log(`${shortId}: giveExtraTime`);
     if (ongoingGameIndexOfClient(socketId) === -1) {
       console.error("game not found");
+      socket.emit("gameNotFoundError");
       return;
     }
     io.to(getOpponent(socketId)).emit("extraTimeReceived");
   });
 
-  socket.on("leaveGame", () => {
-    console.log(`${shortId}: leaveGame`);
-    if (ongoingGameIndexOfClient(socketId) === -1) {
+  socket.on("playerWonOnTime", (winner) => {
+    console.log(`${shortId}: playerWonOnTime ${winner}`);
+    const i = ongoingGameIndexOfClient(socketId);
+    if (i === -1) {
+      console.error("game not found");
+      socket.emit("gameNotFoundError");
       return;
     }
+    const game = ongoingGames[i];
+    game.setGameResult(winner, "time");
+    mongoRequests.storeGame(game);
+  });
+
+  socket.on("playerReachedGoal", (winner) => {
+    console.log(`${shortId}: playerReachedGoal ${winner}`);
+    const i = ongoingGameIndexOfClient(socketId);
+    if (i === -1) {
+      console.error("game not found");
+      socket.emit("gameNotFoundError");
+      return;
+    }
+    const game = ongoingGames[i];
+    game.setGameResult(winner, "goal");
+    mongoRequests.storeGame(game);
+  });
+
+  socket.on("leaveGame", () => {
+    console.log(`${shortId}: leaveGame`);
+    const i = ongoingGameIndexOfClient(socketId);
+    if (i === -1) return;
     io.to(getOpponent(socketId)).emit("opponentLeft");
-    purgeGamesOfClient(socketId);
+    const game = ongoingGames[i];
+    if (game.winner === "") {
+      const winner = socketId === game.socketIds[0] ? "joiner" : "creator";
+      game.setGameResult(winner, "disconnect");
+      mongoRequests.storeGame(game);
+    }
+    removeGamesOfClient(socketId);
   });
 
   socket.on("disconnect", () => {
     console.log(`closed connection: ${shortId}`);
-    if (ongoingGameIndexOfClient(socketId) === -1) {
-      return;
-    }
+    const i = ongoingGameIndexOfClient(socketId);
+    if (i === -1) return;
     io.to(getOpponent(socketId)).emit("opponentLeft");
-    purgeGamesOfClient(socketId);
+    const game = ongoingGames[i];
+    if (game.winner === "") {
+      const winner = socketId === game.socketIds[0] ? "joiner" : "creator";
+      game.setGameResult(winner, "disconnect");
+      mongoRequests.storeGame(game);
+    }
+    removeGamesOfClient(socketId);
+  });
+
+  socket.on("getAllGames", () => {
+    return mongoRequests.getAllGames();
   });
 });
 

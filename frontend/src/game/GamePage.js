@@ -10,6 +10,7 @@ import {
   cellTypeByPos,
   posEq,
   distance,
+  isDistanceAtMost,
   canBuildWall,
 } from "../gameLogic/mainLogic";
 import Board from "./Board";
@@ -102,12 +103,13 @@ const applyMakeMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
       newPlayerPos[idxToMove] = aPos;
       if (posEq(aPos, goals[idxToMove])) {
         const pToMoveStarted = tc % 2 === 0;
-        const remainingDist = distance(
+        const otherIsWithinOneMove = isDistanceAtMost(
           newGrid,
           newPlayerPos[otherIdx],
-          goals[otherIdx]
+          goals[otherIdx],
+          2
         );
-        if (pToMoveStarted && remainingDist <= 2) {
+        if (pToMoveStarted && otherIsWithinOneMove) {
           draftState.winner = "draw";
           draftState.gameWins[0] += 0.5;
           draftState.gameWins[1] += 0.5;
@@ -281,7 +283,9 @@ const GamePage = ({
     //===================================================
     creatorStarts: null, //who starts is decided by the server
     winner: "", //'' if game is ongoing, else 'creator', 'joiner', or 'draw'
-    finishReason: "", //'' if game is ongoing, else 'time', 'goal', or 'resign', 'disconnect'
+    //'' if game is ongoing, 'goal' or agreement' if drawn,
+    //'time', 'goal', 'resign', or 'disconnect' if someone won
+    finishReason: "",
 
     //life cycle of the game
     //-2. Before sending 'createGame'/'joinGame' (for creator/joiner) to the server
@@ -347,7 +351,7 @@ const GamePage = ({
         draftState.lifeCycleStage = 0;
       });
     });
-    socket.once("gameJoined", ({ creatorStarts, creatorName, timeControl }) => {
+    socket.once("gameJoined", ({ creatorName, timeControl, creatorStarts }) => {
       updateState((draftState) => {
         console.log(`game joined`);
         //if life cycle stage is already 1, it means we already joined
@@ -368,6 +372,12 @@ const GamePage = ({
         5000
       );
       returnToLobby();
+    });
+    socket.on("gameNotFoundError", () => {
+      showToastNotification(
+        "There was an issue on the server and we couldn't reach the other player.",
+        5000
+      );
     });
     socket.once("joinerJoined", (joinerName) => {
       updateState((draftState) => {
@@ -470,7 +480,7 @@ const GamePage = ({
       updateState((draftState) => {
         draftState.lifeCycleStage = -1;
       });
-      socket.emit("createGame", state.timeControl, state.names[0]);
+      socket.emit("createGame", state.names[0], state.timeControl);
     }
     if (!clientIsCreator) {
       updateState((draftState) => {
@@ -567,10 +577,10 @@ const GamePage = ({
   }, [updateState]);
 
   //===================================================
-  //game logic when a player selects a position
+  //game logic when a player selects a board cell
   //===================================================
 
-  //part of the logic of handleSelectedPosition:
+  //part of the logic of handleSelectedCell:
   //when the player selects / clicks a cell, it can trigger a different
   //number of actions (1 action: build 1 wall or move 1 step)
   //this function counts the number of actions for a clicked position
@@ -604,9 +614,9 @@ const GamePage = ({
   };
 
   //manage the state change on click or keyboard press. this may
-  //change the ghost action (which is only shown to this client),
-  //or make a full move, in which case it is applied to both clients
-  const handleSelectedPosition = (pos) => {
+  //change the ghost action (which is only shown to this client), or
+  //make a full move, in which case it is also sent to the other client
+  const handleSelectedCell = (pos) => {
     const thisClientToMove = clientIsCreator === creatorToMove(state);
     if (!thisClientToMove) return; //can only move if it's your turn
     if (state.lifeCycleStage < 1) return; //cannot move til player 2 joins
@@ -686,7 +696,19 @@ const GamePage = ({
     }
   };
 
-  const handleBoardClick = (clickedPos) => handleSelectedPosition(clickedPos);
+  //notify server if someone has won on time or by reaching the goal
+  useEffect(() => {
+    //only the creator sends these messages to avoid duplicate
+    if (!clientIsCreator) return;
+    if (state.finishReason === "time") {
+      socket.emit("playerWonOnTime", state.winner);
+    }
+    if (state.finishReason === "goal") {
+      socket.emit("playerReachedGoal", state.winner);
+    }
+  }, [clientIsCreator, socket, state.winner, state.finishReason]);
+
+  const handleBoardClick = (clickedPos) => handleSelectedCell(clickedPos);
 
   //===================================================
   //handling keyboard inputs
@@ -741,7 +763,7 @@ const GamePage = ({
     else if (key === "ArrowLeft") p = { r: p.r, c: p.c - 2 };
     else if (key === "ArrowRight") p = { r: p.r, c: p.c + 2 };
     else return;
-    handleSelectedPosition(p);
+    handleSelectedCell(p);
   };
   const upHandler = () => {
     updateState((draftState) => {
