@@ -186,11 +186,13 @@ const applyLeaveGame = (draftState, leaverIsCreator) => {
   draftState.ghostAction = null;
   closeDialogs(draftState);
 };
-const applyTakeback = (draftState) => {
+const applyTakeback = (draftState, requesterIsCreator) => {
   draftState.showTakebackDialog = false;
   if (draftState.lifeCycleStage !== 2 && draftState.lifeCycleStage !== 3)
     return;
-  draftState.moveHistory.pop();
+  const requesterToMove = requesterIsCreator === creatorToMove(draftState);
+  const numMovesToUndo = requesterToMove ? 2 : 1;
+  for (let k = 0; k < numMovesToUndo; k++) draftState.moveHistory.pop();
   draftState.ghostAction = null;
   const tc = turnCount(draftState);
   draftState.viewIndex = tc;
@@ -379,7 +381,7 @@ const GamePage = ({
         5000
       );
     });
-    socket.once("joinerJoined", (joinerName) => {
+    socket.once("joinerJoined", ({ joinerName }) => {
       updateState((draftState) => {
         //if life cycle stage is already 1, it means the joiner already joined
         if (draftState.lifeCycleStage === 1) return;
@@ -415,13 +417,9 @@ const GamePage = ({
       );
     });
     socket.on("takebackAccepted", () => {
-      showToastNotification(
-        "The opponent agreed to the takeback. The last move played" +
-          " on the board has been undone.",
-        5000
-      );
+      showToastNotification("The opponent agreed to the takeback.", 5000);
       updateState((draftState) => {
-        applyTakeback(draftState);
+        applyTakeback(draftState, clientIsCreator);
       });
     });
     socket.on("rematchOffered", () => {
@@ -445,20 +443,20 @@ const GamePage = ({
         applyAddExtraTime(draftState, clientIsCreator ? 0 : 1);
       });
     });
-    socket.on("opponentResigned", () => {
+    socket.on("resigned", () => {
       showToastNotification("The opponent resigned.", 5000);
       updateState((draftState) => {
         if (draftState.isVolumeOn) moveSound.play();
         applyResignGame(draftState, !clientIsCreator);
       });
     });
-    socket.on("opponentMoved", (actions, moveIndex, receivedTime) => {
+    socket.on("moved", ({ actions, moveIndex, remainingTime }) => {
       updateState((draftState) => {
-        console.log(`move ${moveIndex} received (${receivedTime}s)`);
-        applyMakeMove(draftState, actions, moveIndex, receivedTime);
+        console.log(`move ${moveIndex} received (${remainingTime}s)`);
+        applyMakeMove(draftState, actions, moveIndex, remainingTime);
       });
     });
-    socket.on("opponentLeft", () => {
+    socket.on("leftGame", () => {
       showToastNotification("The opponent left the game.", 5000);
       updateState((draftState) => {
         applyLeaveGame(draftState, clientIsCreator ? false : true);
@@ -480,13 +478,19 @@ const GamePage = ({
       updateState((draftState) => {
         draftState.lifeCycleStage = -1;
       });
-      socket.emit("createGame", state.names[0], state.timeControl);
+      socket.emit("createGame", {
+        creatorName: state.names[0],
+        timeControl: state.timeControl,
+      });
     }
     if (!clientIsCreator) {
       updateState((draftState) => {
         draftState.lifeCycleStage = -1;
       });
-      socket.emit("joinGame", state.gameId, state.names[1]);
+      socket.emit("joinGame", {
+        gameId: state.gameId,
+        joinerName: state.names[1],
+      });
     }
   });
 
@@ -541,7 +545,7 @@ const GamePage = ({
       );
       socket.emit("acceptTakeback");
       updateState((draftState) => {
-        applyTakeback(draftState);
+        applyTakeback(draftState, !clientIsCreator);
       });
     } else {
       socket.emit("rejectTakeback");
@@ -685,7 +689,7 @@ const GamePage = ({
       let tLeft = state.moveHistory[tc].timeLeft[idx];
       //we don't add the increment until the clocks start running (stage 3)
       if (state.lifeCycleStage === 3) tLeft += state.timeControl.increment;
-      socket.emit("move", fullMoveActions, tLeft);
+      socket.emit("move", { actions: fullMoveActions, remainingTime: tLeft });
       updateState((draftState) => {
         applyMakeMove(draftState, fullMoveActions, turnCount(state) + 1, tLeft);
       });
@@ -701,10 +705,10 @@ const GamePage = ({
     //only the creator sends these messages to avoid duplicate
     if (!clientIsCreator) return;
     if (state.finishReason === "time") {
-      socket.emit("playerWonOnTime", state.winner);
+      socket.emit("playerWonOnTime", { winner: state.winner });
     }
     if (state.finishReason === "goal") {
-      socket.emit("playerReachedGoal", state.winner);
+      socket.emit("playerReachedGoal", { winner: state.winner });
     }
   }, [clientIsCreator, socket, state.winner, state.finishReason]);
 
@@ -967,6 +971,7 @@ const GamePage = ({
           handleGiveExtraTime={handleGiveExtraTime}
           moveHistory={state.moveHistory}
           playerColors={playerColors}
+          clientIsCreator={clientIsCreator}
           creatorStarts={state.creatorStarts}
           handleViewMove={handleViewMove}
           viewIndex={state.viewIndex}
@@ -1038,7 +1043,7 @@ const GamePage = ({
         isOpen={state.showTakebackDialog}
         title="Takeback request received"
         body={
-          "The opponent requested a takeback. If you accept, the " +
+          "The opponent requested a takeback. If you accept, their " +
           "last move will be undone."
         }
         acceptButtonText="Accept"
