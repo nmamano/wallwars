@@ -11,6 +11,7 @@ const GameControlPanel = ({
   handleGiveExtraTime,
   moveHistory,
   playerColors,
+  clientIsCreator,
   creatorStarts,
   handleViewMove,
   viewIndex,
@@ -32,6 +33,10 @@ const GameControlPanel = ({
   const buttonHeight = 36;
   const moveHistoryHeight =
     boardHeight - buttonHeight * 3 - gapHeight * 3 - padding * 2;
+
+  const takebackEnabled =
+    lifeCycleStage === 3 ||
+    (lifeCycleStage === 2 && creatorStarts === clientIsCreator);
   return (
     <div
       className="teal darken-2"
@@ -67,15 +72,15 @@ const GameControlPanel = ({
       />
       <IconButton
         icon={"replay"}
-        tooltip={"Propose takeback"}
+        tooltip={"Request takeback"}
         onClick={() => {
           showToastNotification(
-            "A takeback request was sent to the opponent. If they accept, the last move will be undone.",
+            "A takeback request was sent to the opponent.",
             5000
           );
           handleRequestTakeback();
         }}
-        disabled={lifeCycleStage !== 3 && lifeCycleStage !== 2}
+        disabled={!takebackEnabled}
       />
       <IconButton
         icon={"add_alarm"}

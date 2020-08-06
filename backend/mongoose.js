@@ -103,9 +103,11 @@ const storeGame = async (game) => {
   const gameToStore = new Game(game);
   try {
     await gameToStore.save();
-    console.log(`stored game in db _id: ${gameToStore.id}`);
+    console.log(
+      `Stored game in DB ${process.env.DB_NAME} _id: ${gameToStore.id}`
+    );
   } catch (err) {
-    console.log("store game to db failed");
+    console.log(`Store game to DB ${process.env.DB_NAME} failed`);
     console.log(err);
   }
 };
