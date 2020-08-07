@@ -2,7 +2,7 @@ const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 
-const mongoRequests = require("./mongoose");
+const gameController = require("./gameController");
 
 const port = process.env.PORT || 4001;
 const app = express();
@@ -180,24 +180,6 @@ class GameManager {
 //global object containing all the games
 const GM = new GameManager();
 
-//utility logging function
-const logMessage = (socketId, sent, messageTitle, messageParams) => {
-  const shortSocketId = socketId.substring(0, 3);
-  let client = shortSocketId;
-  const game = GM.ongoingGameOfClient(socketId);
-  let logText = "";
-  if (game) {
-    const shortGameId = game.gameId.substring(0, 2);
-    logText += `[${shortGameId}] `;
-    const isCreator = socketId === game.socketIds[0];
-    client += `(${isCreator ? "C" : "J"})`;
-  }
-  logText += sent ? "server => " + client : client + " => server";
-  logText += `: ${messageTitle}`;
-  if (messageParams) logText += ` ${JSON.stringify(messageParams)}`;
-  console.log(logText);
-};
-
 //reserved socket.io events
 const connectionMsg = "connection";
 const disconnectMsg = "disconnect";
@@ -210,6 +192,7 @@ const gameJoinFailedMsg = "gameJoinFailed";
 const joinerJoinedMsg = "joinerJoined";
 const moveMessage = "move";
 const movedMessage = "moved";
+const gameNotFoundErrorMsg = "gameNotfoundError";
 const resignMsg = "resign";
 const resignedMsg = "resigned";
 const leaveGameMsg = "leaveGame";
@@ -236,6 +219,36 @@ const acceptTakebackMsg = "acceptTakeback";
 const takebackAcceptedMsg = "takebackAccepted";
 const rejectTakebackMsg = "rejectTakeback";
 const takebackRejectedMsg = "takebackRejected";
+const getRandomGameMsg = "getRandomGame";
+const requestedRandomGameMsg = "requestedRandomGame";
+const randomGameNotFoundErrorMsg = "randomGameNotFound";
+
+//generic utility function for logging incoming and outgoing messages
+const logMessage = (socketId, sent, messageTitle, messageParams) => {
+  const shortSocketId = socketId.substring(0, 3);
+  let client = shortSocketId;
+  const game = GM.ongoingGameOfClient(socketId);
+  let logText = "";
+  if (game) {
+    const shortGameId = game.gameId.substring(0, 2);
+    logText += `[${shortGameId}] `;
+    const isCreator = socketId === game.socketIds[0];
+    client += `(${isCreator ? "C" : "J"})`;
+  }
+  logText += sent ? "server => " + client : client + " => server";
+  logText += `: ${messageTitle}`;
+
+  if (messageParams) {
+    const paramsText = JSON.stringify(messageParams);
+    if (paramsText.length < 500) {
+      logText += " " + paramsText;
+    } else {
+      const shortParamText = paramsText.substring(0, 500) + "...";
+      logText += " " + shortParamText;
+    }
+  }
+  console.log(logText);
+};
 
 io.on(connectionMsg, (socket) => {
   const socketId = socket.id;
@@ -261,7 +274,7 @@ io.on(connectionMsg, (socket) => {
     else io.to(oppId).emit(messageTitle);
     logMessage(oppId, true, messageTitle, params);
   };
-  const emitGameNotFoundError = () => emitMessage("GameNotFoundError");
+  const emitGameNotFoundError = () => emitMessage(gameNotFoundErrorMsg);
 
   logReceivedMessage(connectionMsg);
 
@@ -358,7 +371,7 @@ io.on(connectionMsg, (socket) => {
     const winner = socketId === game.socketIds[0] ? "joiner" : "creator";
     game.setGameResult(winner, "resign");
     emitMessageOpponent(resignedMsg);
-    mongoRequests.storeGame(game);
+    gameController.storeGame(game);
   });
 
   socket.on(offerDrawMsg, () => {
@@ -379,7 +392,7 @@ io.on(connectionMsg, (socket) => {
     }
     game.setGameResult("draw", "agreement");
     emitMessageOpponent(drawAcceptedMsg);
-    mongoRequests.storeGame(game);
+    gameController.storeGame(game);
   });
 
   socket.on(rejectDrawMsg, () => {
@@ -437,7 +450,7 @@ io.on(connectionMsg, (socket) => {
       return;
     }
     game.setGameResult(winner, "time");
-    mongoRequests.storeGame(game);
+    gameController.storeGame(game);
   });
 
   socket.on(playerReachedGoalMsg, ({ winner }) => {
@@ -448,7 +461,7 @@ io.on(connectionMsg, (socket) => {
       return;
     }
     game.setGameResult(winner, "goal");
-    mongoRequests.storeGame(game);
+    gameController.storeGame(game);
   });
 
   socket.on(leaveGameMsg, () => {
@@ -459,7 +472,7 @@ io.on(connectionMsg, (socket) => {
     if (game.winner === "") {
       const winner = socketId === game.socketIds[0] ? "joiner" : "creator";
       game.setGameResult(winner, "disconnect");
-      mongoRequests.storeGame(game);
+      gameController.storeGame(game);
     }
     GM.removeGamesOfClient(socketId);
   });
@@ -473,15 +486,20 @@ io.on(connectionMsg, (socket) => {
     if (game.winner === "") {
       const winner = socketId === game.socketIds[0] ? "joiner" : "creator";
       game.setGameResult(winner, "disconnect");
-      mongoRequests.storeGame(game);
+      gameController.storeGame(game);
     }
     GM.removeGamesOfClient(socketId);
   });
 
-  // socket.on("getAllGames", () => {
-  //   logReceivedMessage("getAllGames");
-  //   return mongoRequests.getAllGames();
-  // });
+  socket.on(getRandomGameMsg, async () => {
+    logReceivedMessage(getRandomGameMsg);
+    const game = await gameController.getRandomGame();
+    if (game)
+      emitMessage(requestedRandomGameMsg, {
+        game: game,
+      });
+    else emitMessage(randomGameNotFoundErrorMsg);
+  });
 });
 
 server.listen(port, () => console.log(`Listening on port ${port}`));

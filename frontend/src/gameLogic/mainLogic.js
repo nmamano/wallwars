@@ -22,6 +22,15 @@ function dimensions(grid) {
   return { h: grid.length, w: grid[0].length };
 }
 
+export function emptyGrid(dims) {
+  let grid = [];
+  for (let r = 0; r < dims.h; r++) {
+    grid[r] = [];
+    for (let c = 0; c < dims.w; c++) grid[r][c] = 0;
+  }
+  return grid;
+}
+
 function inBounds(pos, dims) {
   return pos.r >= 0 && pos.r < dims.h && pos.c >= 0 && pos.c < dims.w;
 }

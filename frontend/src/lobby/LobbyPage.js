@@ -1,13 +1,16 @@
 import React, { useState } from "react";
+import { Row, Col } from "react-materialize";
 import { uniqueNamesGenerator, names } from "unique-names-generator";
 import { useMediaQuery } from "react-responsive";
 import { ToastContainer } from "react-toastify";
 import { useCookies } from "react-cookie";
+
 import GamePage from "../game/GamePage";
 import Header from "../shared/Header";
 import LobbyForm from "./LobbyForm";
 import LobbyHelp from "./LobbyHelp";
 import showToastNotification from "../shared/showToastNotification";
+import GameShowcase from "./GameShowcase";
 
 const maxPlayerNameLen = 9;
 
@@ -133,6 +136,12 @@ const LobbyPage = ({ socket }) => {
             handleJoinGame={handleJoinGame}
             handleRefreshName={handleRefreshName}
           />
+          <Row className="valign-wrapper">
+            <Col className="center" m={12}>
+              <h5 title={"Random games already played"}>Game Showcase</h5>
+            </Col>
+          </Row>
+          <GameShowcase socket={socket} isLargeScreen={isLargeScreen} />
         </div>
       )}
     </div>

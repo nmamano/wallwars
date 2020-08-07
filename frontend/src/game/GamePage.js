@@ -6,9 +6,11 @@ import UIfx from "uifx";
 import moveSoundAudio from "./../static/moveSound.mp3";
 import showToastNotification from "../shared/showToastNotification";
 
+import globalSettings from "../shared/globalSettings";
 import {
   cellTypeByPos,
   posEq,
+  emptyGrid,
   distance,
   isDistanceAtMost,
   canBuildWall,
@@ -26,23 +28,6 @@ import ControlPanel from "./ControlPanel";
 //===================================================
 const moveSound = new UIfx(moveSoundAudio);
 
-const dims = { w: 23, h: 19 }; //traditional board size
-const corners = {
-  tl: { r: 0, c: 0 },
-  tr: { r: 0, c: dims.w - 1 },
-  bl: { r: dims.h - 1, c: 0 },
-  br: { r: dims.h - 1, c: dims.w - 1 },
-};
-//most data structures related to the players use an array
-//of length 2, with the data for the creator first
-const initialPlayerPos = [corners.tl, corners.tr];
-const goals = [corners.br, corners.bl];
-const playerColors = ["red", "indigo"];
-const groundSize = 37; //in pixels
-const wallWidth = 12; //in pixels
-const smallScreenGroundSize = 23;
-const smallScreenWallWidth = 10;
-
 const backgroundColors = {
   dark: "#004d40",
   light: "#009688",
@@ -58,15 +43,6 @@ const creatorToMove = (state) =>
 
 const indexToMove = (state) => (creatorToMove(state) ? 0 : 1);
 
-const emptyGrid = (dims) => {
-  let grid = [];
-  for (let r = 0; r < dims.h; r++) {
-    grid[r] = [];
-    for (let c = 0; c < dims.w; c++) grid[r][c] = 0;
-  }
-  return grid;
-};
-
 //one of 'None', 'Ground', 'Wall'
 const ghostType = (pos) => (pos === null ? "None" : cellTypeByPos(pos));
 
@@ -80,7 +56,7 @@ const ghostType = (pos) => (pos === null ? "None" : cellTypeByPos(pos));
 //function that updates the state of the game when a move happens
 //it applied the move number 'moveIndex', consisting of the action(s) in 'actions',
 //'timeLeftAfterMove' is the time left by the player who made the move
-const applyMakeMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
+const applyMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
   //only in life cycle stages 1,2,3 players can make move
   if (draftState.lifeCycleStage < 1 || draftState.lifeCycleStage > 3) return;
   //make the move only if it is the next one (safety measure against desync issues)
@@ -101,12 +77,12 @@ const applyMakeMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
     const aType = cellTypeByPos(aPos);
     if (aType === "Ground") {
       newPlayerPos[idxToMove] = aPos;
-      if (posEq(aPos, goals[idxToMove])) {
+      if (posEq(aPos, globalSettings.goals[idxToMove])) {
         const pToMoveStarted = tc % 2 === 0;
         const otherIsWithinOneMove = isDistanceAtMost(
           newGrid,
           newPlayerPos[otherIdx],
-          goals[otherIdx],
+          globalSettings.goals[otherIdx],
           2
         );
         if (pToMoveStarted && otherIsWithinOneMove) {
@@ -132,8 +108,8 @@ const applyMakeMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
     playerPos: newPlayerPos,
     timeLeft: newTimeLeft,
     distances: [
-      distance(newGrid, newPlayerPos[0], goals[0]),
-      distance(newGrid, newPlayerPos[1], goals[1]),
+      distance(newGrid, newPlayerPos[0], globalSettings.goals[0]),
+      distance(newGrid, newPlayerPos[1], globalSettings.goals[1]),
     ],
     wallCounts: wallCounts,
   });
@@ -202,20 +178,28 @@ const applyTakeback = (draftState, requesterIsCreator) => {
 const applySetupRematch = (draftState) => {
   if (draftState.lifeCycleStage !== 4) return;
   draftState.creatorStarts = !draftState.creatorStarts;
-  const newGrid = emptyGrid(dims);
+  const newGrid = emptyGrid(globalSettings.boardDims);
   draftState.moveHistory = [
     {
       index: 0,
       actions: [],
       grid: newGrid,
-      playerPos: initialPlayerPos,
+      playerPos: globalSettings.initialPlayerPos,
       timeLeft: [
         draftState.timeControl.duration * 60,
         draftState.timeControl.duration * 60,
       ],
       distances: [
-        distance(newGrid, initialPlayerPos[0], goals[0]),
-        distance(newGrid, initialPlayerPos[1], goals[1]),
+        distance(
+          newGrid,
+          globalSettings.initialPlayerPos[0],
+          globalSettings.goals[0]
+        ),
+        distance(
+          newGrid,
+          globalSettings.initialPlayerPos[1],
+          globalSettings.goals[1]
+        ),
       ],
       wallCounts: [0, 0],
     },
@@ -305,15 +289,23 @@ const GamePage = ({
         actions: [],
         //grid contains the locations of all the built walls, labeled by who built them
         //0: empty wall, 1: player built by creator, 2: player built by joiner
-        grid: emptyGrid(dims),
-        playerPos: initialPlayerPos,
+        grid: emptyGrid(globalSettings.boardDims),
+        playerPos: globalSettings.initialPlayerPos,
         timeLeft: [
           clientIsCreator ? creatorParams.timeControl.duration * 60 : null,
           clientIsCreator ? creatorParams.timeControl.duration * 60 : null,
         ],
         distances: [
-          distance(emptyGrid(dims), initialPlayerPos[0], goals[0]),
-          distance(emptyGrid(dims), initialPlayerPos[1], goals[1]),
+          distance(
+            emptyGrid(globalSettings.boardDims),
+            globalSettings.initialPlayerPos[0],
+            globalSettings.goals[0]
+          ),
+          distance(
+            emptyGrid(globalSettings.boardDims),
+            globalSettings.initialPlayerPos[1],
+            globalSettings.goals[1]
+          ),
         ],
         wallCounts: [0, 0],
       },
@@ -453,7 +445,7 @@ const GamePage = ({
     socket.on("moved", ({ actions, moveIndex, remainingTime }) => {
       updateState((draftState) => {
         console.log(`move ${moveIndex} received (${remainingTime}s)`);
-        applyMakeMove(draftState, actions, moveIndex, remainingTime);
+        applyMove(draftState, actions, moveIndex, remainingTime);
       });
     });
     socket.on("leftGame", () => {
@@ -612,7 +604,14 @@ const GamePage = ({
         //use ghost position for the check
         playerPosCopy[idx] = state.ghostAction;
       }
-      return canBuildWall(gridCopy, playerPosCopy, goals, clickPos) ? 1 : 0;
+      return canBuildWall(
+        gridCopy,
+        playerPosCopy,
+        globalSettings.goals,
+        clickPos
+      )
+        ? 1
+        : 0;
     }
     console.error("unexpected action type", clickType);
   };
@@ -628,7 +627,13 @@ const GamePage = ({
     //can only move if looking at current position
     if (state.viewIndex !== turnCount(state)) return;
     //out of bounds, can happen when using the keyboard
-    if (pos.r < 0 || pos.r >= dims.h || pos.c < 0 || pos.c >= dims.w) return;
+    if (
+      pos.r < 0 ||
+      pos.r >= globalSettings.boardDims.h ||
+      pos.c < 0 ||
+      pos.c >= globalSettings.boardDims.w
+    )
+      return;
 
     const clickType = cellTypeByPos(pos);
     //there's a rule that the first move by each player must be a move
@@ -691,7 +696,7 @@ const GamePage = ({
       if (state.lifeCycleStage === 3) tLeft += state.timeControl.increment;
       socket.emit("move", { actions: fullMoveActions, remainingTime: tLeft });
       updateState((draftState) => {
-        applyMakeMove(draftState, fullMoveActions, turnCount(state) + 1, tLeft);
+        applyMove(draftState, fullMoveActions, turnCount(state) + 1, tLeft);
       });
     } else {
       updateState((draftState) => {
@@ -868,17 +873,20 @@ const GamePage = ({
   //preparing props for rendering
   //===================================================
   let [gSize, wWidth] = isLargeScreen
-    ? [groundSize, wallWidth]
-    : [smallScreenGroundSize, smallScreenWallWidth];
+    ? [globalSettings.groundSize, globalSettings.wallWidth]
+    : [
+        globalSettings.smallScreenGroundSize,
+        globalSettings.smallScreenWallWidth,
+      ];
   const scalingFactor = Math.pow(1.1, state.zoomLevel - 5);
   const scaledGroundSize = gSize * scalingFactor;
   const scaledWallWidth = wWidth * scalingFactor;
   const boardHeight =
-    (scaledWallWidth * (dims.h - 1)) / 2 +
-    (scaledGroundSize * (dims.h + 1)) / 2;
+    (scaledWallWidth * (globalSettings.boardDims.h - 1)) / 2 +
+    (scaledGroundSize * (globalSettings.boardDims.h + 1)) / 2;
   const boardWidth =
-    (scaledWallWidth * (dims.w - 1)) / 2 +
-    (scaledGroundSize * (dims.w + 1)) / 2;
+    (scaledWallWidth * (globalSettings.boardDims.w - 1)) / 2 +
+    (scaledGroundSize * (globalSettings.boardDims.w + 1)) / 2;
 
   const gapSize = isLargeScreen ? 15 : 6;
   let gridTemplateRows, gridTemplateColumns, gridTemplateAreas;
@@ -936,7 +944,7 @@ const GamePage = ({
           lifeCycleStage={state.lifeCycleStage}
           names={state.names}
           indexToMove={indexToMove(state)}
-          playerColors={playerColors}
+          playerColors={globalSettings.playerColors}
           timeLeft={[displayTime1, displayTime2]}
           isLargeScreen={isLargeScreen}
           scores={state.gameWins}
@@ -953,10 +961,10 @@ const GamePage = ({
         />
         <Board
           creatorToMove={creatorToMove(state)}
-          playerColors={playerColors}
+          playerColors={globalSettings.playerColors}
           grid={state.moveHistory[state.viewIndex].grid}
           playerPos={state.moveHistory[state.viewIndex].playerPos}
-          goals={goals}
+          goals={globalSettings.goals}
           ghostAction={state.ghostAction}
           handleClick={handleBoardClick}
           groundSize={scaledGroundSize}
@@ -970,7 +978,7 @@ const GamePage = ({
           handleRequestTakeback={handleRequestTakeback}
           handleGiveExtraTime={handleGiveExtraTime}
           moveHistory={state.moveHistory}
-          playerColors={playerColors}
+          playerColors={globalSettings.playerColors}
           clientIsCreator={clientIsCreator}
           creatorStarts={state.creatorStarts}
           handleViewMove={handleViewMove}

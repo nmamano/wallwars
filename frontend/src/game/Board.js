@@ -123,7 +123,8 @@ const Board = ({
             className={className}
             key={`cell_${pos.r}_${pos.c}`}
             onClick={() => {
-              if (cellType !== "Pillar") handleClick(pos);
+              if (cellType !== "Pillar" && handleClick !== null)
+                handleClick(pos);
             }}
             onMouseEnter={() => handleMouseEnter(pos)}
             onMouseLeave={handleMouseLeave}

@@ -112,11 +112,16 @@ const storeGame = async (game) => {
   }
 };
 
-const getAllGames = async () => {
-  if (!connectedToDB) return [];
-  const games = Game.find();
-  return games;
+const getRandomGame = async () => {
+  if (!connectedToDB) return null;
+  const conditions = {
+    "moveHistory.10": { $exists: true }, //only games with 10+ moves
+  };
+  let count = await Game.countDocuments(conditions);
+  const randomIndex = Math.floor(Math.random() * count);
+  let res = await Game.findOne(conditions).skip(randomIndex);
+  return res;
 };
 
 exports.storeGame = storeGame;
-exports.getAllGames = getAllGames;
+exports.getRandomGame = getRandomGame;
