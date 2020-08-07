@@ -44,6 +44,9 @@ const Board = ({
     setHoveredCell(null);
   };
   const iconSize = 0.8 * groundSize;
+  let coordColor = "white";
+  if (isDarkModeOn) coordColor = "black";
+
   return (
     <div
       style={{
@@ -82,8 +85,15 @@ const Board = ({
         if (cellType === "Ground") className += " waves-effect waves-light";
         if (cellType === "Wall") className += " waves-effect waves-dark";
 
-        const anyIconHere = p1Here || p2Here || p1GhostHere || p2GhostHere;
-
+        const ghostOrPlayerHere =
+          p1Here || p2Here || p1GhostHere || p2GhostHere;
+        const anyIconHere = ghostOrPlayerHere || goal1Here || goal2Here;
+        const coordFits = groundSize > 27 && !anyIconHere;
+        const letterCoordHere =
+          coordFits && pos.r === dims.h - 1 && pos.c % 2 === 0;
+        const numberCoordHere =
+          coordFits && pos.c === dims.w - 1 && pos.r % 2 === 0;
+        const coordHere = letterCoordHere || numberCoordHere;
         //special coloring for Ground cells containing the goals goals
         if (goal1Here || goal2Here) {
           className = goal1Here ? color1 : color2;
@@ -103,6 +113,11 @@ const Board = ({
           }
         }
 
+        let justifyContent = "center";
+        if (coordHere) justifyContent = letterCoordHere ? "start" : "flex-end";
+        let alignItems = "center";
+        if (coordHere) alignItems = letterCoordHere ? "flex-end" : "flex-start";
+
         return (
           <div
             className={className}
@@ -115,8 +130,8 @@ const Board = ({
             style={{
               backgroundColor: color,
               display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
+              justifyContent: justifyContent,
+              alignItems: alignItems,
               cursor: "pointer",
               borderTop: pos.r === 0 ? displayParams.borderStyle : "",
               borderBottom:
@@ -142,7 +157,7 @@ const Board = ({
                 {icon2}
               </i>
             )}
-            {goal1Here && !anyIconHere && (
+            {goal1Here && !ghostOrPlayerHere && (
               <i
                 className={`material-icons white-text`}
                 style={{ fontSize: `${iconSize}px` }}
@@ -150,7 +165,7 @@ const Board = ({
                 {icon1}
               </i>
             )}
-            {goal2Here && !anyIconHere && (
+            {goal2Here && !ghostOrPlayerHere && (
               <i
                 className={`material-icons white-text`}
                 style={{ fontSize: `${iconSize}px` }}
@@ -173,6 +188,20 @@ const Board = ({
               >
                 {icon2}
               </i>
+            )}
+            {letterCoordHere && (
+              <div
+                style={{ color: coordColor, padding: "0", marginLeft: "4px" }}
+              >
+                {String.fromCharCode(97 + pos.c / 2)}
+              </div>
+            )}
+            {numberCoordHere && (
+              <div
+                style={{ color: coordColor, padding: "0", marginRight: "4px" }}
+              >
+                {"" + (1 + pos.r / 2)}
+              </div>
             )}
           </div>
         );
