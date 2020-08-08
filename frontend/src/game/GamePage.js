@@ -5,7 +5,7 @@ import { useImmer } from "use-immer";
 import UIfx from "uifx";
 import moveSoundAudio from "./../static/moveSound.mp3";
 import showToastNotification from "../shared/showToastNotification";
-
+import { useCookies } from "react-cookie";
 import globalSettings from "../shared/globalSettings";
 import {
   cellTypeByPos,
@@ -237,13 +237,16 @@ const GamePage = ({
   isDarkModeOn,
   handleToggleDarkMode,
 }) => {
+  //cosmetic state stored between sessions
+  const [cookies, setCookie] = useCookies(["isVolumeOn", "zoomLevel"]);
+
   //===================================================
   //state that depends on the props, but is otherwise constant
   //===================================================
   const clientIsCreator = creatorParams !== null;
 
   //===================================================
-  //'state' contains every other piece of state
+  //the 'state' object contains every other piece of state
   //===================================================
   const [state, updateState] = useImmer({
     //===================================================
@@ -316,12 +319,18 @@ const GamePage = ({
     //in order to choose a different action
     ghostAction: null,
 
-    isVolumeOn: false,
+    isVolumeOn:
+      cookies.isVolumeOn && cookies.isVolumeOn === "true" ? true : false,
     showBackButtonWarning: false,
     isKeyPressed: false,
     //index of the move that the client is looking at, which may not be the last one
     viewIndex: 0,
-    zoomLevel: 5, //number from 0 to 10
+    zoomLevel:
+      cookies.zoomLevel &&
+      parseInt(cookies.zoomLevel) >= 0 &&
+      parseInt(cookies.zoomLevel) <= 10
+        ? parseInt(cookies.zoomLevel)
+        : 5, //number from 0 to 10
     //various dialogs where the player needs to make a decision
     showDrawDialog: false,
     showTakebackDialog: false,
@@ -730,9 +739,7 @@ const GamePage = ({
       draftState.isKeyPressed = true;
     });
     if (key === "m") {
-      updateState((draftState) => {
-        draftState.isVolumeOn = !draftState.isVolumeOn;
-      });
+      handleToggleVolume();
       return;
     }
 
@@ -811,16 +818,23 @@ const GamePage = ({
   //cosmetics logic
   //===================================================
   const handleToggleVolume = () => {
+    setCookie("isVolumeOn", state.isVolumeOn ? "false" : "true", {
+      path: "/",
+    });
     updateState((draftState) => {
       draftState.isVolumeOn = !draftState.isVolumeOn;
     });
   };
   const handleIncreaseBoardSize = () => {
+    if (state.zoomLevel < 10)
+      setCookie("zoomLevel", state.zoomLevel + 1, { path: "/" });
     updateState((draftState) => {
       if (draftState.zoomLevel < 10) draftState.zoomLevel += 1;
     });
   };
   const handleDecreaseBoardSize = () => {
+    if (state.zoomLevel > 0)
+      setCookie("zoomLevel", state.zoomLevel - 1, { path: "/" });
     updateState((draftState) => {
       if (draftState.zoomLevel > 0) draftState.zoomLevel -= 1;
     });

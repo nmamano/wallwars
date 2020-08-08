@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Row, Col } from "react-materialize";
 import { uniqueNamesGenerator, names } from "unique-names-generator";
 import { useMediaQuery } from "react-responsive";
@@ -28,6 +28,7 @@ const LobbyPage = ({ socket }) => {
     "playerName",
     "duration",
     "increment",
+    "isDarkModeOn",
   ]);
 
   const [playerName, setPlayerName] = useState(
@@ -39,7 +40,9 @@ const LobbyPage = ({ socket }) => {
   const [isOngoingGame, setIsOngoingGame] = useState(false);
   const [creatorParams, setCreatorParams] = useState(null);
   const [joinerParams, setJoinerParams] = useState(null);
-  const [isDarkModeOn, setIsDarkModeOn] = useState(false);
+  const [isDarkModeOn, setIsDarkModeOn] = useState(
+    cookies.isDarkModeOn && cookies.isDarkModeOn === "true" ? true : false
+  );
 
   const handlePlayerName = (props) => {
     setPlayerName(props.target.value.slice(0, maxPlayerNameLen));
@@ -101,25 +104,28 @@ const LobbyPage = ({ socket }) => {
     setJoinerParams(null);
     setJoinGameId("");
   };
-
-  const backgroundColors = {
-    dark: "#004d40",
-    light: "#009688",
-  };
   const handleToggleDarkMode = () => {
-    setIsDarkModeOn((isDarkModeOn) => {
-      //temporary hack -- not a proper way to change the bg color
-      if (!isDarkModeOn)
-        document.body.style.backgroundColor = backgroundColors.dark;
-      else document.body.style.backgroundColor = backgroundColors.light;
-      return !isDarkModeOn;
-    });
+    setCookie("isDarkModeOn", isDarkModeOn ? "false" : "true", { path: "/" });
+    setIsDarkModeOn(!isDarkModeOn);
   };
+  useEffect(() => {
+    const backgroundColors = {
+      dark: "#004d40",
+      light: "#009688",
+    };
+    if (isDarkModeOn)
+      document.body.style.backgroundColor = backgroundColors.dark;
+    else document.body.style.backgroundColor = backgroundColors.light;
+  }, [isDarkModeOn]);
 
   let isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
 
   return (
-    <div style={{ marginBottom: "2rem" }}>
+    <div
+      style={{
+        paddingBottom: "2rem",
+      }}
+    >
       <ToastContainer />
 
       {isOngoingGame && (
