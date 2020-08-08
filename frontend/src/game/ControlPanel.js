@@ -21,8 +21,7 @@ const GameControlPanel = ({
   handleSeeLastMove,
   handleToggleVolume,
   isVolumeOn,
-  handleToggleDarkMode,
-  isDarkModeOn,
+  handleLeaveGame,
   handleIncreaseBoardSize,
   handleDecreaseBoardSize,
   zoomLevel,
@@ -129,11 +128,6 @@ const GameControlPanel = ({
         onClick={handleToggleVolume}
       />
       <IconButton
-        icon={isDarkModeOn ? "brightness_2" : "brightness_4"}
-        tooltip={isDarkModeOn ? "Turn off dark mode" : "Turn on dark mode"}
-        onClick={handleToggleDarkMode}
-      />
-      <IconButton
         icon={"zoom_out"}
         tooltip={"Decrease board size"}
         onClick={handleDecreaseBoardSize}
@@ -144,6 +138,14 @@ const GameControlPanel = ({
         tooltip={"Increase board size"}
         onClick={handleIncreaseBoardSize}
         disabled={zoomLevel === 10}
+      />
+      <IconButton
+        icon="home"
+        tooltip="Quit game"
+        onClick={handleLeaveGame}
+        modalTitle="Return to lobby"
+        modalBody="Are you sure you want to return to the lobby? You will not be able to rejoin this game."
+        modalConfirmButtonText="Quit game"
       />
     </div>
   );

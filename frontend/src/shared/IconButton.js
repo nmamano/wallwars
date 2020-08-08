@@ -15,7 +15,7 @@ const IconButton = ({
   if (!modalBody) {
     return (
       <Button
-        className="teal"
+        className={bgColor ? bgColor : "teal"}
         node="button"
         waves="light"
         icon={<Icon className="large">{icon}</Icon>}

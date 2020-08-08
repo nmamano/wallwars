@@ -5,7 +5,7 @@ import { useImmer } from "use-immer";
 import Board from "../game/Board";
 import { cellTypeByPos, emptyGrid } from "../gameLogic/mainLogic";
 
-const GameShowcase = ({ socket, isLargeScreen }) => {
+const GameShowcase = ({ socket, isLargeScreen, isDarkModeOn }) => {
   const [state, updateState] = useImmer({
     game: null,
     nextMove: 0,
@@ -103,7 +103,7 @@ const GameShowcase = ({ socket, isLargeScreen }) => {
           ? globalSettings.wallWidth
           : globalSettings.smallScreenWallWidth
       }
-      isDarkModeOn={false}
+      isDarkModeOn={isDarkModeOn}
     />
   );
 };

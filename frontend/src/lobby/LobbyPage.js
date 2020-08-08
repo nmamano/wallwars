@@ -39,6 +39,7 @@ const LobbyPage = ({ socket }) => {
   const [isOngoingGame, setIsOngoingGame] = useState(false);
   const [creatorParams, setCreatorParams] = useState(null);
   const [joinerParams, setJoinerParams] = useState(null);
+  const [isDarkModeOn, setIsDarkModeOn] = useState(false);
 
   const handlePlayerName = (props) => {
     setPlayerName(props.target.value.slice(0, maxPlayerNameLen));
@@ -101,6 +102,20 @@ const LobbyPage = ({ socket }) => {
     setJoinGameId("");
   };
 
+  const backgroundColors = {
+    dark: "#004d40",
+    light: "#009688",
+  };
+  const handleToggleDarkMode = () => {
+    setIsDarkModeOn((isDarkModeOn) => {
+      //temporary hack -- not a proper way to change the bg color
+      if (!isDarkModeOn)
+        document.body.style.backgroundColor = backgroundColors.dark;
+      else document.body.style.backgroundColor = backgroundColors.light;
+      return !isDarkModeOn;
+    });
+  };
+
   let isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
 
   return (
@@ -114,6 +129,8 @@ const LobbyPage = ({ socket }) => {
           joinerParams={joinerParams}
           returnToLobby={returnToLobby}
           isLargeScreen={isLargeScreen}
+          isDarkModeOn={isDarkModeOn}
+          handleToggleDarkMode={handleToggleDarkMode}
         />
       )}
       {!isOngoingGame && (
@@ -122,6 +139,8 @@ const LobbyPage = ({ socket }) => {
             gameName={""}
             helpText={LobbyHelp()}
             isLargeScreen={isLargeScreen}
+            isDarkModeOn={isDarkModeOn}
+            handleToggleDarkMode={handleToggleDarkMode}
           />
           <LobbyForm
             playerName={playerName}
@@ -141,7 +160,11 @@ const LobbyPage = ({ socket }) => {
               <h5 title={"Random games already played"}>Game Showcase</h5>
             </Col>
           </Row>
-          <GameShowcase socket={socket} isLargeScreen={isLargeScreen} />
+          <GameShowcase
+            socket={socket}
+            isLargeScreen={isLargeScreen}
+            isDarkModeOn={isDarkModeOn}
+          />
         </div>
       )}
     </div>

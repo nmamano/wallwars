@@ -8,11 +8,10 @@ import showToastNotification from "./showToastNotification";
 
 function Header({
   gameName,
-  showLobby,
-  endGame,
   helpText,
   isLargeScreen,
   isDarkModeOn,
+  handleToggleDarkMode,
 }) {
   let brand;
   if (!gameName) {
@@ -89,20 +88,13 @@ function Header({
             marginRight: isLargeScreen ? "15px" : "5px",
           }}
         >
-          {showLobby ? (
-            <IconButton
-              icon="home"
-              tooltip="Quit game"
-              onClick={endGame}
-              modalTitle="Return to lobby"
-              modalBody="Are you sure you want to return to the lobby? You will not be able to rejoin this game."
-              modalConfirmButtonText="Quit game"
-              bgColor="red darken-1"
-              padding={padding}
-            />
-          ) : (
-            <div></div>
-          )}
+          <IconButton
+            icon={isDarkModeOn ? "brightness_2" : "brightness_4"}
+            tooltip={isDarkModeOn ? "Turn off dark mode" : "Turn on dark mode"}
+            onClick={handleToggleDarkMode}
+            bgColor="red darken-1"
+            padding={padding}
+          />
           <IconButton
             icon="help"
             tooltip="Help"

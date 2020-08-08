@@ -28,11 +28,6 @@ import ControlPanel from "./ControlPanel";
 //===================================================
 const moveSound = new UIfx(moveSoundAudio);
 
-const backgroundColors = {
-  dark: "#004d40",
-  light: "#009688",
-};
-
 //===================================================
 //utility functions that don't require any state
 //===================================================
@@ -239,6 +234,8 @@ const GamePage = ({
   joinerParams, //gameId and joinerName
   returnToLobby, //call this to return to lobby
   isLargeScreen,
+  isDarkModeOn,
+  handleToggleDarkMode,
 }) => {
   //===================================================
   //state that depends on the props, but is otherwise constant
@@ -320,7 +317,6 @@ const GamePage = ({
     ghostAction: null,
 
     isVolumeOn: false,
-    isDarkModeOn: false,
     showBackButtonWarning: false,
     isKeyPressed: false,
     //index of the move that the client is looking at, which may not be the last one
@@ -489,9 +485,6 @@ const GamePage = ({
   const handleLeaveGame = () => {
     //tell the server to stop listening to events for this game
     socket.emit("leaveGame");
-    //undo dark mode background change
-    if (state.isDarkModeOn)
-      document.body.style.backgroundColor = backgroundColors.light;
     returnToLobby();
   };
   const handleSendRematchOffer = () => {
@@ -822,15 +815,6 @@ const GamePage = ({
       draftState.isVolumeOn = !draftState.isVolumeOn;
     });
   };
-  const handleToggleDarkMode = () => {
-    updateState((draftState) => {
-      draftState.isDarkModeOn = !draftState.isDarkModeOn;
-      //temporary hack -- not a proper way to change the bg color
-      if (draftState.isDarkModeOn)
-        document.body.style.backgroundColor = backgroundColors.dark;
-      else document.body.style.backgroundColor = backgroundColors.light;
-    });
-  };
   const handleIncreaseBoardSize = () => {
     updateState((draftState) => {
       if (draftState.zoomLevel < 10) draftState.zoomLevel += 1;
@@ -918,14 +902,13 @@ const GamePage = ({
   //rendering (dialogs only shown on occasion)
   //===================================================
   return (
-    <div className={state.isDarkModeOn ? "teal darken-4" : undefined}>
+    <div className={isDarkModeOn ? "teal darken-4" : undefined}>
       <Header
         gameName={state.gameId}
-        showLobby
-        endGame={handleLeaveGame}
         helpText={GameHelp()}
         isLargeScreen={isLargeScreen}
-        isDarkModeOn={state.isDarkModeOn}
+        isDarkModeOn={isDarkModeOn}
+        handleToggleDarkMode={handleToggleDarkMode}
       />
       <div
         style={{
@@ -969,7 +952,7 @@ const GamePage = ({
           handleClick={handleBoardClick}
           groundSize={scaledGroundSize}
           wallWidth={scaledWallWidth}
-          isDarkModeOn={state.isDarkModeOn}
+          isDarkModeOn={isDarkModeOn}
         />
         <ControlPanel
           lifeCycleStage={state.lifeCycleStage}
@@ -989,8 +972,8 @@ const GamePage = ({
           handleSeeLastMove={handleSeeLastMove}
           handleToggleVolume={handleToggleVolume}
           isVolumeOn={state.isVolumeOn}
-          handleToggleDarkMode={handleToggleDarkMode}
-          isDarkModeOn={state.isDarkModeOn}
+          handleLeaveGame={handleLeaveGame}
+          isDarkModeOn={isDarkModeOn}
           handleIncreaseBoardSize={handleIncreaseBoardSize}
           handleDecreaseBoardSize={handleDecreaseBoardSize}
           zoomLevel={state.zoomLevel}
