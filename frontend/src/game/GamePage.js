@@ -27,7 +27,9 @@ import ControlPanel from "./ControlPanel";
 //settings that never change, so they don't need to be inside the component
 //===================================================
 const moveSound = new UIfx(moveSoundAudio);
-
+const goals = globalSettings.goals;
+const boardDims = globalSettings.boardDims;
+const initialPlayerPos = globalSettings.initialPlayerPos;
 //===================================================
 //utility functions that don't require any state
 //===================================================
@@ -41,6 +43,43 @@ const indexToMove = (state) => (creatorToMove(state) ? 0 : 1);
 //one of 'None', 'Ground', 'Wall'
 const ghostType = (pos) => (pos === null ? "None" : cellTypeByPos(pos));
 
+//when the player selects a cell, it can trigger a different
+//number of actions (1 action: build 1 wall or move 1 step)
+//this function counts the number of actions for a selected position
+const countActions = (
+  grid,
+  selectedPos,
+  posActor,
+  posOther,
+  goalActor,
+  goalOther,
+  extraWalls
+) => {
+  console.log("grid", grid);
+  console.log("selectedPos", selectedPos);
+  console.log("posActor", posActor);
+  console.log("posOther", posOther);
+  console.log("goalActor", goalActor);
+  console.log("goalOther", goalOther);
+  console.log("extraWall", extraWalls);
+  const gridCopy = cloneDeep(grid);
+  for (let k = 0; k < extraWalls.length; k++) {
+    const W = extraWalls[k];
+    gridCopy[W.r][W.c] = 1;
+  }
+  if (cellTypeByPos(selectedPos) === "Ground") {
+    return distance(gridCopy, posActor, selectedPos);
+  }
+  return canBuildWall(
+    gridCopy,
+    [posActor, posOther],
+    [goalActor, goalOther],
+    selectedPos
+  )
+    ? 1
+    : 0;
+};
+
 //===================================================
 //functions that modify a copy of the state
 //===================================================
@@ -51,7 +90,13 @@ const ghostType = (pos) => (pos === null ? "None" : cellTypeByPos(pos));
 //function that updates the state of the game when a move happens
 //it applied the move number 'moveIndex', consisting of the action(s) in 'actions',
 //'timeLeftAfterMove' is the time left by the player who made the move
-const applyMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
+const applyMove = (
+  draftState,
+  actions,
+  moveIndex,
+  timeLeftAfterMove,
+  clientIsCreator
+) => {
   //only in life cycle stages 1,2,3 players can make move
   if (draftState.lifeCycleStage < 1 || draftState.lifeCycleStage > 3) return;
   //make the move only if it is the next one (safety measure against desync issues)
@@ -72,12 +117,12 @@ const applyMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
     const aType = cellTypeByPos(aPos);
     if (aType === "Ground") {
       newPlayerPos[idxToMove] = aPos;
-      if (posEq(aPos, globalSettings.goals[idxToMove])) {
+      if (posEq(aPos, goals[idxToMove])) {
         const pToMoveStarted = tc % 2 === 0;
         const otherIsWithinOneMove = isDistanceAtMost(
           newGrid,
           newPlayerPos[otherIdx],
-          globalSettings.goals[otherIdx],
+          goals[otherIdx],
           2
         );
         if (pToMoveStarted && otherIsWithinOneMove) {
@@ -103,8 +148,8 @@ const applyMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
     playerPos: newPlayerPos,
     timeLeft: newTimeLeft,
     distances: [
-      distance(newGrid, newPlayerPos[0], globalSettings.goals[0]),
-      distance(newGrid, newPlayerPos[1], globalSettings.goals[1]),
+      distance(newGrid, newPlayerPos[0], goals[0]),
+      distance(newGrid, newPlayerPos[1], goals[1]),
     ],
     wallCounts: wallCounts,
   });
@@ -120,6 +165,243 @@ const applyMove = (draftState, actions, moveIndex, timeLeftAfterMove) => {
   //if the player is looking at a previous move, when a move happens
   //they are automatically switched to viewing the new move
   draftState.viewIndex = tc + 1;
+
+  //apply premoves, if any
+  if (draftState.premoveActions.length === 0) return;
+  const acts = draftState.premoveActions;
+  draftState.premoveActions = [];
+  for (let k = 0; k < acts.length; k++)
+    applySelectedCell(draftState, acts[k], clientIsCreator);
+};
+
+//manage the state change on click or keyboard press. this may
+//change the ghost action (which is only shown to this client), or
+//make a full move, in which case it is also sent to the other client
+const applySelectedCell = (draftState, pos, clientIsCreator) => {
+  const thisClientToMove = clientIsCreator === creatorToMove(draftState);
+  if (!thisClientToMove) {
+    applySelectedCellPremove(draftState, pos, clientIsCreator);
+    return;
+  }
+  if (draftState.lifeCycleStage < 1) return; //cannot move til player 2 joins
+  if (draftState.lifeCycleStage > 3) return; //cannot move if game finished
+  //can only move if looking at current position
+  if (draftState.viewIndex !== turnCount(draftState)) return;
+  //out of bounds position, can happen when using the keyboard keys
+  if (pos.r < 0 || pos.r >= boardDims.h || pos.c < 0 || pos.c >= boardDims.w)
+    return;
+
+  const selectedType = cellTypeByPos(pos);
+  //there's a rule that the first move by each player must be a move
+  if (draftState.lifeCycleStage < 3 && selectedType === "Wall") return;
+
+  const idx = indexToMove(draftState);
+  const otherIdx = idx === 0 ? 1 : 0;
+  const gType = ghostType(draftState.ghostAction);
+  const extraWalls = gType === "Wall" ? [draftState.ghostAction] : [];
+  const tc = turnCount(draftState);
+  let curPos = draftState.moveHistory[tc].playerPos[idx];
+  if (selectedType === "Wall" && gType === "Ground")
+    curPos = draftState.ghostAction;
+  const actCount = countActions(
+    draftState.moveHistory[tc].grid,
+    pos,
+    curPos,
+    draftState.moveHistory[tc].playerPos[otherIdx],
+    goals[idx],
+    goals[otherIdx],
+    extraWalls
+  );
+  if (actCount > 2) return; //clicked a ground cell at distance >2
+
+  //variables to store the outcome of the click, if any.
+  //in the case analysis below, if we detect that the click does
+  //not trigger any change, we simply return
+  //see docs/moveLogic.md for the description of the case analysis
+  let [fullMoveActions, newGhostAction] = [null, null];
+  if (gType === "None") {
+    if (selectedType === "Wall") {
+      if (actCount === 1) newGhostAction = pos;
+      else return;
+    } else if (selectedType === "Ground") {
+      if (actCount === 1) newGhostAction = pos;
+      else if (actCount === 2) fullMoveActions = [pos];
+      else return;
+    }
+  } else if (gType === "Wall") {
+    if (selectedType === "Wall") {
+      if (posEq(draftState.ghostAction, pos)) newGhostAction = null;
+      else if (actCount === 1) fullMoveActions = [pos, draftState.ghostAction];
+      else return;
+    } else if (selectedType === "Ground") {
+      if (actCount === 0) newGhostAction = null;
+      else if (actCount === 1) fullMoveActions = [pos, draftState.ghostAction];
+      else return;
+    }
+  } else if (gType === "Ground") {
+    if (selectedType === "Wall") {
+      if (actCount === 1) fullMoveActions = [pos, draftState.ghostAction];
+      else return;
+    } else if (selectedType === "Ground") {
+      if (actCount === 0) newGhostAction = null;
+      else if (actCount === 1) {
+        if (posEq(pos, draftState.ghostAction)) newGhostAction = null;
+        else newGhostAction = pos;
+      } else if (actCount === 2) fullMoveActions = [pos];
+      else return;
+    }
+  } else {
+    console.error("unexpected ghost type", gType);
+  }
+
+  if (fullMoveActions) {
+    const idx = indexToMove(draftState);
+    const tc = turnCount(draftState);
+    let tLeft = draftState.moveHistory[tc].timeLeft[idx];
+    //we don't add the increment until the clocks start running (stage 3)
+    if (draftState.lifeCycleStage === 3)
+      tLeft += draftState.timeControl.increment;
+    draftState.moveToSend = { actions: fullMoveActions, remainingTime: tLeft };
+    applyMove(
+      draftState,
+      fullMoveActions,
+      turnCount(draftState) + 1,
+      tLeft,
+      clientIsCreator
+    );
+  } else {
+    draftState.ghostAction = newGhostAction;
+  }
+};
+
+//manage the state change on click or keyboard press.
+//dual function of applySelectedCell for when it's not your turn
+const applySelectedCellPremove = (draftState, pos, clientIsCreator) => {
+  const thisClientToMove = clientIsCreator === creatorToMove(draftState);
+  if (thisClientToMove) return; //premoves are during the opponent's turn
+  console.log("premoveActions", draftState.premoveActions); //todo
+  if (draftState.lifeCycleStage > 3) return; //cannot premove if game finished
+  //can only premove if looking at current position
+  if (draftState.viewIndex !== turnCount(draftState)) return;
+  //out of bounds position, can happen when using the keyboard keys
+  if (pos.r < 0 || pos.r >= boardDims.h || pos.c < 0 || pos.c >= boardDims.w)
+    return;
+  const selectedType = cellTypeByPos(pos);
+  //there's a rule that the first move by each player must be a move
+  if (draftState.lifeCycleStage < 2 && selectedType === "Wall") return;
+
+  const idx = indexToMove(draftState) === 0 ? 1 : 0;
+  const otherIdx = idx === 0 ? 1 : 0;
+  const tc = turnCount(draftState);
+  const premoveWalls = [];
+  let premoveGround = null;
+  for (let k = 0; k < draftState.premoveActions.length; k++) {
+    const act = draftState.premoveActions[k];
+    if (cellTypeByPos(act) === "Wall") premoveWalls.push(act);
+    else premoveGround = act;
+  }
+  let curPos = draftState.moveHistory[tc].playerPos[idx];
+  if (selectedType === "Wall" && premoveGround) curPos = premoveGround;
+  const actCount = countActions(
+    draftState.moveHistory[tc].grid,
+    pos,
+    curPos,
+    draftState.moveHistory[tc].playerPos[otherIdx],
+    goals[idx],
+    goals[otherIdx],
+    premoveWalls
+  );
+
+  console.log("actCount", actCount);
+  if (actCount > 2) return;
+
+  //see docs/moveLogic.md for the description of the case analysis below
+  let premoveState;
+  if (draftState.premoveActions.length === 0) premoveState = "Empty";
+  else if (!premoveGround && premoveWalls.length === 1) premoveState = "Wall";
+  else if (!premoveGround && premoveWalls.length === 2)
+    premoveState = "WallWall";
+  else if (premoveGround && premoveWalls.length === 1)
+    premoveState = "GroundWall";
+  else if (premoveGround && actCount === 1) premoveState = "GroundDist1";
+  else if (premoveGround && actCount === 2) premoveState = "GroundDist2";
+  else
+    console.error(
+      "Unknown premove state",
+      premoveGround,
+      premoveWalls,
+      actCount
+    );
+  console.log("premoveStateCase", premoveState); //todo
+
+  let newPremoveActions = null;
+  if (posEq(pos, curPos)) {
+    if (draftState.premoveActions.length === 0) return;
+    else {
+      //selecting the current position undoes any premoves
+      draftState.premoveActions = [];
+      return;
+    }
+  }
+
+  let [W, W2] = [null, null];
+  if (premoveWalls.length === 1) [W, W2] = [premoveWalls[0], null];
+  else if (premoveWalls.length === 2)
+    [W, W2] = [premoveWalls[0], premoveWalls[1]];
+  if (premoveState === "Empty") {
+    if (selectedType === "Wall") {
+      if (actCount === 1) newPremoveActions = [pos];
+      else return;
+    } else if (selectedType === "Ground") {
+      console.log("hello");
+      if (actCount === 1 || actCount === 2) newPremoveActions = [pos];
+      else console.error("unreachable case");
+    }
+  } else if (premoveState === "Wall") {
+    if (selectedType === "Wall") {
+      if (posEq(W, pos)) newPremoveActions = [];
+      else if (actCount === 1) newPremoveActions = [W, pos];
+      else return;
+    } else if (selectedType === "Ground") {
+      if (actCount === 1) newPremoveActions = [W, pos];
+      else return;
+    }
+  } else if (premoveState === "WallWall") {
+    if (selectedType === "Wall") {
+      if (posEq(W, pos)) newPremoveActions = [W2];
+      else if (posEq(W2, pos)) newPremoveActions = [W];
+      else return;
+    } else if (selectedType === "Ground") {
+      return;
+    }
+  } else if (premoveState === "GroundDist1") {
+    if (selectedType === "Wall") {
+      if (actCount === 1) newPremoveActions = [pos, premoveGround];
+      else return;
+    } else if (selectedType === "Ground") {
+      if (posEq(pos, premoveGround)) newPremoveActions = [];
+      else newPremoveActions = [pos];
+    }
+  } else if (premoveState === "GroundDist2") {
+    if (selectedType === "Wall") return;
+    else if (selectedType === "Ground") {
+      if (posEq(pos, premoveGround)) newPremoveActions = [];
+      else newPremoveActions = [pos];
+    }
+  } else if (premoveState === "GroundWall") {
+    if (selectedType === "Wall") {
+      if (posEq(pos, W)) newPremoveActions = [premoveGround];
+      else return;
+    } else if (selectedType === "Ground") {
+      if (posEq(pos, premoveGround)) newPremoveActions = [W];
+      else if (actCount === 1) newPremoveActions = [W, pos];
+      else return;
+    }
+  } else {
+    console.error("unexpected premove state case", premoveState);
+  }
+  console.log("newPremoveActions", newPremoveActions); //todo
+  if (newPremoveActions) draftState.premoveActions = newPremoveActions;
 };
 
 const closeDialogs = (draftState) => {
@@ -173,28 +455,20 @@ const applyTakeback = (draftState, requesterIsCreator) => {
 const applySetupRematch = (draftState) => {
   if (draftState.lifeCycleStage !== 4) return;
   draftState.creatorStarts = !draftState.creatorStarts;
-  const newGrid = emptyGrid(globalSettings.boardDims);
+  const newGrid = emptyGrid(boardDims);
   draftState.moveHistory = [
     {
       index: 0,
       actions: [],
       grid: newGrid,
-      playerPos: globalSettings.initialPlayerPos,
+      playerPos: initialPlayerPos,
       timeLeft: [
         draftState.timeControl.duration * 60,
         draftState.timeControl.duration * 60,
       ],
       distances: [
-        distance(
-          newGrid,
-          globalSettings.initialPlayerPos[0],
-          globalSettings.goals[0]
-        ),
-        distance(
-          newGrid,
-          globalSettings.initialPlayerPos[1],
-          globalSettings.goals[1]
-        ),
+        distance(newGrid, initialPlayerPos[0], goals[0]),
+        distance(newGrid, initialPlayerPos[1], goals[1]),
       ],
       wallCounts: [0, 0],
     },
@@ -240,14 +514,10 @@ const GamePage = ({
   //cosmetic state stored between sessions
   const [cookies, setCookie] = useCookies(["isVolumeOn", "zoomLevel"]);
 
-  //===================================================
   //state that depends on the props, but is otherwise constant
-  //===================================================
   const clientIsCreator = creatorParams !== null;
 
-  //===================================================
   //the 'state' object contains every other piece of state
-  //===================================================
   const [state, updateState] = useImmer({
     //===================================================
     //state about the session (sequence of games played by rematching)
@@ -289,23 +559,15 @@ const GamePage = ({
         actions: [],
         //grid contains the locations of all the built walls, labeled by who built them
         //0: empty wall, 1: player built by creator, 2: player built by joiner
-        grid: emptyGrid(globalSettings.boardDims),
-        playerPos: globalSettings.initialPlayerPos,
+        grid: emptyGrid(boardDims),
+        playerPos: initialPlayerPos,
         timeLeft: [
           clientIsCreator ? creatorParams.timeControl.duration * 60 : null,
           clientIsCreator ? creatorParams.timeControl.duration * 60 : null,
         ],
         distances: [
-          distance(
-            emptyGrid(globalSettings.boardDims),
-            globalSettings.initialPlayerPos[0],
-            globalSettings.goals[0]
-          ),
-          distance(
-            emptyGrid(globalSettings.boardDims),
-            globalSettings.initialPlayerPos[1],
-            globalSettings.goals[1]
-          ),
+          distance(emptyGrid(boardDims), initialPlayerPos[0], goals[0]),
+          distance(emptyGrid(boardDims), initialPlayerPos[1], goals[1]),
         ],
         wallCounts: [0, 0],
       },
@@ -314,10 +576,19 @@ const GamePage = ({
     //===================================================
     //state unique to this client
     //===================================================
-    //the ghost action is a single action that is shown only to this client
-    //it can be combined with another action to make a full move, or undone
-    //in order to choose a different action
+    moveToSend: null, //moves to be sent to the other client are stored here temporarily
+
+    //the ghost action is a single action done and shown only to this client
+    //when it is this client's turn to move. it can be combined with another
+    //action to make a full move, or undone in order to choose a different action
     ghostAction: null,
+
+    //premove actions are one or two actions done by this client when it is not
+    //this client's turn to move. once the opponent moves, the game behaves as if
+    //the client inputted the premove actions during their turn. That means they
+    //2 premove actions may become a move, a single premove action may become a
+    //ghost action, or premove actions may be removed if not legal
+    premoveActions: [],
 
     isVolumeOn:
       cookies.isVolumeOn && cookies.isVolumeOn === "true" ? true : false,
@@ -450,7 +721,13 @@ const GamePage = ({
     socket.on("moved", ({ actions, moveIndex, remainingTime }) => {
       updateState((draftState) => {
         console.log(`move ${moveIndex} received (${remainingTime}s)`);
-        applyMove(draftState, actions, moveIndex, remainingTime);
+        applyMove(
+          draftState,
+          actions,
+          moveIndex,
+          remainingTime,
+          clientIsCreator
+        );
       });
     });
     socket.on("leftGame", () => {
@@ -578,136 +855,27 @@ const GamePage = ({
   //game logic when a player selects a board cell
   //===================================================
 
-  //part of the logic of handleSelectedCell:
-  //when the player selects / clicks a cell, it can trigger a different
-  //number of actions (1 action: build 1 wall or move 1 step)
-  //this function counts the number of actions for a clicked position
-  const clickActionCount = (clickPos) => {
-    const idx = indexToMove(state);
-    const clickType = cellTypeByPos(clickPos);
-    const tc = turnCount(state);
-    if (clickType === "Ground") {
-      return distance(
-        state.moveHistory[tc].grid,
-        state.moveHistory[tc].playerPos[idx],
-        clickPos
-      );
-    }
-    if (clickType === "Wall") {
-      //copy to preserve immutability of state, since we may need to modify the
-      //grid / player positions to account for ghost actions
-      const gridCopy = cloneDeep(state.moveHistory[tc].grid);
-      const playerPosCopy = cloneDeep(state.moveHistory[tc].playerPos);
-      const gType = ghostType(state.ghostAction);
-      if (gType === "Wall") {
-        //block ghost wall for the check
-        gridCopy[state.ghostAction.r][state.ghostAction.c] = 1;
-      } else if (gType === "Ground") {
-        //use ghost position for the check
-        playerPosCopy[idx] = state.ghostAction;
-      }
-      return canBuildWall(
-        gridCopy,
-        playerPosCopy,
-        globalSettings.goals,
-        clickPos
-      )
-        ? 1
-        : 0;
-    }
-    console.error("unexpected action type", clickType);
-  };
-
   //manage the state change on click or keyboard press. this may
   //change the ghost action (which is only shown to this client), or
   //make a full move, in which case it is also sent to the other client
   const handleSelectedCell = (pos) => {
-    const thisClientToMove = clientIsCreator === creatorToMove(state);
-    if (!thisClientToMove) return; //can only move if it's your turn
-    if (state.lifeCycleStage < 1) return; //cannot move til player 2 joins
-    if (state.lifeCycleStage > 3) return; //cannot move if game finished
-    //can only move if looking at current position
-    if (state.viewIndex !== turnCount(state)) return;
-    //out of bounds, can happen when using the keyboard
-    if (
-      pos.r < 0 ||
-      pos.r >= globalSettings.boardDims.h ||
-      pos.c < 0 ||
-      pos.c >= globalSettings.boardDims.w
-    )
-      return;
-
-    const clickType = cellTypeByPos(pos);
-    //there's a rule that the first move by each player must be a move
-    if (state.lifeCycleStage < 3 && clickType === "Wall") return;
-
-    const actCount = clickActionCount(pos);
-    const gType = ghostType(state.ghostAction);
-
-    //variables to store the outcome of the click, if any.
-    //in the case analysis below, if we detect that the click does
-    //not trigger any change, we simply return
-    //see docs/moveLogic.md for the description of the case analysis
-    let [fullMoveActions, newGhostAction] = [null, null];
-
-    if (gType === "None") {
-      if (clickType === "Wall") {
-        if (actCount === 1) newGhostAction = pos;
-        else return;
-      } else if (clickType === "Ground") {
-        if (actCount === 1) newGhostAction = pos;
-        else if (actCount === 2) fullMoveActions = [pos];
-        else return;
-      } else {
-        console.error("unexpected action type", clickType);
-      }
-    } else if (gType === "Wall") {
-      if (clickType === "Wall") {
-        if (posEq(state.ghostAction, pos)) newGhostAction = null;
-        else if (actCount === 1) fullMoveActions = [pos, state.ghostAction];
-        else return;
-      } else if (clickType === "Ground") {
-        if (actCount === 1) fullMoveActions = [pos, state.ghostAction];
-        else return;
-      } else {
-        console.error("unexpected action type", clickType);
-      }
-    } else if (gType === "Ground") {
-      if (clickType === "Wall") {
-        if (actCount === 1) fullMoveActions = [pos, state.ghostAction];
-        else return;
-      } else if (clickType === "Ground") {
-        if (actCount === 0) newGhostAction = null;
-        else if (actCount === 1) {
-          if (posEq(pos, state.ghostAction)) return;
-          newGhostAction = pos;
-        } else if (actCount === 2) fullMoveActions = [pos];
-        else return;
-      } else {
-        console.error("unexpected action type", clickType);
-      }
-    } else {
-      console.error("unexpected ghost type", gType);
-    }
-
-    if (fullMoveActions) {
-      const idx = indexToMove(state);
-      const tc = turnCount(state);
-      let tLeft = state.moveHistory[tc].timeLeft[idx];
-      //we don't add the increment until the clocks start running (stage 3)
-      if (state.lifeCycleStage === 3) tLeft += state.timeControl.increment;
-      socket.emit("move", { actions: fullMoveActions, remainingTime: tLeft });
-      updateState((draftState) => {
-        applyMove(draftState, fullMoveActions, turnCount(state) + 1, tLeft);
-      });
-    } else {
-      updateState((draftState) => {
-        draftState.ghostAction = newGhostAction;
-      });
-    }
+    updateState((draftState) => {
+      applySelectedCell(draftState, pos, clientIsCreator);
+    });
   };
 
+  useEffect(() => {
+    if (state.moveToSend) {
+      socket.emit("move", state.moveToSend);
+      updateState((draftState) => {
+        draftState.moveToSend = null;
+      });
+    }
+  });
+
   //notify server if someone has won on time or by reaching the goal
+  //this is necessary because the server does not keep its own clock
+  //and does not understand the rules of the game
   useEffect(() => {
     //only the creator sends these messages to avoid duplicate
     if (!clientIsCreator) return;
@@ -880,11 +1048,11 @@ const GamePage = ({
   const scaledGroundSize = gSize * scalingFactor;
   const scaledWallWidth = wWidth * scalingFactor;
   const boardHeight =
-    (scaledWallWidth * (globalSettings.boardDims.h - 1)) / 2 +
-    (scaledGroundSize * (globalSettings.boardDims.h + 1)) / 2;
+    (scaledWallWidth * (boardDims.h - 1)) / 2 +
+    (scaledGroundSize * (boardDims.h + 1)) / 2;
   const boardWidth =
-    (scaledWallWidth * (globalSettings.boardDims.w - 1)) / 2 +
-    (scaledGroundSize * (globalSettings.boardDims.w + 1)) / 2;
+    (scaledWallWidth * (boardDims.w - 1)) / 2 +
+    (scaledGroundSize * (boardDims.w + 1)) / 2;
 
   const gapSize = isLargeScreen ? 15 : 6;
   let gridTemplateRows, gridTemplateColumns, gridTemplateAreas;
@@ -961,8 +1129,9 @@ const GamePage = ({
           playerColors={globalSettings.playerColors}
           grid={state.moveHistory[state.viewIndex].grid}
           playerPos={state.moveHistory[state.viewIndex].playerPos}
-          goals={globalSettings.goals}
+          goals={goals}
           ghostAction={state.ghostAction}
+          premoveActions={state.premoveActions}
           handleClick={handleBoardClick}
           groundSize={scaledGroundSize}
           wallWidth={scaledWallWidth}

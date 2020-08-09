@@ -104,10 +104,13 @@ const LobbyPage = ({ socket }) => {
     setJoinerParams(null);
     setJoinGameId("");
   };
+
   const handleToggleDarkMode = () => {
     setCookie("isDarkModeOn", isDarkModeOn ? "false" : "true", { path: "/" });
     setIsDarkModeOn(!isDarkModeOn);
   };
+
+  //effect to set the background color of the entire site based on dark mode
   useEffect(() => {
     const backgroundColors = {
       dark: "#004d40",

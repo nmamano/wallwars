@@ -18,6 +18,7 @@ const displayParams = {
 const Board = ({
   grid,
   ghostAction,
+  premoveActions,
   playerColors: [color1, color2],
   playerPos: [p1, p2],
   goals: [g1, g2],
@@ -61,10 +62,16 @@ const Board = ({
         const [p1Here, p2Here] = [posEq(pos, p1), posEq(pos, p2)];
         const [goal1Here, goal2Here] = [posEq(pos, g1), posEq(pos, g2)];
         //ghosts are the partial moves that are only displayed locally
+
         const ghostHere = ghostAction !== null && posEq(ghostAction, pos);
+        const premoveHere =
+          (premoveActions.length > 0 && posEq(premoveActions[0], pos)) ||
+          (premoveActions.length > 1 && posEq(premoveActions[1], pos));
+
+        //premoves are treated as ghost moves with respect to displaying them
         const [p1GhostHere, p2GhostHere] = [
-          ghostHere && creatorToMove,
-          ghostHere && !creatorToMove,
+          (ghostHere && creatorToMove) || (premoveHere && !creatorToMove),
+          (ghostHere && !creatorToMove) || (premoveHere && creatorToMove),
         ];
         const cellType = cellTypeByPos(pos);
 
@@ -102,12 +109,15 @@ const Board = ({
         //wall coloring for built walls (depending on builder)
         if (cellType === "Wall") {
           const solidWallHere = grid[pos.r][pos.c] !== 0;
-          if (solidWallHere || ghostHere) {
+          if (solidWallHere || ghostHere || premoveHere) {
             if (solidWallHere) {
               className = grid[pos.r][pos.c] === 1 ? color1 : color2;
               className += isDarkModeOn ? "" : " darken-3";
-            } else {
+            } else if (ghostHere) {
               className = creatorToMove ? color1 : color2;
+              className += isDarkModeOn ? " lighten-2" : " lighten-3";
+            } else {
+              className = !creatorToMove ? color1 : color2;
               className += isDarkModeOn ? " lighten-2" : " lighten-3";
             }
           }

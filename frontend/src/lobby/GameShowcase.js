@@ -92,6 +92,7 @@ const GameShowcase = ({ socket, isLargeScreen, isDarkModeOn }) => {
       playerPos={state.playerPos}
       goals={globalSettings.goals}
       ghostAction={null}
+      premoveActions={[]}
       handleClick={null}
       groundSize={
         isLargeScreen
