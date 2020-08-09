@@ -55,13 +55,6 @@ const countActions = (
   goalOther,
   extraWalls
 ) => {
-  console.log("grid", grid);
-  console.log("selectedPos", selectedPos);
-  console.log("posActor", posActor);
-  console.log("posOther", posOther);
-  console.log("goalActor", goalActor);
-  console.log("goalOther", goalOther);
-  console.log("extraWall", extraWalls);
   const gridCopy = cloneDeep(grid);
   for (let k = 0; k < extraWalls.length; k++) {
     const W = extraWalls[k];
@@ -279,7 +272,6 @@ const applySelectedCell = (draftState, pos, clientIsCreator) => {
 const applySelectedCellPremove = (draftState, pos, clientIsCreator) => {
   const thisClientToMove = clientIsCreator === creatorToMove(draftState);
   if (thisClientToMove) return; //premoves are during the opponent's turn
-  console.log("premoveActions", draftState.premoveActions); //todo
   if (draftState.lifeCycleStage > 3) return; //cannot premove if game finished
   //can only premove if looking at current position
   if (draftState.viewIndex !== turnCount(draftState)) return;
@@ -311,8 +303,18 @@ const applySelectedCellPremove = (draftState, pos, clientIsCreator) => {
     goals[otherIdx],
     premoveWalls
   );
+  let premoveGroundDist = null;
+  if (premoveGround)
+    premoveGroundDist = countActions(
+      draftState.moveHistory[tc].grid,
+      premoveGround,
+      draftState.moveHistory[tc].playerPos[idx],
+      draftState.moveHistory[tc].playerPos[otherIdx],
+      goals[idx],
+      goals[otherIdx],
+      premoveWalls
+    );
 
-  console.log("actCount", actCount);
   if (actCount > 2) return;
 
   //see docs/moveLogic.md for the description of the case analysis below
@@ -323,16 +325,20 @@ const applySelectedCellPremove = (draftState, pos, clientIsCreator) => {
     premoveState = "WallWall";
   else if (premoveGround && premoveWalls.length === 1)
     premoveState = "GroundWall";
-  else if (premoveGround && actCount === 1) premoveState = "GroundDist1";
-  else if (premoveGround && actCount === 2) premoveState = "GroundDist2";
-  else
+  else if (premoveGround && premoveGroundDist === 1)
+    premoveState = "GroundDist1";
+  else if (premoveGround && premoveGroundDist === 2)
+    premoveState = "GroundDist2";
+  else {
     console.error(
       "Unknown premove state",
       premoveGround,
       premoveWalls,
-      actCount
+      actCount,
+      premoveGroundDist
     );
-  console.log("premoveStateCase", premoveState); //todo
+    return;
+  }
 
   let newPremoveActions = null;
   if (posEq(pos, curPos)) {
@@ -353,7 +359,6 @@ const applySelectedCellPremove = (draftState, pos, clientIsCreator) => {
       if (actCount === 1) newPremoveActions = [pos];
       else return;
     } else if (selectedType === "Ground") {
-      console.log("hello");
       if (actCount === 1 || actCount === 2) newPremoveActions = [pos];
       else console.error("unreachable case");
     }
@@ -376,7 +381,7 @@ const applySelectedCellPremove = (draftState, pos, clientIsCreator) => {
     }
   } else if (premoveState === "GroundDist1") {
     if (selectedType === "Wall") {
-      if (actCount === 1) newPremoveActions = [pos, premoveGround];
+      if (actCount === 1) newPremoveActions = [premoveGround, pos];
       else return;
     } else if (selectedType === "Ground") {
       if (posEq(pos, premoveGround)) newPremoveActions = [];
@@ -400,7 +405,6 @@ const applySelectedCellPremove = (draftState, pos, clientIsCreator) => {
   } else {
     console.error("unexpected premove state case", premoveState);
   }
-  console.log("newPremoveActions", newPremoveActions); //todo
   if (newPremoveActions) draftState.premoveActions = newPremoveActions;
 };
 
