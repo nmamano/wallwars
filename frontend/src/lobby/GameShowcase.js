@@ -5,7 +5,12 @@ import { useImmer } from "use-immer";
 import Board from "../game/Board";
 import { cellTypeByPos, emptyGrid } from "../gameLogic/mainLogic";
 
-const GameShowcase = ({ socket, isLargeScreen, isDarkModeOn }) => {
+const GameShowcase = ({
+  socket,
+  isLargeScreen,
+  isDarkModeOn,
+  handleViewGame,
+}) => {
   const [state, updateState] = useImmer({
     game: null,
     nextMove: 0,
@@ -93,7 +98,7 @@ const GameShowcase = ({ socket, isLargeScreen, isDarkModeOn }) => {
       goals={globalSettings.goals}
       ghostAction={null}
       premoveActions={[]}
-      handleClick={null}
+      handleClick={() => handleViewGame(state.game._id)}
       groundSize={
         isLargeScreen
           ? globalSettings.groundSize

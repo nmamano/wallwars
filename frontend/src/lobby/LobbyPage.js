@@ -224,6 +224,7 @@ const LobbyPage = ({ socket }) => {
                 socket={socket}
                 isLargeScreen={isLargeScreen}
                 isDarkModeOn={isDarkModeOn}
+                handleViewGame={handleViewGame}
               />
             </div>
             <div
