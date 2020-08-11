@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { Row, Col } from "react-materialize";
 import { uniqueNamesGenerator, names } from "unique-names-generator";
 import { useMediaQuery } from "react-responsive";
 import { ToastContainer } from "react-toastify";
 import { useCookies } from "react-cookie";
 
+import globalSettings from "../shared/globalSettings";
 import GamePage from "../game/GamePage";
 import Header from "../shared/Header";
 import LobbyForm from "./LobbyForm";
 import LobbyHelp from "./LobbyHelp";
 import showToastNotification from "../shared/showToastNotification";
 import GameShowcase from "./GameShowcase";
+import RecentGameList from "./RecentGameList";
 
 const maxPlayerNameLen = 9;
 
@@ -36,10 +37,9 @@ const LobbyPage = ({ socket }) => {
   );
   const [duration, setDuration] = useState(cookies.duration || 5);
   const [increment, setIncrement] = useState(cookies.increment || 5);
-  const [joinGameId, setJoinGameId] = useState("");
+  const [joinCode, setJoinCode] = useState("");
   const [isOngoingGame, setIsOngoingGame] = useState(false);
-  const [creatorParams, setCreatorParams] = useState(null);
-  const [joinerParams, setJoinerParams] = useState(null);
+  const [clientParams, setClientParams] = useState(null);
   const [isDarkModeOn, setIsDarkModeOn] = useState(
     cookies.isDarkModeOn && cookies.isDarkModeOn === "true" ? true : false
   );
@@ -53,7 +53,7 @@ const LobbyPage = ({ socket }) => {
   };
   const handleDuration = (props) => setDuration(props.target.value);
   const handleIncrement = (props) => setIncrement(props.target.value);
-  const handleJoinGameId = (props) => setJoinGameId(props.target.value);
+  const handleJoinCode = (props) => setJoinCode(props.target.value);
 
   const handleCreateGame = () => {
     let [dur, inc] = [parseFloat(duration), parseFloat(increment)];
@@ -78,7 +78,8 @@ const LobbyPage = ({ socket }) => {
     let name = playerName;
     if (name === "") name = "Anon";
     else setCookie("playerName", name, { path: "/" });
-    setCreatorParams({
+    setClientParams({
+      clientRole: "Creator",
       timeControl: {
         duration: dur,
         increment: inc,
@@ -91,18 +92,25 @@ const LobbyPage = ({ socket }) => {
     let name = playerName;
     if (name === "") name = "Anon";
     else setCookie("playerName", name, { path: "/" });
-    setJoinerParams({
-      gameId: joinGameId,
+    setClientParams({
+      clientRole: "Joiner",
+      joinCode: joinCode,
       joinerName: name,
+    });
+    setIsOngoingGame(true);
+  };
+  const handleViewGame = (watchGameId) => {
+    setClientParams({
+      clientRole: "Spectator",
+      gameId: watchGameId,
     });
     setIsOngoingGame(true);
   };
 
   const returnToLobby = () => {
     setIsOngoingGame(false);
-    setCreatorParams(null);
-    setJoinerParams(null);
-    setJoinGameId("");
+    setClientParams(null);
+    setJoinCode("");
   };
 
   const handleToggleDarkMode = () => {
@@ -121,8 +129,32 @@ const LobbyPage = ({ socket }) => {
     else document.body.style.backgroundColor = backgroundColors.light;
   }, [isDarkModeOn]);
 
-  let isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
-
+  //preparing props for layout (duplicated with GamePage)
+  const isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
+  const dims = globalSettings.boardDims;
+  let [gSize, wWidth] = isLargeScreen
+    ? [globalSettings.groundSize, globalSettings.wallWidth]
+    : [
+        globalSettings.smallScreenGroundSize,
+        globalSettings.smallScreenWallWidth,
+      ];
+  const boardHeight = (wWidth * (dims.h - 1)) / 2 + (gSize * (dims.h + 1)) / 2;
+  const boardWidth = (wWidth * (dims.w - 1)) / 2 + (gSize * (dims.w + 1)) / 2;
+  const gapSize = isLargeScreen ? 15 : 6;
+  let gridTemplateRows, gridTemplateColumns, gridTemplateAreas;
+  const titleHeight = 40;
+  const sideBySideLayout = useMediaQuery({ query: "(min-width: 1300px)" });
+  if (sideBySideLayout) {
+    gridTemplateRows = `${titleHeight}px ${boardHeight}px`;
+    gridTemplateColumns = `${boardWidth}px ${boardWidth}px`;
+    gridTemplateAreas =
+      "'showcaseTitle recentTitle' 'gameShowcase recentGameList'";
+  } else {
+    gridTemplateRows = `${titleHeight}px ${boardHeight}px ${titleHeight}px ${boardHeight}px`;
+    gridTemplateColumns = `${boardWidth}px`;
+    gridTemplateAreas =
+      "'showcaseTitle' 'gameShowcase' 'recentTitle' 'recentGameList'";
+  }
   return (
     <div
       style={{
@@ -134,8 +166,7 @@ const LobbyPage = ({ socket }) => {
       {isOngoingGame && (
         <GamePage
           socket={socket}
-          creatorParams={creatorParams}
-          joinerParams={joinerParams}
+          clientParams={clientParams}
           returnToLobby={returnToLobby}
           isLargeScreen={isLargeScreen}
           isDarkModeOn={isDarkModeOn}
@@ -158,22 +189,62 @@ const LobbyPage = ({ socket }) => {
             handleDuration={handleDuration}
             increment={increment}
             handleIncrement={handleIncrement}
-            joinGameId={joinGameId}
-            handleJoinGameId={handleJoinGameId}
+            joinCode={joinCode}
+            handleJoinCode={handleJoinCode}
             handleCreateGame={handleCreateGame}
             handleJoinGame={handleJoinGame}
             handleRefreshName={handleRefreshName}
           />
-          <Row className="valign-wrapper">
-            <Col className="center" m={12}>
-              <h5 title={"Random games already played"}>Game Showcase</h5>
-            </Col>
-          </Row>
-          <GameShowcase
-            socket={socket}
-            isLargeScreen={isLargeScreen}
-            isDarkModeOn={isDarkModeOn}
-          />
+          <div
+            style={{
+              display: "grid",
+              gridTemplateRows: gridTemplateRows,
+              gridTemplateColumns: gridTemplateColumns,
+              gridTemplateAreas: gridTemplateAreas,
+              columnGap: `${2 * gapSize}px`,
+              rowGap: `${gapSize}px`,
+              margin: `${gapSize}px`,
+              justifyContent: "center",
+              alignContent: "center",
+            }}
+          >
+            <div
+              style={{
+                gridArea: "showcaseTitle",
+                alignSelf: "center",
+                justifySelf: "center",
+                fontSize: "20px",
+              }}
+              title={"Random games already played"}
+            >
+              Game Showcase
+            </div>
+            <div style={{ gridArea: "gameShowcase" }}>
+              <GameShowcase
+                socket={socket}
+                isLargeScreen={isLargeScreen}
+                isDarkModeOn={isDarkModeOn}
+              />
+            </div>
+            <div
+              style={{
+                gridArea: "recentTitle",
+                alignSelf: "center",
+                justifySelf: "center",
+                fontSize: "20px",
+              }}
+            >
+              Recent games
+            </div>
+            <div style={{ gridArea: "recentGameList" }}>
+              <RecentGameList
+                socket={socket}
+                isLargeScreen={isLargeScreen}
+                isDarkModeOn={isDarkModeOn}
+                handleViewGame={handleViewGame}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

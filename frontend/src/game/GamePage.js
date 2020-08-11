@@ -6,6 +6,7 @@ import UIfx from "uifx";
 import moveSoundAudio from "./../static/moveSound.mp3";
 import showToastNotification from "../shared/showToastNotification";
 import { useCookies } from "react-cookie";
+
 import globalSettings from "../shared/globalSettings";
 import {
   cellTypeByPos,
@@ -27,11 +28,14 @@ import ControlPanel from "./ControlPanel";
 //settings that never change, so they don't need to be inside the component
 //===================================================
 const moveSound = new UIfx(moveSoundAudio);
+const playMoveSound = () => {
+  moveSound.play();
+};
 const goals = globalSettings.goals;
 const boardDims = globalSettings.boardDims;
 const initialPlayerPos = globalSettings.initialPlayerPos;
 //===================================================
-//utility functions that don't require any state
+//pure utility functions
 //===================================================
 const turnCount = (state) => state.moveHistory.length - 1;
 
@@ -76,27 +80,177 @@ const countActions = (
 //===================================================
 //functions that modify a copy of the state
 //===================================================
-//they are a bit out of context here before the component, but they don't need
-//to be inside. the state itself should be immutable, but we can make changes
+//the state itself should be immutable, but we can make changes
 //to the copy 'draftState'
 
-//function that updates the state of the game when a move happens
-//it applied the move number 'moveIndex', consisting of the action(s) in 'actions',
-//'timeLeftAfterMove' is the time left by the player who made the move
-const applyMove = (
+const createInitialState = (cookies) => {
+  const draftState = {
+    //===================================================
+    //state about the session (sequence of games played by rematching)
+    //===================================================
+    //game code used by the joiner to join the game
+    joinCode: null,
+    //json object with duration in minutes and increment in seconds
+    timeControl: null,
+    names: [null, null],
+    //how many games each player has won in this session
+    gameWins: [0, 0],
+    opponentLeft: false,
+
+    //===================================================
+    //shared state of the current game
+    //===================================================
+    creatorStarts: null, //who starts is decided by the server
+    winner: "", //'' if game is ongoing, else 'creator', 'joiner', or 'draw'
+    //'' if game is ongoing, 'goal' or agreement' if drawn,
+    //'time', 'goal', 'resign', or 'disconnect' if someone won
+    finishReason: "",
+
+    //life cycle of the game
+    //-2. Before sending 'createGame'/'joinGame' (for creator/joiner) to the server
+    //-1. Before receiving 'gameCreated'/'gameJoined' (for creator/joiner) from the server
+    //0. game created on server, but joiner not joined yet (only creator goes into this stage).
+    //1. joiner joined, but no moves made yet. Clocks not ticking.
+    //2. One player moved. Clocks still not ticking.
+    //3. Both players made at least 1 move and game has not ended. Clocks are ticking.
+    //4. Game ended because a win/draw condition is reached.
+    lifeCycleStage: -2,
+
+    moveHistory: [
+      {
+        index: 0,
+        actions: [],
+        //grid contains the locations of all the built walls, labeled by who built them
+        //0: empty wall, 1: player built by creator, 2: player built by joiner
+        grid: emptyGrid(boardDims),
+        playerPos: initialPlayerPos,
+        timeLeft: [null, null],
+        distances: [
+          distance(emptyGrid(boardDims), initialPlayerPos[0], goals[0]),
+          distance(emptyGrid(boardDims), initialPlayerPos[1], goals[1]),
+        ],
+        wallCounts: [0, 0],
+      },
+    ],
+
+    //===================================================
+    //state unique to this client
+    //===================================================
+    moveToSend: null, //moves to be sent to the other client are stored here temporarily
+
+    //the ghost action is a single action done and shown only to this client
+    //when it is this client's turn to move. it can be combined with another
+    //action to make a full move, or undone in order to choose a different action
+    ghostAction: null,
+
+    //premove actions are one or two actions done by this client when it is not
+    //this client's turn to move. once the opponent moves, the game behaves as if
+    //the client inputted the premove actions during their turn
+    premoveActions: [],
+
+    isVolumeOn: false,
+    showBackButtonWarning: false,
+    isKeyPressed: false,
+    //index of the move that the client is looking at, which may not be the last one
+    viewIndex: 0,
+    zoomLevel: 5, //number from 0 to 10
+    //various dialogs where the player needs to make a decision
+    showDrawDialog: false,
+    showTakebackDialog: false,
+    showRematchDialog: false,
+  };
+  applyCookieSettings(draftState, cookies);
+  return draftState;
+};
+
+const applyCookieSettings = (draftState, cookies) => {
+  if (!cookies) return;
+  if (cookies.isVolumeOn && cookies.isVolumeOn === "true")
+    draftState.isVolumeOn = true;
+  if (cookies.zoomLevel) {
+    const zoomVal = parseInt(cookies.zoomLevel);
+    if (zoomVal >= 0 && zoomVal <= 10) draftState.zoomLevel = zoomVal;
+  }
+};
+
+const applyAddCreator = (draftState, timeControl, creatorName) => {
+  draftState.lifeCycleStage = -1;
+  draftState.timeControl = timeControl;
+  draftState.names[0] = creatorName;
+  const totalTimeInSeconds = timeControl.duration * 60;
+  draftState.moveHistory[0].timeLeft = [totalTimeInSeconds, totalTimeInSeconds];
+};
+
+const applyAddJoiner = (draftState, joinCode, joinerName) => {
+  draftState.lifeCycleStage = -1;
+  draftState.joinCode = joinCode;
+  draftState.names[1] = joinerName;
+};
+
+//data sent by the server to the creator
+const applyCreatedOnServer = (draftState, joinCode, creatorStarts) => {
+  //if life cycle stage is already 0, it means we already processed the response
+  if (draftState.lifeCycleStage === 0) return;
+  draftState.joinCode = joinCode;
+  draftState.creatorStarts = creatorStarts;
+  draftState.lifeCycleStage = 0;
+};
+
+//data sent by the server to the joiner
+const applyJoinedOnServer = (
   draftState,
-  actions,
-  moveIndex,
-  timeLeftAfterMove,
-  clientIsCreator
+  creatorName,
+  timeControl,
+  creatorStarts
 ) => {
+  //if life cycle stage is already 1, it means we already joined
+  if (draftState.lifeCycleStage === 1) return;
+  draftState.creatorStarts = creatorStarts;
+  draftState.names[0] = creatorName;
+  draftState.timeControl = timeControl;
+  const startSeconds = timeControl.duration * 60;
+  draftState.moveHistory[0].timeLeft = [startSeconds, startSeconds];
+  draftState.lifeCycleStage = 1;
+};
+
+const applyJoinerJoined = (draftState, joinerName) => {
+  //if life cycle stage is already 1, it means the joiner already joined
+  if (draftState.lifeCycleStage === 1) return;
+  draftState.names[1] = joinerName;
+  draftState.lifeCycleStage = 1;
+};
+
+const applyReceivedGame = (draftState, serverGame) => {
+  applyAddCreator(
+    draftState,
+    serverGame.timeControl,
+    serverGame.playerNames[0]
+  );
+  applyCreatedOnServer(
+    draftState,
+    serverGame.joinCode,
+    serverGame.creatorStarts
+  );
+  applyJoinerJoined(draftState, serverGame.playerNames[1]);
+  for (let k = 0; k < serverGame.moveHistory.length; k++) {
+    const actions = serverGame.moveHistory[k].actions;
+    const tLeft = serverGame.moveHistory[k].remainingTime;
+    applyMove(draftState, actions, tLeft, k + 1);
+  }
+  draftState.gameWins = serverGame.gameWins;
+  draftState.winner = serverGame.winner;
+  draftState.finishReason = serverGame.finishReason;
+  draftState.lifeCycleStage = 4;
+};
+
+//applies the move number 'moveIndex', consisting of the action(s) in 'actions',
+//'timeLeftAfterMove' is the time left by the player who made the move
+const applyMove = (draftState, actions, timeLeftAfterMove, moveIndex) => {
   //only in life cycle stages 1,2,3 players can make move
   if (draftState.lifeCycleStage < 1 || draftState.lifeCycleStage > 3) return;
   //make the move only if it is the next one (safety measure against desync issues)
   const tc = turnCount(draftState);
   if (tc !== moveIndex - 1) return;
-
-  if (draftState.isVolumeOn) moveSound.play();
 
   const idxToMove = indexToMove(draftState);
   const otherIdx = idxToMove === 0 ? 1 : 0;
@@ -160,20 +314,20 @@ const applyMove = (
   draftState.viewIndex = tc + 1;
 
   //apply premoves, if any
-  if (draftState.premoveActions.length === 0) return;
-  const acts = draftState.premoveActions;
-  draftState.premoveActions = [];
-  for (let k = 0; k < acts.length; k++)
-    applySelectedCell(draftState, acts[k], clientIsCreator);
+  if (draftState.premoveActions.length > 0) {
+    const acts = draftState.premoveActions;
+    draftState.premoveActions = [];
+    for (let k = 0; k < acts.length; k++)
+      applySelectedCell(draftState, acts[k], true, false);
+  }
 };
 
 //manage the state change on click or keyboard press. this may
 //change the ghost action (which is only shown to this client), or
 //make a full move, in which case it is also sent to the other client
-const applySelectedCell = (draftState, pos, clientIsCreator) => {
-  const thisClientToMove = clientIsCreator === creatorToMove(draftState);
-  if (!thisClientToMove) {
-    applySelectedCellPremove(draftState, pos, clientIsCreator);
+const applySelectedCell = (draftState, pos, clientToMove, shouldPlaySound) => {
+  if (!clientToMove) {
+    applySelectedCellPremove(draftState, pos);
     return;
   }
   if (draftState.lifeCycleStage < 1) return; //cannot move til player 2 joins
@@ -255,13 +409,8 @@ const applySelectedCell = (draftState, pos, clientIsCreator) => {
     if (draftState.lifeCycleStage === 3)
       tLeft += draftState.timeControl.increment;
     draftState.moveToSend = { actions: fullMoveActions, remainingTime: tLeft };
-    applyMove(
-      draftState,
-      fullMoveActions,
-      turnCount(draftState) + 1,
-      tLeft,
-      clientIsCreator
-    );
+    if (shouldPlaySound && draftState.isVolumeOn) playMoveSound();
+    applyMove(draftState, fullMoveActions, tLeft, turnCount(draftState) + 1);
   } else {
     draftState.ghostAction = newGhostAction;
   }
@@ -269,9 +418,7 @@ const applySelectedCell = (draftState, pos, clientIsCreator) => {
 
 //manage the state change on click or keyboard press.
 //dual function of applySelectedCell for when it's not your turn
-const applySelectedCellPremove = (draftState, pos, clientIsCreator) => {
-  const thisClientToMove = clientIsCreator === creatorToMove(draftState);
-  if (thisClientToMove) return; //premoves are during the opponent's turn
+const applySelectedCellPremove = (draftState, pos) => {
   if (draftState.lifeCycleStage > 3) return; //cannot premove if game finished
   //can only premove if looking at current position
   if (draftState.viewIndex !== turnCount(draftState)) return;
@@ -415,7 +562,7 @@ const closeDialogs = (draftState) => {
 };
 const applyDrawGame = (draftState, finishReason) => {
   if (draftState.lifeCycleStage !== 3) return;
-  if (draftState.isVolumeOn) moveSound.play();
+  if (draftState.isVolumeOn) playMoveSound();
   draftState.lifeCycleStage = 4;
   draftState.winner = "draw";
   draftState.gameWins[0] += 0.5;
@@ -508,136 +655,45 @@ const applyClockTick = (draftState) => {
 
 const GamePage = ({
   socket,
-  creatorParams, //timeControl and creatorName
-  joinerParams, //gameId and joinerName
-  returnToLobby, //call this to return to lobby
+  //clientParams contains 'clientRole' as well as other fields that depend on the client role:
+  //timeControl and creatorName for Creator,
+  //joinCode and joinerName for Joiner, gameId for Spectator
+  clientParams,
+  returnToLobby,
   isLargeScreen,
   isDarkModeOn,
   handleToggleDarkMode,
 }) => {
+  const clientRole = clientParams.clientRole;
+
   //cosmetic state stored between sessions
   const [cookies, setCookie] = useCookies(["isVolumeOn", "zoomLevel"]);
 
-  //state that depends on the props, but is otherwise constant
-  const clientIsCreator = creatorParams !== null;
-
   //the 'state' object contains every other piece of state
-  const [state, updateState] = useImmer({
-    //===================================================
-    //state about the session (sequence of games played by rematching)
-    //===================================================
-    //game code used by the joiner to join the game
-    gameId: clientIsCreator ? null : joinerParams.gameId,
-    //duration in minutes and increment in seconds
-    timeControl: clientIsCreator ? creatorParams.timeControl : null,
-    names: [
-      clientIsCreator ? creatorParams.creatorName : null,
-      clientIsCreator ? null : joinerParams.joinerName,
-    ],
-    //how many games each player has won in this session (not implemented yet)
-    gameWins: [0, 0],
-    opponentLeft: false,
-
-    //===================================================
-    //shared state of the current game
-    //===================================================
-    creatorStarts: null, //who starts is decided by the server
-    winner: "", //'' if game is ongoing, else 'creator', 'joiner', or 'draw'
-    //'' if game is ongoing, 'goal' or agreement' if drawn,
-    //'time', 'goal', 'resign', or 'disconnect' if someone won
-    finishReason: "",
-
-    //life cycle of the game
-    //-2. Before sending 'createGame'/'joinGame' (for creator/joiner) to the server
-    //-1. Before receiving 'gameCreated'/'gameJoined' (for creator/joiner) from the server
-    //0. game created on server, but joiner not joined yet (only creator goes into this stage).
-    //1. joiner joined, but no moves made yet. Clocks not ticking.
-    //2. One player moved. Clocks still not ticking.
-    //3. Both players made at least 1 move and game has not ended. Clocks are ticking.
-    //4. Game ended because a win/draw condition is reached.
-    lifeCycleStage: -2,
-
-    moveHistory: [
-      {
-        index: 0,
-        actions: [],
-        //grid contains the locations of all the built walls, labeled by who built them
-        //0: empty wall, 1: player built by creator, 2: player built by joiner
-        grid: emptyGrid(boardDims),
-        playerPos: initialPlayerPos,
-        timeLeft: [
-          clientIsCreator ? creatorParams.timeControl.duration * 60 : null,
-          clientIsCreator ? creatorParams.timeControl.duration * 60 : null,
-        ],
-        distances: [
-          distance(emptyGrid(boardDims), initialPlayerPos[0], goals[0]),
-          distance(emptyGrid(boardDims), initialPlayerPos[1], goals[1]),
-        ],
-        wallCounts: [0, 0],
-      },
-    ],
-
-    //===================================================
-    //state unique to this client
-    //===================================================
-    moveToSend: null, //moves to be sent to the other client are stored here temporarily
-
-    //the ghost action is a single action done and shown only to this client
-    //when it is this client's turn to move. it can be combined with another
-    //action to make a full move, or undone in order to choose a different action
-    ghostAction: null,
-
-    //premove actions are one or two actions done by this client when it is not
-    //this client's turn to move. once the opponent moves, the game behaves as if
-    //the client inputted the premove actions during their turn. That means they
-    //2 premove actions may become a move, a single premove action may become a
-    //ghost action, or premove actions may be removed if not legal
-    premoveActions: [],
-
-    isVolumeOn:
-      cookies.isVolumeOn && cookies.isVolumeOn === "true" ? true : false,
-    showBackButtonWarning: false,
-    isKeyPressed: false,
-    //index of the move that the client is looking at, which may not be the last one
-    viewIndex: 0,
-    zoomLevel:
-      cookies.zoomLevel &&
-      parseInt(cookies.zoomLevel) >= 0 &&
-      parseInt(cookies.zoomLevel) <= 10
-        ? parseInt(cookies.zoomLevel)
-        : 5, //number from 0 to 10
-    //various dialogs where the player needs to make a decision
-    showDrawDialog: false,
-    showTakebackDialog: false,
-    showRematchDialog: false,
-  });
+  const [state, updateState] = useImmer(createInitialState(cookies));
 
   //===================================================
   //communication FROM the server
   //===================================================
   useEffect(() => {
-    socket.once("gameCreated", ({ gameId, creatorStarts }) => {
+    socket.once("gameCreated", ({ joinCode, creatorStarts }) => {
       updateState((draftState) => {
-        //if life cycle stage is already 0, it means we already processed the response
-        if (draftState.lifeCycleStage === 0) return;
-        draftState.gameId = gameId;
-        draftState.creatorStarts = creatorStarts;
-        draftState.lifeCycleStage = 0;
+        applyCreatedOnServer(draftState, joinCode, creatorStarts);
       });
     });
     socket.once("gameJoined", ({ creatorName, timeControl, creatorStarts }) => {
       updateState((draftState) => {
-        console.log(`game joined`);
-        //if life cycle stage is already 1, it means we already joined
-        if (draftState.lifeCycleStage === 1) return;
-        draftState.creatorStarts = creatorStarts;
-        draftState.names[0] = creatorName;
-        draftState.timeControl = timeControl;
-        draftState.moveHistory[0].timeLeft = [
-          timeControl.duration * 60,
-          timeControl.duration * 60,
-        ];
-        draftState.lifeCycleStage = 1;
+        applyJoinedOnServer(
+          draftState,
+          creatorName,
+          timeControl,
+          creatorStarts
+        );
+      });
+    });
+    socket.once("requestedGame", ({ game }) => {
+      updateState((draftState) => {
+        applyReceivedGame(draftState, game);
       });
     });
     socket.once("gameJoinFailed", () => {
@@ -655,11 +711,9 @@ const GamePage = ({
     });
     socket.once("joinerJoined", ({ joinerName }) => {
       updateState((draftState) => {
-        //if life cycle stage is already 1, it means the joiner already joined
         if (draftState.lifeCycleStage === 1) return;
-        if (draftState.isVolumeOn) moveSound.play();
-        draftState.names[1] = joinerName;
-        draftState.lifeCycleStage = 1;
+        if (draftState.isVolumeOn) playMoveSound();
+        applyJoinerJoined(draftState, joinerName);
       });
     });
 
@@ -691,7 +745,8 @@ const GamePage = ({
     socket.on("takebackAccepted", () => {
       showToastNotification("The opponent agreed to the takeback.", 5000);
       updateState((draftState) => {
-        applyTakeback(draftState, clientIsCreator);
+        const requesterIsCreator = clientRole === "Creator";
+        applyTakeback(draftState, requesterIsCreator);
       });
     });
     socket.on("rematchOffered", () => {
@@ -705,45 +760,44 @@ const GamePage = ({
     socket.on("rematchAccepted", () => {
       showToastNotification("The opponent accepted the rematch offer.", 5000);
       updateState((draftState) => {
-        if (draftState.isVolumeOn) moveSound.play();
+        if (draftState.isVolumeOn) playMoveSound();
         applySetupRematch(draftState);
       });
     });
     socket.on("extraTimeReceived", () => {
       showToastNotification("The opponent added 60s to your clock.", 5000);
       updateState((draftState) => {
-        applyAddExtraTime(draftState, clientIsCreator ? 0 : 1);
+        const playerIndex = clientRole === "Creator" ? 0 : 1;
+        applyAddExtraTime(draftState, playerIndex);
       });
     });
     socket.on("resigned", () => {
       showToastNotification("The opponent resigned.", 5000);
       updateState((draftState) => {
-        if (draftState.isVolumeOn) moveSound.play();
-        applyResignGame(draftState, !clientIsCreator);
+        if (draftState.isVolumeOn) playMoveSound();
+        const resignerIsCreator = clientRole !== "Creator";
+        applyResignGame(draftState, resignerIsCreator);
       });
     });
     socket.on("moved", ({ actions, moveIndex, remainingTime }) => {
       updateState((draftState) => {
         console.log(`move ${moveIndex} received (${remainingTime}s)`);
-        applyMove(
-          draftState,
-          actions,
-          moveIndex,
-          remainingTime,
-          clientIsCreator
-        );
+        if (draftState.isVolumeOn) playMoveSound();
+        applyMove(draftState, actions, remainingTime, moveIndex);
       });
     });
     socket.on("leftGame", () => {
       showToastNotification("The opponent left the game.", 5000);
+
       updateState((draftState) => {
-        applyLeaveGame(draftState, clientIsCreator ? false : true);
+        const leaverIsCreator = clientRole === "Creator" ? false : true;
+        applyLeaveGame(draftState, leaverIsCreator);
       });
     });
     return () => {
       socket.removeAllListeners();
     };
-  }, [socket, updateState, clientIsCreator, returnToLobby]);
+  }, [socket, updateState, clientRole, returnToLobby]);
 
   //===================================================
   //communication TO the server
@@ -752,23 +806,34 @@ const GamePage = ({
   useEffect(() => {
     //first contact only from lifecycle stage -2
     if (state.lifeCycleStage !== -2) return;
-    if (clientIsCreator) {
+    if (clientRole === "Creator") {
       updateState((draftState) => {
-        draftState.lifeCycleStage = -1;
+        applyAddCreator(
+          draftState,
+          clientParams.timeControl,
+          clientParams.creatorName
+        );
       });
       socket.emit("createGame", {
-        creatorName: state.names[0],
-        timeControl: state.timeControl,
+        creatorName: clientParams.creatorName,
+        timeControl: clientParams.timeControl,
       });
-    }
-    if (!clientIsCreator) {
+    } else if (clientRole === "Joiner") {
       updateState((draftState) => {
-        draftState.lifeCycleStage = -1;
+        applyAddJoiner(
+          draftState,
+          clientParams.joinCode,
+          clientParams.joinerName
+        );
       });
       socket.emit("joinGame", {
-        gameId: state.gameId,
-        joinerName: state.names[1],
+        joinCode: clientParams.joinCode,
+        joinerName: clientParams.joinerName,
       });
+    } else if (clientRole === "Spectator") {
+      socket.emit("getGame", { gameId: clientParams.gameId });
+    } else {
+      console.error("unknown client role", clientRole);
     }
   });
 
@@ -820,7 +885,8 @@ const GamePage = ({
       );
       socket.emit("acceptTakeback");
       updateState((draftState) => {
-        applyTakeback(draftState, !clientIsCreator);
+        const requesterIsCreator = clientRole === "Joiner";
+        applyTakeback(draftState, requesterIsCreator);
       });
     } else {
       socket.emit("rejectTakeback");
@@ -832,13 +898,14 @@ const GamePage = ({
   const handleGiveExtraTime = () => {
     socket.emit("giveExtraTime");
     updateState((draftState) => {
-      applyAddExtraTime(draftState, clientIsCreator ? 1 : 0);
+      const receiverIndex = clientRole === "Creator" ? 1 : 0;
+      applyAddExtraTime(draftState, receiverIndex);
     });
   };
   const handleResign = () => {
     socket.emit("resign");
     updateState((draftState) => {
-      applyResignGame(draftState, clientIsCreator);
+      applyResignGame(draftState, clientRole === "Creator");
     });
   };
 
@@ -864,7 +931,9 @@ const GamePage = ({
   //make a full move, in which case it is also sent to the other client
   const handleSelectedCell = (pos) => {
     updateState((draftState) => {
-      applySelectedCell(draftState, pos, clientIsCreator);
+      const clientToMove =
+        creatorToMove(draftState) === (clientRole === "Creator");
+      applySelectedCell(draftState, pos, clientToMove, true);
     });
   };
 
@@ -881,15 +950,15 @@ const GamePage = ({
   //this is necessary because the server does not keep its own clock
   //and does not understand the rules of the game
   useEffect(() => {
-    //only the creator sends these messages to avoid duplicate
-    if (!clientIsCreator) return;
+    //only the creator sends these messages to avoid duplicates
+    if (clientRole !== "Creator") return;
     if (state.finishReason === "time") {
       socket.emit("playerWonOnTime", { winner: state.winner });
     }
     if (state.finishReason === "goal") {
       socket.emit("playerReachedGoal", { winner: state.winner });
     }
-  }, [clientIsCreator, socket, state.winner, state.finishReason]);
+  }, [clientRole, socket, state.winner, state.finishReason]);
 
   const handleBoardClick = (clickedPos) => handleSelectedCell(clickedPos);
 
@@ -919,9 +988,11 @@ const GamePage = ({
     //or if the game is over, arrows are used to navigate
     if (state.viewIndex < turnCount(state) || state.lifeCycleStage === 4) {
       if (key === "ArrowDown" || key === "ArrowRight") {
-        updateState((draftState) => {
-          draftState.viewIndex += 1;
-        });
+        if (state.viewIndex < turnCount(state)) {
+          updateState((draftState) => {
+            draftState.viewIndex += 1;
+          });
+        }
       } else if (key === "ArrowUp" || key === "ArrowLeft") {
         if (state.viewIndex > 0) {
           updateState((draftState) => {
@@ -1042,6 +1113,16 @@ const GamePage = ({
   //===================================================
   //preparing props for rendering
   //===================================================
+  //after the game is over, the players can see how much time they
+  //had left at each move. During the game, they ALWAYS see the current time
+  let displayTime1, displayTime2;
+  if (state.lifeCycleStage === 4) {
+    [displayTime1, displayTime2] = state.moveHistory[state.viewIndex].timeLeft;
+  } else {
+    const tc = turnCount(state);
+    [displayTime1, displayTime2] = state.moveHistory[tc].timeLeft;
+  }
+
   let [gSize, wWidth] = isLargeScreen
     ? [globalSettings.groundSize, globalSettings.wallWidth]
     : [
@@ -1074,23 +1155,13 @@ const GamePage = ({
     gridTemplateAreas = "'timer' 'board' 'status' 'panel'";
   }
 
-  //after the game is over, the players can see how much time they
-  //had left at each move. During the game, they ALWAYS see the current time
-  let displayTime1, displayTime2;
-  if (state.lifeCycleStage === 4) {
-    [displayTime1, displayTime2] = state.moveHistory[state.viewIndex].timeLeft;
-  } else {
-    const tc = turnCount(state);
-    [displayTime1, displayTime2] = state.moveHistory[tc].timeLeft;
-  }
-
   //===================================================
   //rendering (dialogs only shown on occasion)
   //===================================================
   return (
     <div className={isDarkModeOn ? "teal darken-4" : undefined}>
       <Header
-        gameName={state.gameId}
+        gameName={state.joinCode}
         helpText={GameHelp()}
         isLargeScreen={isLargeScreen}
         isDarkModeOn={isDarkModeOn}
@@ -1149,7 +1220,7 @@ const GamePage = ({
           handleGiveExtraTime={handleGiveExtraTime}
           moveHistory={state.moveHistory}
           playerColors={globalSettings.playerColors}
-          clientIsCreator={clientIsCreator}
+          clientRole={clientRole}
           creatorStarts={state.creatorStarts}
           handleViewMove={handleViewMove}
           viewIndex={state.viewIndex}
@@ -1167,7 +1238,7 @@ const GamePage = ({
           boardHeight={boardHeight}
         />
       </div>
-      {state.lifeCycleStage === 4 && (
+      {state.lifeCycleStage === 4 && clientRole !== "Spectator" && (
         <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
           <Col className="center" s={12}>
             <Button

@@ -15,15 +15,14 @@ const io = socketIo(server);
 class Game {
   //for extra reliability, we could add a check that there isn't
   //another unjoined game with the same id already
-  static randomGameId() {
+  static randomJoinCode() {
     return Math.random().toString(36).substring(2, 8);
   }
 
   constructor() {
-    this.gameId = Game.randomGameId(); //code used by the joiner to join
-    //number of wins of creator & joiner played with the given gameId code,
-    //excluding the current one. this is to distinguish consecutive games
-    //played with the same gameId
+    this.joinCode = Game.randomJoinCode(); //code used by the joiner to join
+    //number of wins of creator & joiner played using this join code,
+    //excluding the current one.
     this.gameWins = [0, 0];
     this.socketIds = [null, null]; //socked ids of creator & joiner
     this.playerNames = [null, null];
@@ -96,10 +95,10 @@ class GameManager {
     this.ongoingGames = [];
   }
 
-  unjoinedGame(gameId) {
+  unjoinedGame(joinCode) {
     for (let i = 0; i < this.unjoinedGames.length; i += 1) {
       const game = this.unjoinedGames[i];
-      if (game.gameId === gameId) return game;
+      if (game.joinCode === joinCode) return game;
     }
     return null;
   }
@@ -128,16 +127,18 @@ class GameManager {
     this.unjoinedGames.push(game);
   }
 
-  moveGameFromUnjoinedToOngoing(gameId) {
+  moveGameFromUnjoinedToOngoing(joinCode) {
     for (let i = 0; i < this.unjoinedGames.length; i += 1) {
       const game = this.unjoinedGames[i];
-      if (game.gameId === gameId) {
+      if (game.joinCode === joinCode) {
         this.unjoinedGames.splice(i, 1);
         this.ongoingGames.push(game);
         return;
       }
     }
-    console.log(`error: couldn't move game ${gameId} from unjoined to ongoing`);
+    console.log(
+      `error: couldn't move game with join code ${joinCode} from unjoined to ongoing`
+    );
   }
 
   removeGamesOfClient(socketId) {
@@ -183,7 +184,7 @@ const GM = new GameManager();
 //reserved socket.io events
 const connectionMsg = "connection";
 const disconnectMsg = "disconnect";
-//custom messages
+//gameplay messages
 const createGameMsg = "createGame";
 const gameCreatedMsg = "gameCreated";
 const joinGameMsg = "joinGame";
@@ -192,7 +193,7 @@ const gameJoinFailedMsg = "gameJoinFailed";
 const joinerJoinedMsg = "joinerJoined";
 const moveMessage = "move";
 const movedMessage = "moved";
-const gameNotFoundErrorMsg = "gameNotfoundError";
+const gameNotFoundErrorMsg = "gameNotFoundError";
 const resignMsg = "resign";
 const resignedMsg = "resigned";
 const leaveGameMsg = "leaveGame";
@@ -219,9 +220,14 @@ const acceptTakebackMsg = "acceptTakeback";
 const takebackAcceptedMsg = "takebackAccepted";
 const rejectTakebackMsg = "rejectTakeback";
 const takebackRejectedMsg = "takebackRejected";
+//GET messages
+const getGameMsg = "getGame";
+const requestedGameMsg = "requestedGame";
 const getRandomGameMsg = "getRandomGame";
 const requestedRandomGameMsg = "requestedRandomGame";
 const randomGameNotFoundErrorMsg = "randomGameNotFound";
+const getRecentGamesMsg = "getRecentGames";
+const requestedRecentGamesMsg = "requestedRecentGames";
 
 //generic utility function for logging incoming and outgoing messages
 const logMessage = (socketId, sent, messageTitle, messageParams) => {
@@ -230,8 +236,8 @@ const logMessage = (socketId, sent, messageTitle, messageParams) => {
   const game = GM.ongoingGameOfClient(socketId);
   let logText = "";
   if (game) {
-    const shortGameId = game.gameId.substring(0, 2);
-    logText += `[${shortGameId}] `;
+    const shortJoinCode = game.joinCode.substring(0, 2);
+    logText += `[${shortJoinCode}] `;
     const isCreator = socketId === game.socketIds[0];
     client += `(${isCreator ? "C" : "J"})`;
   }
@@ -288,22 +294,22 @@ io.on(connectionMsg, (socket) => {
     game.addCreator(socketId, creatorName, timeControl);
     GM.addUnjoinedGame(game);
     emitMessage(gameCreatedMsg, {
-      gameId: game.gameId,
+      joinCode: game.joinCode,
       creatorStarts: game.creatorStarts,
     });
     // GM.printAllGames();
   });
 
-  socket.on(joinGameMsg, ({ gameId, joinerName }) => {
+  socket.on(joinGameMsg, ({ joinCode, joinerName }) => {
     GM.removeGamesOfClient(socketId); //ensure there's no other game for this client
-    logReceivedMessage(joinGameMsg, { gameId, joinerName });
-    const game = GM.unjoinedGame(gameId);
+    logReceivedMessage(joinGameMsg, { joinCode, joinerName });
+    const game = GM.unjoinedGame(joinCode);
     if (!game) {
       emitMessage(gameJoinFailedMsg);
       return;
     }
     game.addJoiner(socketId, joinerName);
-    GM.moveGameFromUnjoinedToOngoing(gameId);
+    GM.moveGameFromUnjoinedToOngoing(joinCode);
     emitMessage(gameJoinedMsg, {
       creatorName: game.playerNames[0],
       timeControl: game.timeControl,
@@ -491,12 +497,30 @@ io.on(connectionMsg, (socket) => {
     GM.removeGamesOfClient(socketId);
   });
 
+  socket.on(getGameMsg, async ({ gameId }) => {
+    logReceivedMessage(getGameMsg, gameId);
+    //in the future, this should also handle live games
+    const game = await gameController.getGame(gameId);
+    if (game) emitMessage(requestedGameMsg, { game: game });
+    else emitMessage(gameNotFoundErrorMsg);
+  });
+
   socket.on(getRandomGameMsg, async () => {
     logReceivedMessage(getRandomGameMsg);
     const game = await gameController.getRandomGame();
     if (game)
       emitMessage(requestedRandomGameMsg, {
         game: game,
+      });
+    else emitMessage(randomGameNotFoundErrorMsg);
+  });
+
+  socket.on(getRecentGamesMsg, async () => {
+    logReceivedMessage(getRecentGamesMsg);
+    const games = await gameController.getRecentGames();
+    if (games)
+      emitMessage(requestedRecentGamesMsg, {
+        games: games,
       });
     else emitMessage(randomGameNotFoundErrorMsg);
   });

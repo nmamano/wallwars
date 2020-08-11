@@ -11,7 +11,7 @@ const GameControlPanel = ({
   handleGiveExtraTime,
   moveHistory,
   playerColors,
-  clientIsCreator,
+  clientRole,
   creatorStarts,
   handleViewMove,
   viewIndex,
@@ -35,7 +35,11 @@ const GameControlPanel = ({
 
   const takebackEnabled =
     lifeCycleStage === 3 ||
-    (lifeCycleStage === 2 && creatorStarts === clientIsCreator);
+    (lifeCycleStage === 2 && creatorStarts === (clientRole === "Creator"));
+
+  //all game functions are disabled for spectator
+  const isSpectator = clientRole === "Spectator";
+
   return (
     <div
       className="teal darken-2"
@@ -58,7 +62,7 @@ const GameControlPanel = ({
         modalBody={"Are you sure you want to resign?"}
         modalConfirmButtonText={"Resign"}
         onClick={handleResign}
-        disabled={lifeCycleStage !== 3}
+        disabled={isSpectator || lifeCycleStage !== 3}
       />
       <IconButton
         icon={"local_florist"}
@@ -67,7 +71,7 @@ const GameControlPanel = ({
         modalBody={"Are you sure you want to offer a draw?"}
         modalConfirmButtonText={"Offer draw"}
         onClick={handleOfferDraw}
-        disabled={lifeCycleStage !== 3}
+        disabled={isSpectator || lifeCycleStage !== 3}
       />
       <IconButton
         icon={"replay"}
@@ -79,7 +83,7 @@ const GameControlPanel = ({
           );
           handleRequestTakeback();
         }}
-        disabled={!takebackEnabled}
+        disabled={isSpectator || !takebackEnabled}
       />
       <IconButton
         icon={"add_alarm"}
@@ -88,7 +92,7 @@ const GameControlPanel = ({
           showToastNotification("You added 60s to the opponent's clock.", 5000);
           handleGiveExtraTime();
         }}
-        disabled={lifeCycleStage !== 3}
+        disabled={isSpectator || lifeCycleStage !== 3}
       />
       <div style={{ gridColumnStart: "1", gridColumnEnd: "5" }}>
         <MoveHistory
@@ -126,6 +130,7 @@ const GameControlPanel = ({
           isVolumeOn ? "Turn off sound effects" : "Turn on sound effects"
         }
         onClick={handleToggleVolume}
+        disabled={isSpectator}
       />
       <IconButton
         icon={"zoom_out"}
@@ -144,7 +149,7 @@ const GameControlPanel = ({
         tooltip="Quit game"
         onClick={handleLeaveGame}
         modalTitle="Return to lobby"
-        modalBody="Are you sure you want to return to the lobby? You will not be able to rejoin this game."
+        modalBody="Are you sure you want to return to the lobby?"
         modalConfirmButtonText="Quit game"
       />
     </div>

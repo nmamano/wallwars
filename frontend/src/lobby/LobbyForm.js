@@ -9,8 +9,8 @@ const LobbyForm = ({
   handleDuration,
   increment,
   handleIncrement,
-  joinGameId,
-  handleJoinGameId,
+  joinCode,
+  handleJoinCode,
   handleCreateGame,
   handleJoinGame,
   handleRefreshName,
@@ -25,7 +25,7 @@ const LobbyForm = ({
 
   const downHandler = ({ key }) => {
     if (key !== "Enter") return;
-    if (joinGameId.length > 0) handleJoinGame();
+    if (joinCode.length > 0) handleJoinGame();
     else {
       showToastNotification("Created new game", 5000);
       handleCreateGame();
@@ -100,8 +100,8 @@ const LobbyForm = ({
           <TextInput
             id="joinInput"
             placeholder="Write game code here..."
-            value={`${joinGameId}`}
-            onChange={handleJoinGameId}
+            value={`${joinCode}`}
+            onChange={handleJoinCode}
           />
         </Col>
         <Col s={1} m={3}></Col>

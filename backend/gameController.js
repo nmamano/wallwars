@@ -1,8 +1,12 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-//users can play regardless of whether the connection to the DB is down
-//the games are simply not stored in that case
+/*Game controller interacts with mongodb
+Currently, 'games' is the only collection, so all the db logic is here
+
+users can play regardless of whether the connection to the DB is down
+the games are simply not stored in that case */
+
 var connectedToDB = false;
 
 //shut deprecation warnings
@@ -26,16 +30,15 @@ mongoose
 
 const gameSchema = new Schema(
   {
-    gameId: { type: String, required: true },
-    gameWins: {
-      type: [Number],
-      required: true,
-      validate: [(wins) => wins.length === 2, "gameWins should have 2 entries"],
-    },
     socketIds: {
       type: [String],
       required: true,
       validate: [(ids) => ids.length === 2, "socketIds should have 2 entries"],
+    },
+    joinCode: { type: String, required: true },
+    timeControl: {
+      duration: { type: Number, required: true },
+      increment: { type: Number, required: true },
     },
     playerNames: {
       type: [String],
@@ -45,9 +48,31 @@ const gameSchema = new Schema(
         "playerNames should have 2 entries",
       ],
     },
-    timeControl: {
-      duration: { type: Number, required: true },
-      increment: { type: Number, required: true },
+    gameWins: {
+      type: [Number],
+      required: true,
+      validate: [(wins) => wins.length === 2, "gameWins should have 2 entries"],
+    },
+    winner: {
+      type: String,
+      required: true,
+      validate: [
+        (val) => val === "draw" || val === "creator" || val === "joiner",
+        "winner should be 'draw', 'creator', or 'joiner'",
+      ],
+    },
+    finishReason: {
+      type: String,
+      required: true,
+      validate: [
+        (reason) =>
+          reason === "goal" ||
+          reason === "agreement" ||
+          reason === "time" ||
+          reason === "resign" ||
+          reason === "disconnect",
+        "finishReason should be 'goal', 'agreement', 'time', 'resign', or 'disconnect'",
+      ],
     },
     creatorStarts: { type: Boolean, required: true },
     moveHistory: [
@@ -68,27 +93,6 @@ const gameSchema = new Schema(
         remainingTime: { type: Number, required: true },
       },
     ],
-    winner: {
-      type: String,
-      required: true,
-      validate: [
-        (val) => val === "draw" || val === "creator" || val === "joiner",
-        "winner should be 'draw', 'creator', or 'joiner'",
-      ],
-    },
-    finnishReason: {
-      type: String,
-      required: true,
-      validate: [
-        (reason) =>
-          reason === "goal" ||
-          reason === "agreement" ||
-          reason === "time" ||
-          reason === "resign" ||
-          reason === "disconnect",
-        "finnishReason should be 'goal', 'agreement', 'time', 'resign', or 'disconnect'",
-      ],
-    },
     startDate: {
       type: Date,
       required: true,
@@ -104,7 +108,7 @@ const storeGame = async (game) => {
   try {
     await gameToStore.save();
     console.log(
-      `Stored game in DB ${process.env.DB_NAME} _id: ${gameToStore.id}`
+      `Stored game in DB ${process.env.DB_NAME} _id: ${gameToStore.id} time: ${gameToStore.startDate}`
     );
   } catch (err) {
     console.log(`Store game to DB ${process.env.DB_NAME} failed`);
@@ -112,10 +116,16 @@ const storeGame = async (game) => {
   }
 };
 
+const getGame = async (id) => {
+  if (!connectedToDB) return null;
+  let res = await Game.findById(id);
+  return res;
+};
+
 const getRandomGame = async () => {
   if (!connectedToDB) return null;
   const conditions = {
-    "moveHistory.10": { $exists: true }, //only games with 10+ moves
+    "moveHistory.20": { $exists: true }, //only games with 20+ moves
   };
   let count = await Game.countDocuments(conditions);
   const randomIndex = Math.floor(Math.random() * count);
@@ -123,5 +133,18 @@ const getRandomGame = async () => {
   return res;
 };
 
+const getRecentGames = async () => {
+  if (!connectedToDB) return null;
+  const conditions = {
+    "moveHistory.4": { $exists: true }, //only games with 4+ moves
+  };
+  //up to 100 games
+  const games = await Game.find(conditions).sort({ startDate: 1 }).limit(100);
+  games.reverse();
+  return games;
+};
+
 exports.storeGame = storeGame;
+exports.getGame = getGame;
 exports.getRandomGame = getRandomGame;
+exports.getRecentGames = getRecentGames;

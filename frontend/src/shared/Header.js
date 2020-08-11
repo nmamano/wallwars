@@ -23,7 +23,7 @@ function Header({
         <CopyToClipboard
           style={{ cursor: "pointer" }}
           text={gameName}
-          onCopy={() => showToastNotification("Game code copied to clipboard!")}
+          onCopy={() => showToastNotification("Join code copied to clipboard!")}
         >
           <span>Game {gameName}</span>
         </CopyToClipboard>

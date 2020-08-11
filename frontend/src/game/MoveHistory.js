@@ -16,6 +16,20 @@ const moveToString = (move) => {
   return "WW";
 };
 
+const thClassName = "teal darken-2";
+const thStyle = {
+  position: "sticky",
+  top: "0px",
+  paddingTop: "0.15rem",
+  paddingBottom: "0.15rem",
+  borderRadius: "0",
+};
+const tdStyle = {
+  paddingTop: "0.15rem",
+  paddingBottom: "0.15rem",
+  borderRadius: "0",
+};
+
 const MoveHistory = ({
   moveHistory,
   playerColors,
@@ -24,18 +38,7 @@ const MoveHistory = ({
   viewIndex,
   height,
 }) => {
-  const thStyle = {
-    position: "sticky",
-    top: "0px",
-    paddingTop: "0.15rem",
-    paddingBottom: "0.15rem",
-    borderRadius: "0",
-  };
-  const tdStyle = {
-    paddingTop: "0.15rem",
-    paddingBottom: "0.15rem",
-    borderRadius: "0",
-  };
+
   return (
     <div
       id={"movehistory"}
@@ -49,16 +52,16 @@ const MoveHistory = ({
       <Table centered style={{ width: "100%" }}>
         <thead>
           <tr>
-            <th className={"teal darken-2"} style={thStyle}>
+            <th className={thClassName} style={thStyle}>
               Move
             </th>
-            <th className={"teal darken-2"} style={thStyle}>
+            <th className={thClassName} style={thStyle}>
               Actions
             </th>
-            <th className={"teal darken-2"} style={thStyle}>
+            <th className={thClassName} style={thStyle}>
               Distance
             </th>
-            <th className={"teal darken-2"} style={thStyle}>
+            <th className={thClassName} style={thStyle}>
               # Walls
             </th>
           </tr>
