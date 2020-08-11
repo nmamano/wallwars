@@ -1155,13 +1155,10 @@ const GamePage = ({
     gridTemplateAreas = "'timer' 'board' 'status' 'panel'";
   }
 
-  //===================================================
-  //rendering (dialogs only shown on occasion)
-  //===================================================
   return (
     <div className={isDarkModeOn ? "teal darken-4" : undefined}>
       <Header
-        gameName={state.joinCode}
+        gameName={clientRole === "Spectator" ? "" : state.joinCode}
         helpText={GameHelp()}
         isLargeScreen={isLargeScreen}
         isDarkModeOn={isDarkModeOn}
@@ -1224,6 +1221,7 @@ const GamePage = ({
           creatorStarts={state.creatorStarts}
           handleViewMove={handleViewMove}
           viewIndex={state.viewIndex}
+          turnCount={turnCount(state)}
           handleSeeFirstMove={handleSeeFirstMove}
           handleSeePreviousMove={handleSeePreviousMove}
           handleSeeNextMove={handleSeeNextMove}

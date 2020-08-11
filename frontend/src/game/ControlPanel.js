@@ -15,6 +15,7 @@ const GameControlPanel = ({
   creatorStarts,
   handleViewMove,
   viewIndex,
+  turnCount,
   handleSeeFirstMove,
   handleSeePreviousMove,
   handleSeeNextMove,
@@ -107,22 +108,22 @@ const GameControlPanel = ({
       <IconButton
         icon={"fast_rewind"}
         onClick={handleSeeFirstMove}
-        disabled={lifeCycleStage <= 1}
+        disabled={lifeCycleStage <= 1 || viewIndex === 0}
       />
       <IconButton
         icon={"navigate_before"}
         onClick={handleSeePreviousMove}
-        disabled={lifeCycleStage <= 1}
+        disabled={lifeCycleStage <= 1 || viewIndex === 0}
       />
       <IconButton
         icon={"navigate_next"}
         onClick={handleSeeNextMove}
-        disabled={lifeCycleStage <= 1}
+        disabled={lifeCycleStage <= 1 || viewIndex === turnCount}
       />
       <IconButton
         icon={"fast_forward"}
         onClick={handleSeeLastMove}
-        disabled={lifeCycleStage <= 1}
+        disabled={lifeCycleStage <= 1 || viewIndex === turnCount}
       />
       <IconButton
         icon={isVolumeOn ? "volume_up" : "volume_off"}

@@ -38,7 +38,6 @@ const MoveHistory = ({
   viewIndex,
   height,
 }) => {
-
   return (
     <div
       id={"movehistory"}
@@ -47,6 +46,10 @@ const MoveHistory = ({
         overflowY: "scroll",
         display: "block",
         height: height,
+        MozUserSelect: "none",
+        webkitUserSelect: "none",
+        msUserSelect: "none",
+        userSelect: "none",
       }}
     >
       <Table centered style={{ width: "100%" }}>

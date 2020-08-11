@@ -56,6 +56,10 @@ const Board = ({
         gridTemplateRows: `repeat(${repRows}, ${groundSize}px ${wallWidth}px) ${groundSize}px`,
         justifyContent: "center",
         gridArea: "board",
+        MozUserSelect: "none",
+        webkitUserSelect: "none",
+        msUserSelect: "none",
+        userSelect: "none",
       }}
     >
       {allPos.map((pos) => {
