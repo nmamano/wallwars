@@ -48,6 +48,14 @@ const gameSchema = new Schema(
         "playerNames should have 2 entries",
       ],
     },
+    playerTokens: {
+      type: [String],
+      required: true,
+      validate: [
+        (tokens) => tokens.length === 2,
+        "playerTokens should have 2 entries",
+      ],
+    },
     gameWins: {
       type: [Number],
       required: true,

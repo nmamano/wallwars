@@ -93,6 +93,10 @@ const createInitialState = (cookies) => {
     //json object with duration in minutes and increment in seconds
     timeControl: null,
     names: [null, null],
+    //the icon used for the player. The default icon is special in that it is
+    //different for the creator and joiner
+    tokens: ["default", "default"],
+
     //how many games each player has won in this session
     gameWins: [0, 0],
     opponentLeft: false,
@@ -173,18 +177,20 @@ const applyCookieSettings = (draftState, cookies) => {
   }
 };
 
-const applyAddCreator = (draftState, timeControl, creatorName) => {
+const applyAddCreator = (draftState, timeControl, name, token) => {
   draftState.lifeCycleStage = -1;
   draftState.timeControl = timeControl;
-  draftState.names[0] = creatorName;
+  draftState.names[0] = name;
+  draftState.tokens[0] = token;
   const totalTimeInSeconds = timeControl.duration * 60;
   draftState.moveHistory[0].timeLeft = [totalTimeInSeconds, totalTimeInSeconds];
 };
 
-const applyAddJoiner = (draftState, joinCode, joinerName) => {
+const applyAddJoiner = (draftState, joinCode, name, token) => {
   draftState.lifeCycleStage = -1;
   draftState.joinCode = joinCode;
-  draftState.names[1] = joinerName;
+  draftState.names[1] = name;
+  draftState.tokens[1] = token;
 };
 
 //data sent by the server to the creator
@@ -200,6 +206,7 @@ const applyCreatedOnServer = (draftState, joinCode, creatorStarts) => {
 const applyJoinedOnServer = (
   draftState,
   creatorName,
+  creatorToken,
   timeControl,
   creatorStarts
 ) => {
@@ -207,16 +214,18 @@ const applyJoinedOnServer = (
   if (draftState.lifeCycleStage === 1) return;
   draftState.creatorStarts = creatorStarts;
   draftState.names[0] = creatorName;
+  draftState.tokens[0] = creatorToken;
   draftState.timeControl = timeControl;
   const startSeconds = timeControl.duration * 60;
   draftState.moveHistory[0].timeLeft = [startSeconds, startSeconds];
   draftState.lifeCycleStage = 1;
 };
 
-const applyJoinerJoined = (draftState, joinerName) => {
+const applyJoinerJoined = (draftState, joinerName, joinerToken) => {
   //if life cycle stage is already 1, it means the joiner already joined
   if (draftState.lifeCycleStage === 1) return;
   draftState.names[1] = joinerName;
+  draftState.tokens[1] = joinerToken;
   draftState.lifeCycleStage = 1;
 };
 
@@ -224,14 +233,19 @@ const applyReceivedGame = (draftState, serverGame) => {
   applyAddCreator(
     draftState,
     serverGame.timeControl,
-    serverGame.playerNames[0]
+    serverGame.playerNames[0],
+    serverGame.playerTokens[0]
   );
   applyCreatedOnServer(
     draftState,
     serverGame.joinCode,
     serverGame.creatorStarts
   );
-  applyJoinerJoined(draftState, serverGame.playerNames[1]);
+  applyJoinerJoined(
+    draftState,
+    serverGame.playerNames[1],
+    serverGame.playerTokens[1]
+  );
   for (let k = 0; k < serverGame.moveHistory.length; k++) {
     const actions = serverGame.moveHistory[k].actions;
     const tLeft = serverGame.moveHistory[k].remainingTime;
@@ -656,8 +670,8 @@ const applyClockTick = (draftState) => {
 const GamePage = ({
   socket,
   //clientParams contains 'clientRole' as well as other fields that depend on the client role:
-  //timeControl and creatorName for Creator,
-  //joinCode and joinerName for Joiner, gameId for Spectator
+  //timeControl, name, token for Creator,
+  //joinCode, name, token for Joiner, gameId for Spectator
   clientParams,
   returnToLobby,
   isLargeScreen,
@@ -681,16 +695,20 @@ const GamePage = ({
         applyCreatedOnServer(draftState, joinCode, creatorStarts);
       });
     });
-    socket.once("gameJoined", ({ creatorName, timeControl, creatorStarts }) => {
-      updateState((draftState) => {
-        applyJoinedOnServer(
-          draftState,
-          creatorName,
-          timeControl,
-          creatorStarts
-        );
-      });
-    });
+    socket.once(
+      "gameJoined",
+      ({ creatorName, creatorToken, timeControl, creatorStarts }) => {
+        updateState((draftState) => {
+          applyJoinedOnServer(
+            draftState,
+            creatorName,
+            creatorToken,
+            timeControl,
+            creatorStarts
+          );
+        });
+      }
+    );
     socket.once("requestedGame", ({ game }) => {
       updateState((draftState) => {
         applyReceivedGame(draftState, game);
@@ -709,11 +727,11 @@ const GamePage = ({
         5000
       );
     });
-    socket.once("joinerJoined", ({ joinerName }) => {
+    socket.once("joinerJoined", ({ joinerName, joinerToken }) => {
       updateState((draftState) => {
         if (draftState.lifeCycleStage === 1) return;
         if (draftState.isVolumeOn) playMoveSound();
-        applyJoinerJoined(draftState, joinerName);
+        applyJoinerJoined(draftState, joinerName, joinerToken);
       });
     });
 
@@ -811,24 +829,28 @@ const GamePage = ({
         applyAddCreator(
           draftState,
           clientParams.timeControl,
-          clientParams.creatorName
+          clientParams.name,
+          clientParams.token
         );
       });
       socket.emit("createGame", {
-        creatorName: clientParams.creatorName,
+        name: clientParams.name,
         timeControl: clientParams.timeControl,
+        token: clientParams.token,
       });
     } else if (clientRole === "Joiner") {
       updateState((draftState) => {
         applyAddJoiner(
           draftState,
           clientParams.joinCode,
-          clientParams.joinerName
+          clientParams.name,
+          clientParams.token
         );
       });
       socket.emit("joinGame", {
         joinCode: clientParams.joinCode,
-        joinerName: clientParams.joinerName,
+        name: clientParams.name,
+        token: clientParams.token,
       });
     } else if (clientRole === "Spectator") {
       socket.emit("getGame", { gameId: clientParams.gameId });
@@ -1208,6 +1230,7 @@ const GamePage = ({
           groundSize={scaledGroundSize}
           wallWidth={scaledWallWidth}
           isDarkModeOn={isDarkModeOn}
+          tokens={state.tokens}
         />
         <ControlPanel
           lifeCycleStage={state.lifeCycleStage}

@@ -1,6 +1,38 @@
 import React, { useEffect } from "react";
-import { Row, Col, TextInput, Button, Icon } from "react-materialize";
+import { Row, Col, TextInput, Button, Icon, Dropdown } from "react-materialize";
+
 import showToastNotification from "../shared/showToastNotification";
+
+//random icons until I find a nicer set to use
+const tokens = [
+  "school",
+  "default",
+  "face",
+  "outlet",
+  "mood",
+  "mood_bad",
+  "child_care",
+  "pets",
+  "whatshot",
+  "toys",
+  "spa",
+  "stop",
+  "star",
+  "lens",
+  "favorite",
+  "visibility",
+  "group_work",
+  "flare",
+  "ac_unit",
+  "camera",
+  "casino",
+  "directions_boat",
+  "directions_bus",
+  "directions_car",
+  "event_seat",
+  "adb",
+  "bug_report",
+];
 
 const LobbyForm = ({
   playerName,
@@ -14,6 +46,9 @@ const LobbyForm = ({
   handleCreateGame,
   handleJoinGame,
   handleRefreshName,
+  token,
+  handleToken,
+  isLargeScreen,
 }) => {
   useEffect(() => {
     window.addEventListener("keydown", downHandler);
@@ -32,13 +67,24 @@ const LobbyForm = ({
     }
   };
 
+  const defaultToken = (
+    <div className={"white-text"} style={{ fontSize: "30px" }}>
+      <i className={`material-icons white-text`} style={{ height: `100%` }}>
+        face
+      </i>
+      {isLargeScreen ? " / " : "/"}
+      <i className={`material-icons white-text`} style={{ height: `100%` }}>
+        outlet
+      </i>
+    </div>
+  );
   return (
     <div className="container teal darken-2" style={{ marginTop: "2rem" }}>
       <Row className="valign-wrapper">
-        <Col className="center" s={5} m={4}>
-          <h5>Your name:</h5>
+        <Col className="center" s={4} m={4}>
+          <h5>{isLargeScreen ? "Your name:" : "Name:"}</h5>
         </Col>
-        <Col s={5} m={3}>
+        <Col s={6} m={3}>
           <TextInput
             id="nameInput"
             value={playerName}
@@ -59,6 +105,82 @@ const LobbyForm = ({
           />
         </Col>
         <Col s={1} m={4}></Col>
+      </Row>
+      <Row className="valign-wrapper">
+        <Col className="center" s={4} m={4}>
+          <h5>{isLargeScreen ? "Your token:" : "Token:"}</h5>
+        </Col>
+        <Col s={3} m={2} className="center">
+          {token === "default" ? (
+            defaultToken
+          ) : (
+            <div className={"white-text"} style={{ fontSize: "30px" }}>
+              <i
+                className={`material-icons white-text`}
+                style={{ height: `100%` }}
+              >
+                {token}
+              </i>
+            </div>
+          )}
+        </Col>
+        <Col s={4} m={4}>
+          <div>
+            <Dropdown
+              id="Dropdown_6"
+              options={{
+                alignment: "left",
+                autoTrigger: true,
+                closeOnClick: true,
+                constrainWidth: true,
+                container: null,
+                coverTrigger: true,
+                hover: false,
+                inDuration: 150,
+                onCloseEnd: null,
+                onCloseStart: null,
+                onOpenEnd: null,
+                onOpenStart: null,
+                outDuration: 250,
+              }}
+              trigger={<Button node="button">Change</Button>}
+            >
+              {tokens.map((token) => {
+                return (
+                  <div
+                    style={{ width: "100%" }}
+                    key={token}
+                    className={"teal"}
+                    node="button"
+                    onClick={() => handleToken(token)}
+                  >
+                    <div
+                      className="center"
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        padding: "4px 0",
+                      }}
+                    >
+                      {token === "default" ? (
+                        defaultToken
+                      ) : (
+                        <i
+                          className={`material-icons white-text`}
+                          style={{ height: `100%` }}
+                        >
+                          {token}
+                        </i>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </Dropdown>
+          </div>
+        </Col>
+        <Col s={1} m={2}></Col>
       </Row>
       <Row className="valign-wrapper">
         <Col className="center" s={5} m={4}>

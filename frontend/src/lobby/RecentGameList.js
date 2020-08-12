@@ -86,7 +86,7 @@ const RecentGameList = ({
   isDarkModeOn,
   handleViewGame,
 }) => {
-  const [recentGames, setRecentGames] = useState(null);
+  const [recentGames, setRecentGames] = useState([]);
   const [needToRequestGames, setNeedToRequestGames] = useState(true);
 
   useEffect(() => {
@@ -101,7 +101,6 @@ const RecentGameList = ({
     });
   }, [socket, needToRequestGames]);
 
-  if (!recentGames) return <div></div>;
   if (isLargeScreen) {
     return (
       <div
@@ -111,6 +110,7 @@ const RecentGameList = ({
           display: "block",
           height: "100%",
           border: "1px solid #00796d",
+          backgroundColor: isDarkModeOn ? "#d32f2f" : "#e57373",
         }}
       >
         <Table centered style={{ width: "100%" }}>

@@ -27,13 +27,17 @@ const Board = ({
   groundSize,
   wallWidth,
   isDarkModeOn,
+  tokens,
 }) => {
   const dims = { h: grid.length, w: grid[0].length };
   const allPos = [];
   for (let r = 0; r < dims.h; r++)
     for (let c = 0; c < dims.w; c++) allPos[r * dims.w + c] = { r: r, c: c };
 
-  const [icon1, icon2] = displayParams.playerIcons;
+  let [icon1, icon2] = tokens;
+  if (icon1 === "default") icon1 = displayParams.playerIcons[0];
+  if (icon2 === "default") icon2 = displayParams.playerIcons[1];
+
   const [repRows, repCols] = [(dims.h - 1) / 2, (dims.w - 1) / 2];
 
   const [hoveredCell, setHoveredCell] = useState(null);
@@ -57,7 +61,7 @@ const Board = ({
         justifyContent: "center",
         gridArea: "board",
         MozUserSelect: "none",
-        webkitUserSelect: "none",
+        WebkitUserSelect: "none",
         msUserSelect: "none",
         userSelect: "none",
       }}

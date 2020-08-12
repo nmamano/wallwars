@@ -30,11 +30,13 @@ const LobbyPage = ({ socket }) => {
     "duration",
     "increment",
     "isDarkModeOn",
+    "token",
   ]);
 
   const [playerName, setPlayerName] = useState(
     cookies.playerName || randPlayerName()
   );
+  const [token, setToken] = useState(cookies.token || "default");
   const [duration, setDuration] = useState(cookies.duration || 5);
   const [increment, setIncrement] = useState(cookies.increment || 5);
   const [joinCode, setJoinCode] = useState("");
@@ -47,7 +49,10 @@ const LobbyPage = ({ socket }) => {
   const handlePlayerName = (props) => {
     setPlayerName(props.target.value.slice(0, maxPlayerNameLen));
   };
-
+  const handleToken = (icon) => {
+    setToken(icon);
+    setCookie("token", icon, { path: "/" });
+  };
   const handleRefreshName = () => {
     setPlayerName(randPlayerName());
   };
@@ -84,7 +89,8 @@ const LobbyPage = ({ socket }) => {
         duration: dur,
         increment: inc,
       },
-      creatorName: name,
+      name: name,
+      token: token,
     });
     setIsOngoingGame(true);
   };
@@ -95,7 +101,8 @@ const LobbyPage = ({ socket }) => {
     setClientParams({
       clientRole: "Joiner",
       joinCode: joinCode,
-      joinerName: name,
+      name: name,
+      token: token,
     });
     setIsOngoingGame(true);
   };
@@ -194,6 +201,9 @@ const LobbyPage = ({ socket }) => {
             handleCreateGame={handleCreateGame}
             handleJoinGame={handleJoinGame}
             handleRefreshName={handleRefreshName}
+            token={token}
+            handleToken={handleToken}
+            isLargeScreen={isLargeScreen}
           />
           <div
             style={{

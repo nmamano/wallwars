@@ -110,6 +110,7 @@ const GameShowcase = ({
           : globalSettings.smallScreenWallWidth
       }
       isDarkModeOn={isDarkModeOn}
+      tokens={state.game ? state.game.playerTokens : ["default", "default"]}
     />
   );
 };

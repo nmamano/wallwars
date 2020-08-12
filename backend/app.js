@@ -26,6 +26,7 @@ class Game {
     this.gameWins = [0, 0];
     this.socketIds = [null, null]; //socked ids of creator & joiner
     this.playerNames = [null, null];
+    this.playerTokens = ["default", "default"];
     //object with 2 attributes: duration (in minutes) and increment (in seconds)
     this.timeControl = null;
     this.creatorStarts = Math.random() < 0.5; //coin flip
@@ -39,17 +40,19 @@ class Game {
     this.winner = "";
     //'' if game is ongoing, 'goal' or agreement' if drawn,
     //'time', 'goal', 'resign', or 'disconnect' if someone won
-    this.finnishReason = "";
+    this.finishReason = "";
     this.startDate = null;
   }
-  addCreator(creatorSocketId, creatorName, timeControl) {
+  addCreator(creatorSocketId, name, token, timeControl) {
     this.socketIds[0] = creatorSocketId;
-    this.playerNames[0] = creatorName;
+    this.playerNames[0] = name;
+    this.playerTokens[0] = token;
     this.timeControl = timeControl;
   }
-  addJoiner(joinerSocketId, joinerName) {
+  addJoiner(joinerSocketId, name, token) {
     this.socketIds[1] = joinerSocketId;
-    this.playerNames[1] = joinerName;
+    this.playerNames[1] = name;
+    this.playerTokens[1] = token;
   }
   setupRematch() {
     if (this.winner === "draw") {
@@ -63,7 +66,7 @@ class Game {
     this.creatorStarts = !this.creatorStarts; //alternate who starts
     this.moveHistory = [];
     this.winner = "";
-    this.finnishReason = "";
+    this.finishReason = "";
   }
   addMove(actions, remainingTime) {
     if (this.moveHistory.length === 0) this.startDate = Date.now();
@@ -79,7 +82,7 @@ class Game {
   }
   setGameResult(winner, reason) {
     this.winner = winner;
-    this.finnishReason = reason;
+    this.finishReason = reason;
   }
   turnCount() {
     return this.moveHistory.length;
@@ -287,35 +290,38 @@ io.on(connectionMsg, (socket) => {
   ////////////////////////////////////
   //process incoming messages
   ////////////////////////////////////
-  socket.on(createGameMsg, ({ creatorName, timeControl }) => {
+  socket.on(createGameMsg, ({ name, token, timeControl }) => {
     GM.removeGamesOfClient(socketId); //ensure there's no other game for this client
-    logReceivedMessage(createGameMsg, { creatorName, timeControl });
+    logReceivedMessage(createGameMsg, { name, token, timeControl });
     const game = new Game();
-    game.addCreator(socketId, creatorName, timeControl);
+    game.addCreator(socketId, name, token, timeControl);
     GM.addUnjoinedGame(game);
     emitMessage(gameCreatedMsg, {
       joinCode: game.joinCode,
       creatorStarts: game.creatorStarts,
     });
-    // GM.printAllGames();
   });
 
-  socket.on(joinGameMsg, ({ joinCode, joinerName }) => {
+  socket.on(joinGameMsg, ({ joinCode, name, token }) => {
     GM.removeGamesOfClient(socketId); //ensure there's no other game for this client
-    logReceivedMessage(joinGameMsg, { joinCode, joinerName });
+    logReceivedMessage(joinGameMsg, { joinCode, name, token });
     const game = GM.unjoinedGame(joinCode);
     if (!game) {
       emitMessage(gameJoinFailedMsg);
       return;
     }
-    game.addJoiner(socketId, joinerName);
+    game.addJoiner(socketId, name, token);
     GM.moveGameFromUnjoinedToOngoing(joinCode);
     emitMessage(gameJoinedMsg, {
       creatorName: game.playerNames[0],
+      creatorToken: game.playerTokens[0],
       timeControl: game.timeControl,
       creatorStarts: game.creatorStarts,
     });
-    emitMessageOpponent(joinerJoinedMsg, { joinerName: joinerName });
+    emitMessageOpponent(joinerJoinedMsg, {
+      joinerName: name,
+      joinerToken: token,
+    });
     // GM.printAllGames();
   });
 
