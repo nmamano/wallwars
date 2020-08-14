@@ -223,6 +223,8 @@ const acceptTakebackMsg = "acceptTakeback";
 const takebackAcceptedMsg = "takebackAccepted";
 const rejectTakebackMsg = "rejectTakeback";
 const takebackRejectedMsg = "takebackRejected";
+const pingServerMsg = "pingServer";
+const pongFromServerMsg = "pongFromServer";
 //GET messages
 const getGameMsg = "getGame";
 const requestedGameMsg = "requestedGame";
@@ -232,12 +234,13 @@ const randomGameNotFoundErrorMsg = "randomGameNotFound";
 const getRecentGamesMsg = "getRecentGames";
 const requestedRecentGamesMsg = "requestedRecentGames";
 
-//generic utility function for logging incoming and outgoing messages
+//middleware for logging incoming and outgoing messages
 const logMessage = (socketId, sent, messageTitle, messageParams) => {
   const shortSocketId = socketId.substring(0, 3);
   let client = shortSocketId;
   const game = GM.ongoingGameOfClient(socketId);
-  let logText = "";
+  const date = new Date();
+  let logText = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()} `;
   if (game) {
     const shortJoinCode = game.joinCode.substring(0, 2);
     logText += `[${shortJoinCode}] `;
@@ -529,6 +532,11 @@ io.on(connectionMsg, (socket) => {
         games: games,
       });
     else emitMessage(randomGameNotFoundErrorMsg);
+  });
+
+  socket.on(pingServerMsg, () => {
+    logReceivedMessage(pingServerMsg);
+    emitMessage(pongFromServerMsg);
   });
 });
 

@@ -34,6 +34,8 @@ const playMoveSound = () => {
 const goals = globalSettings.goals;
 const boardDims = globalSettings.boardDims;
 const initialPlayerPos = globalSettings.initialPlayerPos;
+const pingInterval = 5000;
+
 //===================================================
 //pure utility functions
 //===================================================
@@ -158,6 +160,15 @@ const createInitialState = (cookies) => {
     //index of the move that the client is looking at, which may not be the last one
     viewIndex: 0,
     zoomLevel: 5, //number from 0 to 10
+
+    //the client pings the server periodically to make sure the server is alive
+    //'waitingForPing' is increased every 'pingInterval' seconds.
+    //It is reset to 0 at every server message. A ping message is sent if waitingForPing
+    //reaches 2 (meaning, it has gone at least 'pingInterval' seconds without hearing
+    //from server). A warning is displayed to the user if it reaches 3 saying the server
+    //is probably unreachable.
+    waitingForPing: 0,
+
     //various dialogs where the player needs to make a decision
     showDrawDialog: false,
     showTakebackDialog: false,
@@ -726,6 +737,9 @@ const GamePage = ({
         "There was an issue on the server and we couldn't reach the other player.",
         5000
       );
+      updateState((draftState) => {
+        draftState.waitingForPing = 0;
+      });
     });
     socket.once("joinerJoined", ({ joinerName, joinerToken }) => {
       updateState((draftState) => {
@@ -738,20 +752,26 @@ const GamePage = ({
     socket.on("drawOffered", () => {
       updateState((draftState) => {
         draftState.showDrawDialog = true;
+        draftState.waitingForPing = 0;
       });
     });
     socket.on("drawRejected", () => {
       showToastNotification("The opponent declined the draw offer.", 5000);
+      updateState((draftState) => {
+        draftState.waitingForPing = 0;
+      });
     });
     socket.on("drawAccepted", () => {
       showToastNotification("The opponent accepted the draw offer.", 5000);
       updateState((draftState) => {
         applyDrawGame(draftState, "agreement");
+        draftState.waitingForPing = 0;
       });
     });
     socket.on("takebackRequested", () => {
       updateState((draftState) => {
         draftState.showTakebackDialog = true;
+        draftState.waitingForPing = 0;
       });
     });
     socket.on("takebackRejected", () => {
@@ -759,27 +779,36 @@ const GamePage = ({
         "The opponent declined the takeback request.",
         5000
       );
+      updateState((draftState) => {
+        draftState.waitingForPing = 0;
+      });
     });
     socket.on("takebackAccepted", () => {
       showToastNotification("The opponent agreed to the takeback.", 5000);
       updateState((draftState) => {
         const requesterIsCreator = clientRole === "Creator";
         applyTakeback(draftState, requesterIsCreator);
+        draftState.waitingForPing = 0;
       });
     });
     socket.on("rematchOffered", () => {
       updateState((draftState) => {
         draftState.showRematchDialog = true;
+        draftState.waitingForPing = 0;
       });
     });
     socket.on("rematchRejected", () => {
       showToastNotification("The opponent declined the rematch offer.", 5000);
+      updateState((draftState) => {
+        draftState.waitingForPing = 0;
+      });
     });
     socket.on("rematchAccepted", () => {
       showToastNotification("The opponent accepted the rematch offer.", 5000);
       updateState((draftState) => {
         if (draftState.isVolumeOn) playMoveSound();
         applySetupRematch(draftState);
+        draftState.waitingForPing = 0;
       });
     });
     socket.on("extraTimeReceived", () => {
@@ -787,6 +816,7 @@ const GamePage = ({
       updateState((draftState) => {
         const playerIndex = clientRole === "Creator" ? 0 : 1;
         applyAddExtraTime(draftState, playerIndex);
+        draftState.waitingForPing = 0;
       });
     });
     socket.on("resigned", () => {
@@ -795,6 +825,7 @@ const GamePage = ({
         if (draftState.isVolumeOn) playMoveSound();
         const resignerIsCreator = clientRole !== "Creator";
         applyResignGame(draftState, resignerIsCreator);
+        draftState.waitingForPing = 0;
       });
     });
     socket.on("moved", ({ actions, moveIndex, remainingTime }) => {
@@ -802,6 +833,7 @@ const GamePage = ({
         console.log(`move ${moveIndex} received (${remainingTime}s)`);
         if (draftState.isVolumeOn) playMoveSound();
         applyMove(draftState, actions, remainingTime, moveIndex);
+        draftState.waitingForPing = 0;
       });
     });
     socket.on("leftGame", () => {
@@ -810,6 +842,12 @@ const GamePage = ({
       updateState((draftState) => {
         const leaverIsCreator = clientRole === "Creator" ? false : true;
         applyLeaveGame(draftState, leaverIsCreator);
+        draftState.waitingForPing = 0;
+      });
+    });
+    socket.on("pongFromServer", () => {
+      updateState((draftState) => {
+        draftState.waitingForPing = 0;
       });
     });
     return () => {
@@ -943,6 +981,27 @@ const GamePage = ({
     }, 1000);
     return () => clearInterval(interval);
   }, [updateState]);
+
+  //===================================================
+  //ping logic
+  //===================================================
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (state.lifeCycleStage !== 3) return;
+      if (state.waitingForPing === 1) {
+        socket.emit("pingServer");
+      } else if (state.waitingForPing === 2) {
+        showToastNotification(
+          "The server is not responding. The game is probably lost. Sorry for the inconvenience.",
+          8000
+        );
+      }
+      updateState((draftState) => {
+        draftState.waitingForPing = (draftState.waitingForPing + 1) % 3;
+      });
+    }, pingInterval);
+    return () => clearInterval(interval);
+  }, [socket, state.lifeCycleStage, state.waitingForPing, updateState]);
 
   //===================================================
   //game logic when a player selects a board cell
