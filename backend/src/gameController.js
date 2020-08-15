@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 /*Game controller interacts with mongodb
 Currently, 'games' is the only collection, so all the db logic is here
 
-users can play regardless of whether the connection to the DB is down
+users can play even if the DB is down.
 the games are simply not stored in that case */
 
 var connectedToDB = false;

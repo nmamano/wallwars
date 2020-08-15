@@ -2,7 +2,24 @@ const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 
-const gameController = require("./gameController");
+const gameController = require("./src/gameController");
+const GameManager = require("./src/GameManager");
+const {
+  newGame,
+  turnCount,
+  playerToMoveHasTimeLeft,
+  clientIndex,
+  creatorToMove,
+  timeLeftByPlayer,
+  addCreator,
+  addJoiner,
+  setupRematch,
+  addMove,
+  applyTakeback,
+  applyGiveExtraTime,
+  setResult,
+} = require("./src/gameState");
+const M = require("./src/messageList");
 
 const port = process.env.PORT || 4001;
 const app = express();
@@ -15,307 +32,9 @@ const io = socketIo(server);
 const genRandomCookieId = () => {
   return Math.random().toString(36).substring(2);
 };
-//for extra reliability, we could add a check that there isn't
-//another unjoined game with the same id already
-const randomJoinCode = () => {
-  return Math.random().toString(36).substring(2, 8);
-};
-
-const newGame = () => {
-  return {
-    joinCode: randomJoinCode(), //code used by the joiner to join
-    //number of wins of creator & joiner played using this join code,
-    //excluding the current one.
-    gameWins: [0, 0],
-    socketIds: [null, null], //socked ids of creator & joiner
-    //a cookie is stored at each client which can be used to rejoin a game
-    cookieIds: [null, null],
-    playerNames: [null, null],
-    playerTokens: ["default", "default"],
-    //object with 2 attributes: duration (in minutes) and increment (in seconds)
-    timeControl: null,
-
-    arePlayersPresent: [false, false],
-    creatorStarts: Math.random() < 0.5, //coin flip
-    //array with the sequence of moves played on the board (if a takeback
-    //happens, the move is removed from this history as well). Each entry in
-    //moveHistory is an object with 3 attributes:
-    //actions (an array with the 1 or 2 actions for that move)
-    //remainingTime (the time left of the player who made this move)
-    //time stamp of when the move was received
-    moveHistory: [],
-    //'' if game is ongoing, else 'creator', 'joiner', or 'draw' (same as client)
-    winner: "",
-    //'' if game is ongoing, 'goal' or agreement' if drawn,
-    //'time', 'goal', 'resign', or 'disconnect' if someone won
-    finishReason: "",
-    startDate: null,
-  };
-};
-//===========================================
-//functions that modify the game state
-//===========================================
-const addCreator = (game, socketId, name, token, timeControl, cookieId) => {
-  game.socketIds[0] = socketId;
-  game.playerNames[0] = name;
-  game.playerTokens[0] = token;
-  game.timeControl = timeControl;
-  game.cookieIds[0] = cookieId;
-  game.arePlayersPresent[0] = true;
-};
-const addJoiner = (game, socketId, name, token, cookieId) => {
-  game.socketIds[1] = socketId;
-  game.playerNames[1] = name;
-  game.playerTokens[1] = token;
-  game.cookieIds[1] = cookieId;
-  game.arePlayersPresent[1] = true;
-};
-const setupRematch = (game) => {
-  if (game.winner === "draw") {
-    game.gameWins[0] += 0.5;
-    game.gameWins[1] += 0.5;
-  } else if (game.winner === "creator") {
-    game.gameWins[0] += 1;
-  } else if (game.winner === "joiner") {
-    game.gameWins[1] += 1;
-  }
-  game.creatorStarts = !game.creatorStarts; //alternate who starts
-  game.moveHistory = [];
-  game.winner = "";
-  game.finishReason = "";
-};
-const addMove = (game, actions, remainingTime) => {
-  if (game.moveHistory.length === 0) game.startDate = Date.now();
-  game.moveHistory.push({
-    actions: actions,
-    remainingTime: remainingTime,
-    timestamp: new Date().toJSON(),
-  });
-};
-const applyTakeback = (game, requesterCookieId) => {
-  const requesterToMove =
-    requesterCookieId === game.cookieIds[creatorToMove(game) ? 0 : 1];
-  const numMovesToUndo = requesterToMove ? 2 : 1;
-  for (let k = 0; k < numMovesToUndo; k++) game.moveHistory.pop();
-};
-const applyGiveExtraTime = (game, receiverCookieId) => {
-  if (game.moveHistory.length <= 1) return;
-  const receiverToMove =
-    receiverCookieId === game.cookieIds[creatorToMove(game) ? 0 : 1];
-  const lastMoveIdx = game.moveHistory.length - (receiverToMove ? 2 : 1);
-  game.moveHistory[lastMoveIdx].remainingTime += 60;
-};
-
-const setResult = (game, winner, reason) => {
-  game.winner = winner;
-  game.finishReason = reason;
-};
-const turnCount = (game) => {
-  return game.moveHistory.length;
-};
-const playerToMoveHasTimeLeft = (game) => {
-  const tLeft = game.moveHistory[game.moveHistory.length - 2].remainingTime;
-  const lastOfMoveTime =
-    game.moveHistory[game.moveHistory.length - 1].timestamp;
-  const elapsedMs = new Date() - new Date(lastOfMoveTime);
-  return tLeft * 1000 - elapsedMs >= 0;
-};
-
-clientIndex = (game, cookieId) => {
-  if (game.cookieIds[0] === cookieId) return 0;
-  if (game.cookieIds[1] === cookieId) return 1;
-  return null;
-};
-
-creatorToMove = (game) => {
-  if (game.creatorStarts) return turnCount(game) % 2 == 0;
-  return turnCount(game) % 2 == 1;
-};
-
-const timeLeftByPlayer = (game) => {
-  const tc = game.moveHistory.length;
-  if (tc < 2)
-    return [game.timeControl.duration * 60, game.timeControl.duration * 60];
-  const tLeftPToMove = game.moveHistory[tc - 2].remainingTime;
-  const tLeftOther = game.moveHistory[tc - 1].remainingTime;
-  const lastOfMoveTime = game.moveHistory[tc - 1].timestamp;
-  const elapsedMs = new Date() - new Date(lastOfMoveTime);
-  let timeLeftNow = Math.floor((tLeftPToMove * 1000 - elapsedMs) / 1000);
-  if (timeLeftNow < 0) timeLeftNow = 0;
-  return creatorToMove(game)
-    ? [timeLeftNow, tLeftOther]
-    : [tLeftOther, timeLeftNow];
-};
-
-class GameManager {
-  constructor() {
-    //if there were many concurrent users, this should be converted into a map
-    //to avoid linear search. Not needed for now
-    this.unjoinedGames = [];
-    //games are removed from ongoingGames when a players leaves the game page
-    //AND the game is over. Or when one of the players creates/joins a new game
-    this.ongoingGames = [];
-  }
-
-  unjoinedGame(joinCode) {
-    for (let i = 0; i < this.unjoinedGames.length; i += 1) {
-      const game = this.unjoinedGames[i];
-      if (game.joinCode === joinCode) return game;
-    }
-    return null;
-  }
-
-  ongoingGameOfClient(cookieId) {
-    for (let i = 0; i < this.ongoingGames.length; i += 1) {
-      const game = this.ongoingGames[i];
-      const [id1, id2] = game.cookieIds;
-      if (cookieId === id1 || cookieId === id2) return game;
-    }
-    return null;
-  }
-
-  getOngoingGameByCookieId(cookieId) {
-    for (let i = 0; i < this.ongoingGames.length; i += 1) {
-      const game = this.ongoingGames[i];
-      const [id1, id2] = game.cookieIds;
-      if (cookieId === id1 || cookieId === id2) return game;
-    }
-    return null;
-  }
-
-  getOpponentSocketId(cookieId) {
-    const game = this.ongoingGameOfClient(cookieId);
-    if (!game) return null;
-    const [socketId1, socketId2] = game.socketIds;
-    return cookieId === game.cookieIds[0] ? socketId2 : socketId1;
-  }
-  getOpponentCookieId(cookieId) {
-    const game = this.ongoingGameOfClient(cookieId);
-    if (!game) return null;
-    const [cookieId1, cookieId2] = game.cookieIds;
-    return cookieId === cookieId1 ? cookieId2 : cookieId1;
-  }
-
-  hasOngoingGame(cookieId) {
-    return this.ongoingGameOfClient(cookieId) !== null;
-  }
-
-  addUnjoinedGame(game) {
-    this.unjoinedGames.push(game);
-  }
-
-  moveGameFromUnjoinedToOngoing(joinCode) {
-    for (let i = 0; i < this.unjoinedGames.length; i += 1) {
-      const game = this.unjoinedGames[i];
-      if (game.joinCode === joinCode) {
-        this.unjoinedGames.splice(i, 1);
-        this.ongoingGames.push(game);
-        return;
-      }
-    }
-    console.log(
-      `error: couldn't move game with join code ${joinCode} from unjoined to ongoing`
-    );
-  }
-
-  removeGamesByCookieId(cookieId) {
-    this.removeUnjoinedGamesByCookieId(cookieId);
-    this.removeOngoingGamesByCookieId(cookieId);
-  }
-
-  //in theory, clients can only have one unjoined game at a time,
-  //but we check all to be sure
-  removeUnjoinedGamesByCookieId(cookieId) {
-    if (!cookieId) return;
-    for (let i = 0; i < this.unjoinedGames.length; i += 1) {
-      const game = this.unjoinedGames[i];
-      if (game.cookieIds[0] === cookieId) {
-        console.log("remove unjoined game: ", JSON.stringify(game));
-        this.unjoinedGames.splice(i, 1);
-        i -= 1;
-      }
-    }
-  }
-
-  //in theory, clients can only have one ongoing game at a time,
-  //but we check all to be sure
-  removeOngoingGamesByCookieId(cookieId) {
-    if (!cookieId) return;
-    for (let i = 0; i < this.ongoingGames.length; i += 1) {
-      const game = this.ongoingGames[i];
-      if (game.cookieIds[0] === cookieId || game.cookieIds[1] === cookieId) {
-        this.ongoingGames.splice(i, 1);
-        console.log("removed ongoing game: ", JSON.stringify(game));
-        i -= 1;
-      }
-    }
-  }
-
-  printAllGames() {
-    console.log("Unjoined games:", this.unjoinedGames);
-    console.log("Ongoing games:", this.ongoingGames);
-  }
-}
 
 //global object containing all the games
 const GM = new GameManager();
-
-//reserved socket.io events
-const connectionMsg = "connection";
-const disconnectMsg = "disconnect";
-//gameplay messages
-const createGameMsg = "createGame";
-const gameCreatedMsg = "gameCreated";
-const joinGameMsg = "joinGame";
-const gameJoinedMsg = "gameJoined";
-const gameJoinFailedMsg = "gameJoinFailed";
-const joinerJoinedMsg = "joinerJoined";
-const moveMsg = "move";
-const movedMsg = "moved";
-const gameNotFoundErrorMsg = "gameNotFoundError";
-const resignMsg = "resign";
-const resignedMsg = "resigned";
-const leaveGameMsg = "leaveGame";
-const leftGameMsg = "leftGame";
-const abandonedGameMsg = "abandonedGame";
-const playerWonOnTimeMsg = "playerWonOnTime";
-const playerReachedGoalMsg = "playerReachedGoal";
-const giveExtraTimeMsg = "giveExtraTime";
-const extraTimeReceivedMsg = "extraTimeReceived";
-const offerRematchMsg = "offerRematch";
-const rematchOfferedMsg = "rematchOffered";
-const rejectRematchMsg = "rejectRematch";
-const rematchRejectedMsg = "rematchRejected";
-const acceptRematchMsg = "acceptRematch";
-const rematchAcceptedMsg = "rematchAccepted";
-const offerDrawMsg = "offerDraw";
-const drawOfferedMsg = "drawOffered";
-const acceptDrawMsg = "acceptDraw";
-const drawAcceptedMsg = "drawAccepted";
-const rejectDrawMsg = "rejectDraw";
-const drawRejectedMsg = "drawRejected";
-const requestTakebackMsg = "requestTakeback";
-const takebackRequestedMsg = "takebackRequested";
-const acceptTakebackMsg = "acceptTakeback";
-const takebackAcceptedMsg = "takebackAccepted";
-const rejectTakebackMsg = "rejectTakeback";
-const takebackRejectedMsg = "takebackRejected";
-const pingServerMsg = "pingServer";
-const pongFromServerMsg = "pongFromServer";
-//GET messages
-const getGameMsg = "getGame";
-const requestedGameMsg = "requestedGame";
-const returnToOngoingGameMsg = "returnToOngoingGame";
-const returnedToOngoingGameMsg = "returnedToOngoingGame";
-const opponentReturnedMsg = "opponentReturned";
-const checkHasOngoingGameMsg = "checkHasOngoingGame";
-const respondHasOngoingGameMsg = "respondHasOngoingGame";
-const ongoingGameNotFoundMsg = "ongoingGameNotFound";
-const getRandomGameMsg = "getRandomGame";
-const requestedRandomGameMsg = "requestedRandomGame";
-const randomGameNotFoundMsg = "randomGameNotFound";
-const getRecentGamesMsg = "getRecentGames";
-const requestedRecentGamesMsg = "requestedRecentGames";
 
 //middleware for logging incoming and outgoing messages
 //format: hh:mm:ss ss|ccc|J -> SERVER: m [gg] {p}
@@ -362,7 +81,7 @@ const logMessage = (cookieId, socketId, sent, messageTitle, messageParams) => {
   console.log(logText);
 };
 
-io.on(connectionMsg, (socket) => {
+io.on(M.connectionMsg, (socket) => {
   let clientCookieId = null;
 
   ////////////////////////////////////
@@ -370,6 +89,8 @@ io.on(connectionMsg, (socket) => {
   ////////////////////////////////////
   const logReceivedMessage = (messageTitle, messageParams) =>
     logMessage(clientCookieId, socket.id, false, messageTitle, messageParams);
+
+  logReceivedMessage(M.connectionMsg);
 
   const emitMessage = (messageTitle, params) => {
     if (params) socket.emit(messageTitle, params);
@@ -389,14 +110,14 @@ io.on(connectionMsg, (socket) => {
     logMessage(oppCookieId, oppSocketId, true, messageTitle, params);
   };
 
-  const emitGameNotFoundError = () => emitMessage(gameNotFoundErrorMsg);
+  const emitGameNotFoundError = () => emitMessage(M.gameNotFoundErrorMsg);
 
   //communicate the the opponent that the client is not coming back
   //and store the game to the DB if it had started
   const dealWithLingeringGame = (game) => {
     const idx = clientIndex(game, clientCookieId);
     if (game.winner === "" && game.arePlayersPresent[idx === 0 ? 1 : 0])
-      emitMessageOpponent(abandonedGameMsg);
+      emitMessageOpponent(M.abandonedGameMsg);
 
     if (game.winner === "" && game.moveHistory.length > 1) {
       if (playerToMoveHasTimeLeft(game)) {
@@ -411,14 +132,12 @@ io.on(connectionMsg, (socket) => {
     }
   };
 
-  logReceivedMessage(connectionMsg);
-
   ////////////////////////////////////
   //process incoming messages
   ////////////////////////////////////
 
-  socket.on(createGameMsg, ({ name, token, timeControl, cookieId }) => {
-    logReceivedMessage(createGameMsg, { name, token, timeControl, cookieId });
+  socket.on(M.createGameMsg, ({ name, token, timeControl, cookieId }) => {
+    logReceivedMessage(M.createGameMsg, { name, token, timeControl, cookieId });
     if (cookieId && cookieId !== "undefined") {
       clientCookieId = cookieId;
       const ongoingGame = GM.getOngoingGameByCookieId(clientCookieId);
@@ -430,15 +149,15 @@ io.on(connectionMsg, (socket) => {
     const game = newGame();
     addCreator(game, socket.id, name, token, timeControl, clientCookieId);
     GM.addUnjoinedGame(game);
-    emitMessage(gameCreatedMsg, {
+    emitMessage(M.gameCreatedMsg, {
       joinCode: game.joinCode,
       creatorStarts: game.creatorStarts,
       cookieId: clientCookieId,
     });
   });
 
-  socket.on(joinGameMsg, ({ joinCode, name, token, cookieId }) => {
-    logReceivedMessage(joinGameMsg, { joinCode, name, token, cookieId });
+  socket.on(M.joinGameMsg, ({ joinCode, name, token, cookieId }) => {
+    logReceivedMessage(M.joinGameMsg, { joinCode, name, token, cookieId });
     if (cookieId) {
       const ongoingGame = GM.getOngoingGameByCookieId(cookieId);
       if (ongoingGame) dealWithLingeringGame(ongoingGame, cookieId);
@@ -446,14 +165,14 @@ io.on(connectionMsg, (socket) => {
     GM.removeGamesByCookieId(cookieId); //ensure there's no other game for this client
     const game = GM.unjoinedGame(joinCode);
     if (!game) {
-      emitMessage(gameJoinFailedMsg);
+      emitMessage(M.gameJoinFailedMsg);
       return;
     }
     if (!cookieId || cookieId === "undefined") cookieId = genRandomCookieId();
     clientCookieId = cookieId;
     addJoiner(game, socket.id, name, token, cookieId);
     GM.moveGameFromUnjoinedToOngoing(joinCode);
-    emitMessage(gameJoinedMsg, {
+    emitMessage(M.gameJoinedMsg, {
       creatorName: game.playerNames[0],
       creatorToken: game.playerTokens[0],
       timeControl: game.timeControl,
@@ -461,15 +180,15 @@ io.on(connectionMsg, (socket) => {
       cookieId: cookieId,
       creatorPresent: game.arePlayersPresent[0],
     });
-    emitMessageOpponent(joinerJoinedMsg, {
+    emitMessageOpponent(M.joinerJoinedMsg, {
       joinerName: name,
       joinerToken: token,
     });
     // GM.printAllGames();
   });
 
-  socket.on(moveMsg, ({ actions, remainingTime }) => {
-    logReceivedMessage(moveMsg, { actions, remainingTime });
+  socket.on(M.moveMsg, ({ actions, remainingTime }) => {
+    logReceivedMessage(M.moveMsg, { actions, remainingTime });
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) {
       emitGameNotFoundError();
@@ -480,44 +199,44 @@ io.on(connectionMsg, (socket) => {
       return;
     }
     addMove(game, actions, remainingTime);
-    emitMessageOpponent(movedMsg, {
+    emitMessageOpponent(M.movedMsg, {
       actions: actions,
       moveIndex: turnCount(game),
       remainingTime: remainingTime,
     });
   });
 
-  socket.on(offerRematchMsg, () => {
-    logReceivedMessage(offerRematchMsg);
+  socket.on(M.offerRematchMsg, () => {
+    logReceivedMessage(M.offerRematchMsg);
     if (!GM.hasOngoingGame(clientCookieId)) {
       emitGameNotFoundError();
       return;
     }
-    emitMessageOpponent(rematchOfferedMsg);
+    emitMessageOpponent(M.rematchOfferedMsg);
   });
 
-  socket.on(rejectRematchMsg, () => {
-    logReceivedMessage(rejectRematchMsg);
+  socket.on(M.rejectRematchMsg, () => {
+    logReceivedMessage(M.rejectRematchMsg);
     if (!GM.hasOngoingGame(clientCookieId)) {
       emitGameNotFoundError();
       return;
     }
-    emitMessageOpponent(rematchRejectedMsg);
+    emitMessageOpponent(M.rematchRejectedMsg);
   });
 
-  socket.on(acceptRematchMsg, () => {
-    logReceivedMessage(acceptRematchMsg);
+  socket.on(M.acceptRematchMsg, () => {
+    logReceivedMessage(M.acceptRematchMsg);
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) {
       emitGameNotFoundError();
       return;
     }
     setupRematch(game);
-    emitMessageOpponent(rematchAcceptedMsg);
+    emitMessageOpponent(M.rematchAcceptedMsg);
   });
 
-  socket.on(resignMsg, () => {
-    logReceivedMessage(resignMsg);
+  socket.on(M.resignMsg, () => {
+    logReceivedMessage(M.resignMsg);
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) {
       emitGameNotFoundError();
@@ -526,21 +245,21 @@ io.on(connectionMsg, (socket) => {
     if (game.winner !== "") return;
     const winner = clientCookieId === game.cookieIds[0] ? "joiner" : "creator";
     setResult(game, winner, "resign");
-    emitMessageOpponent(resignedMsg);
+    emitMessageOpponent(M.resignedMsg);
     gameController.storeGame(game);
   });
 
-  socket.on(offerDrawMsg, () => {
-    logReceivedMessage(offerDrawMsg);
+  socket.on(M.offerDrawMsg, () => {
+    logReceivedMessage(M.offerDrawMsg);
     if (!GM.hasOngoingGame(clientCookieId)) {
       emitGameNotFoundError();
       return;
     }
-    emitMessageOpponent(drawOfferedMsg);
+    emitMessageOpponent(M.drawOfferedMsg);
   });
 
-  socket.on(acceptDrawMsg, () => {
-    logReceivedMessage(acceptDrawMsg);
+  socket.on(M.acceptDrawMsg, () => {
+    logReceivedMessage(M.acceptDrawMsg);
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) {
       emitGameNotFoundError();
@@ -548,61 +267,61 @@ io.on(connectionMsg, (socket) => {
     }
     if (game.winner !== "") return;
     setResult(game, "draw", "agreement");
-    emitMessageOpponent(drawAcceptedMsg);
+    emitMessageOpponent(M.drawAcceptedMsg);
     gameController.storeGame(game);
   });
 
-  socket.on(rejectDrawMsg, () => {
-    logReceivedMessage(rejectDrawMsg);
+  socket.on(M.rejectDrawMsg, () => {
+    logReceivedMessage(M.rejectDrawMsg);
     if (!GM.hasOngoingGame(clientCookieId)) {
       emitGameNotFoundError();
       return;
     }
-    emitMessageOpponent(drawRejectedMsg);
+    emitMessageOpponent(M.drawRejectedMsg);
   });
 
-  socket.on(requestTakebackMsg, () => {
-    logReceivedMessage(requestTakebackMsg);
+  socket.on(M.requestTakebackMsg, () => {
+    logReceivedMessage(M.requestTakebackMsg);
     if (!GM.hasOngoingGame(clientCookieId)) {
       emitGameNotFoundError();
       return;
     }
-    emitMessageOpponent(takebackRequestedMsg);
+    emitMessageOpponent(M.takebackRequestedMsg);
   });
 
-  socket.on(acceptTakebackMsg, () => {
-    logReceivedMessage(acceptTakebackMsg);
+  socket.on(M.acceptTakebackMsg, () => {
+    logReceivedMessage(M.acceptTakebackMsg);
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) {
       emitGameNotFoundError();
       return;
     }
     applyTakeback(game, GM.getOpponentCookieId(clientCookieId));
-    emitMessageOpponent(takebackAcceptedMsg);
+    emitMessageOpponent(M.takebackAcceptedMsg);
   });
 
-  socket.on(rejectTakebackMsg, () => {
-    logReceivedMessage(rejectTakebackMsg);
+  socket.on(M.rejectTakebackMsg, () => {
+    logReceivedMessage(M.rejectTakebackMsg);
     if (!GM.hasOngoingGame(clientCookieId)) {
       emitGameNotFoundError();
       return;
     }
-    emitMessageOpponent(takebackRejectedMsg);
+    emitMessageOpponent(M.takebackRejectedMsg);
   });
 
-  socket.on(giveExtraTimeMsg, () => {
-    logReceivedMessage(giveExtraTimeMsg);
+  socket.on(M.giveExtraTimeMsg, () => {
+    logReceivedMessage(M.giveExtraTimeMsg);
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) {
       emitGameNotFoundError();
       return;
     }
     applyGiveExtraTime(game, GM.getOpponentCookieId(clientCookieId));
-    emitMessageOpponent(extraTimeReceivedMsg);
+    emitMessageOpponent(M.extraTimeReceivedMsg);
   });
 
-  socket.on(playerWonOnTimeMsg, ({ winner }) => {
-    logReceivedMessage(playerWonOnTimeMsg, { winner });
+  socket.on(M.playerWonOnTimeMsg, ({ winner }) => {
+    logReceivedMessage(M.playerWonOnTimeMsg, { winner });
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) {
       emitGameNotFoundError();
@@ -613,8 +332,8 @@ io.on(connectionMsg, (socket) => {
     gameController.storeGame(game);
   });
 
-  socket.on(playerReachedGoalMsg, ({ winner }) => {
-    logReceivedMessage(playerReachedGoalMsg, { winner });
+  socket.on(M.playerReachedGoalMsg, ({ winner }) => {
+    logReceivedMessage(M.playerReachedGoalMsg, { winner });
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) {
       emitGameNotFoundError();
@@ -633,84 +352,84 @@ io.on(connectionMsg, (socket) => {
     const idx = clientIndex(game, clientCookieId);
     if (idx === null) return;
     game.arePlayersPresent[idx] = false;
-    emitMessageOpponent(leftGameMsg);
+    emitMessageOpponent(M.leftGameMsg);
     if (game.winner !== "") GM.removeOngoingGamesByCookieId(clientCookieId);
   };
-  socket.on(leaveGameMsg, () => {
-    logReceivedMessage(leaveGameMsg);
+
+  socket.on(M.leaveGameMsg, () => {
+    logReceivedMessage(M.leaveGameMsg);
     handleClientLeaving();
   });
 
-  socket.on(disconnectMsg, () => {
-    logReceivedMessage(disconnectMsg);
+  socket.on(M.disconnectMsg, () => {
+    logReceivedMessage(M.disconnectMsg);
     handleClientLeaving();
   });
 
-  socket.on(pingServerMsg, () => {
-    logReceivedMessage(pingServerMsg);
-    emitMessage(pongFromServerMsg);
+  socket.on(M.pingServerMsg, () => {
+    logReceivedMessage(M.pingServerMsg);
+    emitMessage(M.pongFromServerMsg);
   });
 
-  socket.on(getGameMsg, async ({ gameId }) => {
-    logReceivedMessage(getGameMsg, { gameId });
+  socket.on(M.getGameMsg, async ({ gameId }) => {
+    logReceivedMessage(M.getGameMsg, { gameId });
     //in the future, this should also handle live games
     const game = await gameController.getGame(gameId);
-    if (game) emitMessage(requestedGameMsg, { game: game });
-    else emitMessage(gameNotFoundErrorMsg);
+    if (game) emitMessage(M.requestedGameMsg, { game: game });
+    else emitMessage(M.gameNotFoundErrorMsg);
   });
 
-  socket.on(getRandomGameMsg, async () => {
-    logReceivedMessage(getRandomGameMsg);
+  socket.on(M.getRandomGameMsg, async () => {
+    logReceivedMessage(M.getRandomGameMsg);
     const game = await gameController.getRandomGame();
     if (game)
-      emitMessage(requestedRandomGameMsg, {
+      emitMessage(M.requestedRandomGameMsg, {
         game: game,
       });
-    else emitMessage(randomGameNotFoundMsg);
+    else emitMessage(M.randomGameNotFoundMsg);
   });
 
-  socket.on(getRecentGamesMsg, async () => {
-    logReceivedMessage(getRecentGamesMsg);
+  socket.on(M.getRecentGamesMsg, async () => {
+    logReceivedMessage(M.getRecentGamesMsg);
     const games = await gameController.getRecentGames();
     if (games)
-      emitMessage(requestedRecentGamesMsg, {
+      emitMessage(M.requestedRecentGamesMsg, {
         games: games,
       });
-    else emitMessage(randomGameNotFoundMsg);
+    else emitMessage(M.randomGameNotFoundMsg);
   });
 
-  socket.on(checkHasOngoingGameMsg, ({ cookieId }) => {
-    logReceivedMessage(checkHasOngoingGameMsg, { cookieId });
+  socket.on(M.checkHasOngoingGameMsg, ({ cookieId }) => {
+    logReceivedMessage(M.checkHasOngoingGameMsg, { cookieId });
     if (!cookieId || cookieId === "undefined") {
-      emitMessage(respondHasOngoingGameMsg, { res: false });
+      emitMessage(M.respondHasOngoingGameMsg, { res: false });
       return;
     }
     const game = GM.getOngoingGameByCookieId(cookieId);
-    emitMessage(respondHasOngoingGameMsg, { res: game !== null });
+    emitMessage(M.respondHasOngoingGameMsg, { res: game !== null });
   });
-  socket.on(returnToOngoingGameMsg, ({ cookieId }) => {
-    logReceivedMessage(returnToOngoingGameMsg, { cookieId });
+
+  socket.on(M.returnToOngoingGameMsg, ({ cookieId }) => {
+    logReceivedMessage(M.returnToOngoingGameMsg, { cookieId });
     if (!cookieId || cookieId === "undefined") {
-      emitMessage(ongoingGameNotFoundMsg);
+      emitMessage(M.ongoingGameNotFoundMsg);
       return;
     }
     clientCookieId = cookieId;
     const game = GM.getOngoingGameByCookieId(clientCookieId);
     if (!game) {
-      emitMessage(ongoingGameNotFoundMsg);
+      emitMessage(M.ongoingGameNotFoundMsg);
       return;
     }
-
     const idx = clientIndex(game, clientCookieId);
     game.arePlayersPresent[idx] = true;
     //when a client returns to a game, we need to update its socket id
     game.socketIds[idx] = socket.id;
-
-    emitMessage(returnedToOngoingGameMsg, {
+    emitMessage(M.returnedToOngoingGameMsg, {
       ongoingGame: game,
       timeLeft: timeLeftByPlayer(game),
     });
-    emitMessageOpponent(opponentReturnedMsg);
+    emitMessageOpponent(M.opponentReturnedMsg);
   });
 });
 
