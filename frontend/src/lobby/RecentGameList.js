@@ -122,11 +122,12 @@ const RecentGameList = ({
               <th className={thClassName} style={thStyle}>
                 Player 1
               </th>
-              <th className={thClassName} style={thStyle}>
-                Final Distance
-              </th>
+              <th className={thClassName} style={thStyle}></th>
               <th className={thClassName} style={thStyle}>
                 Player 2
+              </th>
+              <th className={thClassName} style={thStyle}>
+                Distance
               </th>
               <th className={thClassName} style={thStyle}>
                 Turns
@@ -156,8 +157,9 @@ const RecentGameList = ({
                       {timeControlToString(game.timeControl)}
                     </td>
                     <td style={tdStyle}>{game.playerNames[0]}</td>
-                    <td style={tdStyle}>{finalDistsToString(game)}</td>
+                    <td style={tdStyle}>{winnerToString(game)}</td>
                     <td style={tdStyle}>{game.playerNames[1]}</td>
+                    <td style={tdStyle}>{finalDistsToString(game)}</td>
                     <td style={tdStyle}>{game.moveHistory.length}</td>
                     <td style={tdStyle}>{prettyDate(game.startDate, true)}</td>
                   </tr>

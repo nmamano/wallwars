@@ -219,7 +219,7 @@ const LobbyPage = ({ socket }) => {
       {!isGamePageOpen && (
         <div>
           <Header
-            joinCode={null}
+            context={"Lobby"}
             helpText={lobbyHelpText}
             aboutText={aboutText}
             isLargeScreen={isLargeScreen}

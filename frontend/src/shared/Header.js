@@ -7,6 +7,7 @@ import IconButton from "./IconButton";
 import showToastNotification from "./showToastNotification";
 
 function Header({
+  context, //Player, Spectator, or Lobby
   helpText,
   aboutText,
   joinCode,
@@ -15,15 +16,24 @@ function Header({
   isDarkModeOn,
   handleToggleDarkMode,
 }) {
-  const isInGame = joinCode !== null;
-
-  let brand;
-  if (!isInGame) {
-    brand = <span>WallWars</span>;
+  let mainText;
+  if (context === "Lobby") {
+    mainText = <span>WallWars</span>;
+  } else if (context === "Spectator") {
+    mainText = (
+      <span style={{ cursor: "pointer" }} onClick={handleLeaveGame}>
+        WallWars
+      </span>
+    );
   } else {
-    brand = (
+    mainText = (
       <span>
-        {isLargeScreen && <span>WallWars&nbsp;&nbsp;</span>}
+        {isLargeScreen && (
+          <span style={{ cursor: "pointer" }} onClick={handleLeaveGame}>
+            WallWars
+          </span>
+        )}
+        {isLargeScreen && <span>&nbsp;</span>}
         <CopyToClipboard
           style={{ cursor: "pointer" }}
           text={joinCode}
@@ -57,7 +67,7 @@ function Header({
             marginLeft: isLargeScreen ? "15px" : "5px",
           }}
         >
-          {brand}
+          {mainText}
         </div>
         <div
           style={{
@@ -86,7 +96,7 @@ function Header({
             bgColor="red darken-1"
             padding={padding}
           />
-          {!isInGame && (
+          {context === "Lobby" && (
             <IconButton
               icon="info"
               tooltip="About"
@@ -96,7 +106,7 @@ function Header({
               padding={padding}
             />
           )}
-          {isInGame && (
+          {context !== "Lobby" && (
             <IconButton
               icon="home"
               tooltip="Leave game"

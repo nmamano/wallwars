@@ -451,6 +451,7 @@ const GamePage = ({
   //this is necessary because the server does not run its own clock
   //and does not understand the rules of the game
   useEffect(() => {
+    if (state.clientRole === "Spectator") return;
     if (state.finishReason === "goal") {
       socket.emit("playerReachedGoal", { winner: state.winner });
     }
@@ -643,7 +644,8 @@ const GamePage = ({
   return (
     <div className={isDarkModeOn ? "teal darken-4" : undefined}>
       <Header
-        joinCode={state.clientRole === "Spectator" ? "" : state.joinCode}
+        context={state.clientRole === "Spectator" ? "Spectator" : "Player"}
+        joinCode={state.joinCode}
         helpText={gameHelp}
         handleLeaveGame={handleLeaveGame}
         isLargeScreen={isLargeScreen}
