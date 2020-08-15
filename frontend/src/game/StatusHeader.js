@@ -16,7 +16,7 @@ const StatusHeader = ({
     time: "on time",
     goal: "by reaching the goal",
     resign: "by resignation",
-    disconnect: "by disconnection",
+    abandon: "by abandonment",
   };
   const drawFinishMessage = {
     goal: "by the 1-move rule",
@@ -53,6 +53,10 @@ const StatusHeader = ({
 
   const roundNum = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
 
+  let firstMoveName = "";
+  if (lifeCycleStage === 0 && creatorStarts) firstMoveName = names[0];
+  else if (lifeCycleStage > 0) firstMoveName = names[creatorStarts ? 0 : 1];
+
   return (
     <div
       className={"teal darken-2"}
@@ -77,10 +81,7 @@ const StatusHeader = ({
         )}
       </div>
       <div>
-        <p>
-          {"First move:" +
-            (lifeCycleStage > 1 ? ` ${names[creatorStarts ? 0 : 1]}` : "")}
-        </p>
+        <p>{"First move: " + firstMoveName}</p>
       </div>
     </div>
   );

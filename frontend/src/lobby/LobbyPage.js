@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Row, Col, Button } from "react-materialize";
 import { uniqueNamesGenerator, names } from "unique-names-generator";
 import { useMediaQuery } from "react-responsive";
 import { ToastContainer } from "react-toastify";
@@ -22,15 +23,16 @@ const randPlayerName = () =>
   }).slice(0, maxPlayerNameLen);
 
 const LobbyPage = ({ socket }) => {
-  //the player name is saved in a cookie when the player uses a name
-  //to create or join a game. the time control is saved when the player
-  //creates a game
   const [cookies, setCookie] = useCookies([
+    //the name and token are saved when the player creates or joins a game
     "playerName",
+    "token",
+    //the time control is saved when the player creates a game
     "duration",
     "increment",
+    //used to allow players to return to games they already started, even if they close the browser
+    "cookieId",
     "isDarkModeOn",
-    "token",
   ]);
 
   const [playerName, setPlayerName] = useState(
@@ -40,14 +42,18 @@ const LobbyPage = ({ socket }) => {
   const [duration, setDuration] = useState(cookies.duration || 5);
   const [increment, setIncrement] = useState(cookies.increment || 5);
   const [joinCode, setJoinCode] = useState("");
-  const [isOngoingGame, setIsOngoingGame] = useState(false);
+  const [isGamePageOpen, setIsGamePageOpen] = useState(false);
   const [clientParams, setClientParams] = useState(null);
   const [isDarkModeOn, setIsDarkModeOn] = useState(
     cookies.isDarkModeOn && cookies.isDarkModeOn === "true" ? true : false
   );
+  const [hasOngoingGame, setHasOngoingGame] = useState(false);
 
   const handlePlayerName = (props) => {
     setPlayerName(props.target.value.slice(0, maxPlayerNameLen));
+  };
+  const handleSetCookieId = (cookieId) => {
+    setCookie("cookieId", cookieId, { path: "/" });
   };
   const handleToken = (icon) => {
     setToken(icon);
@@ -91,8 +97,10 @@ const LobbyPage = ({ socket }) => {
       },
       name: name,
       token: token,
+      cookieId: cookies.cookieId ? cookies.cookieId : "undefined",
     });
-    setIsOngoingGame(true);
+    setHasOngoingGame(false);
+    setIsGamePageOpen(true);
   };
   const handleJoinGame = () => {
     let name = playerName;
@@ -103,19 +111,31 @@ const LobbyPage = ({ socket }) => {
       joinCode: joinCode,
       name: name,
       token: token,
+      cookieId: cookies.cookieId ? cookies.cookieId : "undefined",
     });
-    setIsOngoingGame(true);
+    setHasOngoingGame(false);
+    setIsGamePageOpen(true);
+  };
+  const handleReturnToGame = () => {
+    setClientParams({
+      clientRole: "Returner",
+      cookieId: cookies.cookieId,
+    });
+    setHasOngoingGame(false);
+    setIsGamePageOpen(true);
   };
   const handleViewGame = (watchGameId) => {
     setClientParams({
       clientRole: "Spectator",
       gameId: watchGameId,
     });
-    setIsOngoingGame(true);
+    setHasOngoingGame(false);
+    setIsGamePageOpen(true);
   };
 
   const returnToLobby = () => {
-    setIsOngoingGame(false);
+    setIsGamePageOpen(false);
+    setHasOngoingGame(false);
     setClientParams(null);
     setJoinCode("");
   };
@@ -124,6 +144,21 @@ const LobbyPage = ({ socket }) => {
     setCookie("isDarkModeOn", isDarkModeOn ? "false" : "true", { path: "/" });
     setIsDarkModeOn(!isDarkModeOn);
   };
+
+  useEffect(() => {
+    if (
+      cookies.cookieId &&
+      cookies.cookieId !== "undefined" &&
+      !hasOngoingGame
+    ) {
+      socket.emit("checkHasOngoingGame", { cookieId: cookies.cookieId });
+    }
+  });
+  useEffect(() => {
+    socket.on("respondHasOngoingGame", ({ res }) => {
+      if (!isGamePageOpen) setHasOngoingGame(res);
+    });
+  });
 
   //effect to set the background color of the entire site based on dark mode
   useEffect(() => {
@@ -170,7 +205,7 @@ const LobbyPage = ({ socket }) => {
     >
       <ToastContainer />
 
-      {isOngoingGame && (
+      {isGamePageOpen && (
         <GamePage
           socket={socket}
           clientParams={clientParams}
@@ -178,9 +213,10 @@ const LobbyPage = ({ socket }) => {
           isLargeScreen={isLargeScreen}
           isDarkModeOn={isDarkModeOn}
           handleToggleDarkMode={handleToggleDarkMode}
+          handleSetCookieId={handleSetCookieId}
         />
       )}
-      {!isOngoingGame && (
+      {!isGamePageOpen && (
         <div>
           <Header
             gameName={""}
@@ -205,6 +241,25 @@ const LobbyPage = ({ socket }) => {
             handleToken={handleToken}
             isLargeScreen={isLargeScreen}
           />
+          {hasOngoingGame &&
+            cookies.cookieId &&
+            cookies.cookieId !== "undefined" && (
+              <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
+                <Col className="center" s={12}>
+                  <Button
+                    large
+                    className="red"
+                    node="button"
+                    waves="light"
+                    onClick={() => {
+                      handleReturnToGame();
+                    }}
+                  >
+                    Return to game
+                  </Button>
+                </Col>
+              </Row>
+            )}
           <div
             style={{
               display: "grid",

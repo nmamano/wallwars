@@ -47,7 +47,7 @@ const MoveHistory = ({
         display: "block",
         height: height,
         MozUserSelect: "none",
-        webkitUserSelect: "none",
+        WebkitUserSelect: "none",
         msUserSelect: "none",
         userSelect: "none",
       }}

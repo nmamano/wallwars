@@ -12,9 +12,12 @@ It works on mobile devices, except that the cells are quite small so it is hard 
 
 Source code for the frontend and backend of "WallWars", an online 2-player strategy game.
 
-The goal of each player is to get to their goal before the opponent gets to theirs, building walls to reshape the terrain to their advantage.
+The goal of each player is to get to their goal before the opponent gets to theirs, placing walls to reshape the terrain to their advantage.
 
-It is inspired by a board game I played once as a kid, of which I don't remember the name, unfortunately.
+WallWars is inspired by board games Blockade and Quoridor. The main
+difference is that in WallWars there is no limit to how many walls you
+can place, and moves are more flexible (for instance, you can move and
+place a wall in the same turn).
 
 ### Tools used
 

@@ -27,6 +27,7 @@ const GameControlPanel = ({
   handleDecreaseBoardSize,
   zoomLevel,
   boardHeight,
+  isOpponentPresent,
 }) => {
   const padding = 5;
   const gapHeight = 5;
@@ -72,7 +73,7 @@ const GameControlPanel = ({
         modalBody={"Are you sure you want to offer a draw?"}
         modalConfirmButtonText={"Offer draw"}
         onClick={handleOfferDraw}
-        disabled={isSpectator || lifeCycleStage !== 3}
+        disabled={isSpectator || !isOpponentPresent || lifeCycleStage !== 3}
       />
       <IconButton
         icon={"replay"}
@@ -84,7 +85,7 @@ const GameControlPanel = ({
           );
           handleRequestTakeback();
         }}
-        disabled={isSpectator || !takebackEnabled}
+        disabled={isSpectator || !isOpponentPresent || !takebackEnabled}
       />
       <IconButton
         icon={"add_alarm"}
@@ -149,9 +150,6 @@ const GameControlPanel = ({
         icon="home"
         tooltip="Quit game"
         onClick={handleLeaveGame}
-        modalTitle="Return to lobby"
-        modalBody="Are you sure you want to return to the lobby?"
-        modalConfirmButtonText="Quit game"
       />
     </div>
   );

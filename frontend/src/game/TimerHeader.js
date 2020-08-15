@@ -1,5 +1,23 @@
 import React from "react";
 
+const dot = (color, title) => (
+  <span
+    style={{
+      height: "10px",
+      width: "10px",
+      backgroundColor: color,
+      borderRadius: "50%",
+      display: "inline-block",
+      border: "solid 1px black",
+    }}
+    title={title}
+  ></span>
+);
+const isPresentDot = (isPresent, name) => {
+  if (isPresent) return dot("#67ff36", `${name} has the game open`);
+  return dot("gray", `${name} does not have the game page open`);
+};
+
 const TimerHeader = ({
   lifeCycleStage,
   names,
@@ -8,6 +26,7 @@ const TimerHeader = ({
   indexToMove,
   isLargeScreen,
   scores,
+  arePlayersPresent,
 }) => {
   const [min1, min2] = [
     Math.floor(timeLeft[0] / 60),
@@ -58,8 +77,8 @@ const TimerHeader = ({
       style={{
         display: "grid",
         gridTemplateColumns: showScores
-          ? "0.5fr 1.7fr 1fr 1fr 1.7fr 0.5fr"
-          : "1.7fr 1fr 1fr 1.7fr",
+          ? "0.5fr 1.7fr 0.2fr 1fr 1fr 0.2fr 1.7fr 0.5fr"
+          : "1.7fr 0.2fr 1fr 1fr 0.2fr 1.7fr",
         gridTemplateRows: "auto",
         alignContent: "center",
         columnGap: sep,
@@ -78,11 +97,17 @@ const TimerHeader = ({
       >
         {names[0]}
       </div>
+      <div style={childStyle} className={"center"}>
+        {isPresentDot(arePlayersPresent[0], names[0])}
+      </div>
       <div style={childStyle} className={highlightLowTime[0] + " center"}>
         {timesAsStrings[0]}
       </div>
       <div style={childStyle} className={highlightLowTime[1] + " center"}>
         {timesAsStrings[1]}
+      </div>
+      <div style={childStyle} className={"center"}>
+        {isPresentDot(arePlayersPresent[1], names[1])}
       </div>
       <div
         style={childStyle}

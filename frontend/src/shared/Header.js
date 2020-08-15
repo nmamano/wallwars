@@ -35,16 +35,14 @@ function Header({
     <div>
       <h6>
         Wallwars is an online 2-player strategy game. The goal is to get to your
-        goal before the opponent gets to hers, building walls to reshape the
+        goal before the opponent gets to theirs, placing walls to reshape the
         terrain to your advantage.
       </h6>
       <h6>
-        It is implemented by Nil M and inspired by a board game he played once
-        as a kid, of which he doesn't remember the name, unfortunately.
-      </h6>
-      <h6>
-        The frontend is made with React, and the backend with Node.js, Express,
-        and socket.io.
+        WallWars is inspired by board games Blockade and Quoridor. The main
+        difference is that in WallWars there is no limit to how many walls you
+        can place, and moves are more flexible (for instance, you can move and
+        place a wall in the same turn).
       </h6>
       <h6>
         The source code is available at https://github.com/nmamano/WallWars

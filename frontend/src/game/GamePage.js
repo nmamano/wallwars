@@ -49,6 +49,9 @@ const indexToMove = (state) => (creatorToMove(state) ? 0 : 1);
 //one of 'None', 'Ground', 'Wall'
 const ghostType = (pos) => (pos === null ? "None" : cellTypeByPos(pos));
 
+const isOpponentPresent = (state) => {
+  return state.arePlayersPresent[state.clientRole === "Creator" ? 1 : 0];
+};
 //when the player selects a cell, it can trigger a different
 //number of actions (1 action: build 1 wall or move 1 step)
 //this function counts the number of actions for a selected position
@@ -101,7 +104,18 @@ const createInitialState = (cookies) => {
 
     //how many games each player has won in this session
     gameWins: [0, 0],
-    opponentLeft: false,
+
+    //players can return to a game even if they close the browser
+    //(as long as it is the same browser, since it is cookie-based)
+    //but if they create/join another game, this counts as abandonment
+    //and they cannot join anymore
+    opponentAbandoned: false,
+
+    //indicates if the players have the game page open
+    //the game goes on even if both leave, but actions that require both
+    //players to agree are disabled if one of the players is not present
+    //eg., agreeing to a draw, starting a rematch, or doing a takeback
+    arePlayersPresent: [false, false],
 
     //===================================================
     //shared state of the current game
@@ -142,6 +156,7 @@ const createInitialState = (cookies) => {
     //===================================================
     //state unique to this client
     //===================================================
+    clientRole: null, //Creator, Joiner, or Spectator
     moveToSend: null, //moves to be sent to the other client are stored here temporarily
 
     //the ghost action is a single action done and shown only to this client
@@ -155,7 +170,6 @@ const createInitialState = (cookies) => {
     premoveActions: [],
 
     isVolumeOn: false,
-    showBackButtonWarning: false,
     isKeyPressed: false,
     //index of the move that the client is looking at, which may not be the last one
     viewIndex: 0,
@@ -189,6 +203,7 @@ const applyCookieSettings = (draftState, cookies) => {
 };
 
 const applyAddCreator = (draftState, timeControl, name, token) => {
+  draftState.clientRole = "Creator";
   draftState.lifeCycleStage = -1;
   draftState.timeControl = timeControl;
   draftState.names[0] = name;
@@ -198,6 +213,7 @@ const applyAddCreator = (draftState, timeControl, name, token) => {
 };
 
 const applyAddJoiner = (draftState, joinCode, name, token) => {
+  draftState.clientRole = "Joiner";
   draftState.lifeCycleStage = -1;
   draftState.joinCode = joinCode;
   draftState.names[1] = name;
@@ -219,7 +235,8 @@ const applyJoinedOnServer = (
   creatorName,
   creatorToken,
   timeControl,
-  creatorStarts
+  creatorStarts,
+  creatorPresent
 ) => {
   //if life cycle stage is already 1, it means we already joined
   if (draftState.lifeCycleStage === 1) return;
@@ -227,6 +244,7 @@ const applyJoinedOnServer = (
   draftState.names[0] = creatorName;
   draftState.tokens[0] = creatorToken;
   draftState.timeControl = timeControl;
+  draftState.arePlayersPresent[0] = creatorPresent;
   const startSeconds = timeControl.duration * 60;
   draftState.moveHistory[0].timeLeft = [startSeconds, startSeconds];
   draftState.lifeCycleStage = 1;
@@ -240,6 +258,60 @@ const applyJoinerJoined = (draftState, joinerName, joinerToken) => {
   draftState.lifeCycleStage = 1;
 };
 
+const applyReturnToGame = (draftState, cookieId, serverGame, timeLeft) => {
+  const clientRole =
+    cookieId === serverGame.cookieIds[0] ? "Creator" : "Joiner";
+  if (clientRole === "Creator") {
+    applyAddCreator(
+      draftState,
+      serverGame.timeControl,
+      serverGame.playerNames[0],
+      serverGame.playerTokens[0]
+    );
+    applyCreatedOnServer(
+      draftState,
+      serverGame.joinCode,
+      serverGame.creatorStarts
+    );
+    applyJoinerJoined(
+      draftState,
+      serverGame.playerNames[1],
+      serverGame.playerTokens[1]
+    );
+  } else {
+    applyAddJoiner(
+      draftState,
+      serverGame.joinCode,
+      serverGame.playerNames[1],
+      serverGame.playerTokens[1]
+    );
+    applyJoinedOnServer(
+      draftState,
+      serverGame.playerNames[0],
+      serverGame.playerTokens[0],
+      serverGame.timeControl,
+      serverGame.creatorStarts,
+      true
+    );
+  }
+  draftState.arePlayersPresent = serverGame.arePlayersPresent;
+  for (let k = 0; k < serverGame.moveHistory.length; k++) {
+    const actions = serverGame.moveHistory[k].actions;
+    const tLeft = serverGame.moveHistory[k].remainingTime;
+    applyMove(draftState, actions, tLeft, k + 1);
+  }
+  draftState.gameWins = serverGame.gameWins;
+  draftState.winner = serverGame.winner;
+  draftState.finishReason = serverGame.finishReason;
+  const tc = turnCount(draftState);
+  draftState.moveHistory[tc].timeLeft = timeLeft;
+  if (serverGame.winner !== "") {
+    draftState.lifeCycleStage = 4;
+  } else {
+    if (timeLeft[0] === 0) applyWonOnTime(draftState, 1);
+    else if (timeLeft[1] === 0) applyWonOnTime(draftState, 0);
+  }
+};
 const applyReceivedGame = (draftState, serverGame) => {
   applyAddCreator(
     draftState,
@@ -262,6 +334,7 @@ const applyReceivedGame = (draftState, serverGame) => {
     const tLeft = serverGame.moveHistory[k].remainingTime;
     applyMove(draftState, actions, tLeft, k + 1);
   }
+  draftState.clientRole = "Spectator";
   draftState.gameWins = serverGame.gameWins;
   draftState.winner = serverGame.winner;
   draftState.finishReason = serverGame.finishReason;
@@ -512,7 +585,7 @@ const applySelectedCellPremove = (draftState, pos) => {
     return;
   }
 
-  let newPremoveActions = null;
+  let newPremoveActions = [];
   if (posEq(pos, curPos)) {
     if (draftState.premoveActions.length === 0) return;
     else {
@@ -605,13 +678,12 @@ const applyResignGame = (draftState, resignerIsCreator) => {
   draftState.ghostAction = null;
   closeDialogs(draftState);
 };
-const applyLeaveGame = (draftState, leaverIsCreator) => {
-  draftState.opponentLeft = true;
+const applyAbandonGame = (draftState, abandonerIsCreator) => {
   if (draftState.lifeCycleStage === 4) return;
   draftState.lifeCycleStage = 4;
-  draftState.winner = leaverIsCreator ? "joiner" : "creator";
-  draftState.gameWins[leaverIsCreator ? 1 : 0] += 1;
-  draftState.finishReason = "disconnect";
+  draftState.winner = abandonerIsCreator ? "joiner" : "creator";
+  draftState.gameWins[abandonerIsCreator ? 1 : 0] += 1;
+  draftState.finishReason = "abandon";
   draftState.ghostAction = null;
   closeDialogs(draftState);
 };
@@ -654,12 +726,22 @@ const applySetupRematch = (draftState) => {
   draftState.lifeCycleStage = 1;
   draftState.viewIndex = 0;
   draftState.ghostAction = null;
+  draftState.premoveActions = [];
   closeDialogs(draftState);
 };
 const applyAddExtraTime = (draftState, playerIndex) => {
   if (draftState.lifeCycleStage !== 3) return;
   const tc = turnCount(draftState);
   draftState.moveHistory[tc].timeLeft[playerIndex] += 60;
+};
+const applyWonOnTime = (draftState, winnerIndex) => {
+  draftState.winner = winnerIndex === 0 ? "creator" : "joiner";
+  draftState.gameWins[winnerIndex] += 1;
+  draftState.finishReason = "time";
+  draftState.lifeCycleStage = 4;
+  draftState.ghostAction = null;
+  draftState.premoveActions = [];
+  closeDialogs(draftState);
 };
 const applyClockTick = (draftState) => {
   //clocks only run after each player have made the first move,
@@ -669,12 +751,7 @@ const applyClockTick = (draftState) => {
   const tc = turnCount(draftState);
   draftState.moveHistory[tc].timeLeft[idx] -= 1;
   if (draftState.moveHistory[tc].timeLeft[idx] === 0) {
-    draftState.winner = idx === 0 ? "joiner" : "creator";
-    draftState.gameWins[idx === 0 ? 1 : 0] += 1;
-    draftState.finishReason = "time";
-    draftState.lifeCycleStage = 4;
-    draftState.ghostAction = null;
-    closeDialogs(draftState);
+    applyWonOnTime(draftState, idx === 0 ? 1 : 0);
   }
 };
 
@@ -688,9 +765,8 @@ const GamePage = ({
   isLargeScreen,
   isDarkModeOn,
   handleToggleDarkMode,
+  handleSetCookieId,
 }) => {
-  const clientRole = clientParams.clientRole;
-
   //cosmetic state stored between sessions
   const [cookies, setCookie] = useCookies(["isVolumeOn", "zoomLevel"]);
 
@@ -701,21 +777,31 @@ const GamePage = ({
   //communication FROM the server
   //===================================================
   useEffect(() => {
-    socket.once("gameCreated", ({ joinCode, creatorStarts }) => {
+    socket.once("gameCreated", ({ joinCode, creatorStarts, cookieId }) => {
+      handleSetCookieId(cookieId);
       updateState((draftState) => {
         applyCreatedOnServer(draftState, joinCode, creatorStarts);
       });
     });
     socket.once(
       "gameJoined",
-      ({ creatorName, creatorToken, timeControl, creatorStarts }) => {
+      ({
+        creatorName,
+        creatorToken,
+        timeControl,
+        creatorStarts,
+        cookieId,
+        creatorPresent,
+      }) => {
+        handleSetCookieId(cookieId);
         updateState((draftState) => {
           applyJoinedOnServer(
             draftState,
             creatorName,
             creatorToken,
             timeControl,
-            creatorStarts
+            creatorStarts,
+            creatorPresent
           );
         });
       }
@@ -724,6 +810,29 @@ const GamePage = ({
       updateState((draftState) => {
         applyReceivedGame(draftState, game);
       });
+    });
+    socket.on("returnedToOngoingGame", ({ ongoingGame, timeLeft }) => {
+      updateState((draftState) => {
+        applyReturnToGame(
+          draftState,
+          clientParams.cookieId,
+          ongoingGame,
+          timeLeft
+        );
+        draftState.waitingForPing = 0;
+      });
+    });
+    socket.on("opponentReturned", () => {
+      updateState((draftState) => {
+        draftState.arePlayersPresent[
+          draftState.clientRole === "Creator" ? 1 : 0
+        ] = true;
+        draftState.waitingForPing = 0;
+      });
+    });
+    socket.on("ongoingGameNotFound", () => {
+      showToastNotification("Couldn't find the game anymore.", 5000);
+      returnToLobby();
     });
     socket.once("gameJoinFailed", () => {
       showToastNotification(
@@ -746,6 +855,8 @@ const GamePage = ({
         if (draftState.lifeCycleStage === 1) return;
         if (draftState.isVolumeOn) playMoveSound();
         applyJoinerJoined(draftState, joinerName, joinerToken);
+        draftState.arePlayersPresent[1] = true;
+        draftState.waitingForPing = 0;
       });
     });
 
@@ -786,7 +897,7 @@ const GamePage = ({
     socket.on("takebackAccepted", () => {
       showToastNotification("The opponent agreed to the takeback.", 5000);
       updateState((draftState) => {
-        const requesterIsCreator = clientRole === "Creator";
+        const requesterIsCreator = draftState.clientRole === "Creator";
         applyTakeback(draftState, requesterIsCreator);
         draftState.waitingForPing = 0;
       });
@@ -814,7 +925,7 @@ const GamePage = ({
     socket.on("extraTimeReceived", () => {
       showToastNotification("The opponent added 60s to your clock.", 5000);
       updateState((draftState) => {
-        const playerIndex = clientRole === "Creator" ? 0 : 1;
+        const playerIndex = draftState.clientRole === "Creator" ? 0 : 1;
         applyAddExtraTime(draftState, playerIndex);
         draftState.waitingForPing = 0;
       });
@@ -823,7 +934,7 @@ const GamePage = ({
       showToastNotification("The opponent resigned.", 5000);
       updateState((draftState) => {
         if (draftState.isVolumeOn) playMoveSound();
-        const resignerIsCreator = clientRole !== "Creator";
+        const resignerIsCreator = draftState.clientRole !== "Creator";
         applyResignGame(draftState, resignerIsCreator);
         draftState.waitingForPing = 0;
       });
@@ -837,11 +948,19 @@ const GamePage = ({
       });
     });
     socket.on("leftGame", () => {
-      showToastNotification("The opponent left the game.", 5000);
-
       updateState((draftState) => {
-        const leaverIsCreator = clientRole === "Creator" ? false : true;
-        applyLeaveGame(draftState, leaverIsCreator);
+        draftState.arePlayersPresent[
+          draftState.clientRole === "Creator" ? 1 : 0
+        ] = false;
+        draftState.waitingForPing = 0;
+      });
+    });
+    socket.on("abandonedGame", () => {
+      showToastNotification("The opponent abandoned the game.", 5000);
+      updateState((draftState) => {
+        const abandonerIsCreator =
+          draftState.clientRole === "Creator" ? false : true;
+        applyAbandonGame(draftState, abandonerIsCreator);
         draftState.waitingForPing = 0;
       });
     });
@@ -853,7 +972,13 @@ const GamePage = ({
     return () => {
       socket.removeAllListeners();
     };
-  }, [socket, updateState, clientRole, returnToLobby]);
+  }, [
+    socket,
+    updateState,
+    returnToLobby,
+    handleSetCookieId,
+    clientParams.cookieId,
+  ]);
 
   //===================================================
   //communication TO the server
@@ -862,7 +987,7 @@ const GamePage = ({
   useEffect(() => {
     //first contact only from lifecycle stage -2
     if (state.lifeCycleStage !== -2) return;
-    if (clientRole === "Creator") {
+    if (clientParams.clientRole === "Creator") {
       updateState((draftState) => {
         applyAddCreator(
           draftState,
@@ -870,13 +995,15 @@ const GamePage = ({
           clientParams.name,
           clientParams.token
         );
+        draftState.arePlayersPresent[0] = true;
       });
       socket.emit("createGame", {
         name: clientParams.name,
         timeControl: clientParams.timeControl,
         token: clientParams.token,
+        cookieId: clientParams.cookieId,
       });
-    } else if (clientRole === "Joiner") {
+    } else if (clientParams.clientRole === "Joiner") {
       updateState((draftState) => {
         applyAddJoiner(
           draftState,
@@ -884,21 +1011,24 @@ const GamePage = ({
           clientParams.name,
           clientParams.token
         );
+        draftState.arePlayersPresent[1] = true;
       });
       socket.emit("joinGame", {
         joinCode: clientParams.joinCode,
         name: clientParams.name,
         token: clientParams.token,
+        cookieId: clientParams.cookieId,
       });
-    } else if (clientRole === "Spectator") {
+    } else if (clientParams.clientRole === "Spectator") {
       socket.emit("getGame", { gameId: clientParams.gameId });
+    } else if (clientParams.clientRole === "Returner") {
+      socket.emit("returnToOngoingGame", { cookieId: clientParams.cookieId });
     } else {
-      console.error("unknown client role", clientRole);
+      console.error("unknown client role", clientParams.clientRole);
     }
   });
 
   const handleLeaveGame = () => {
-    //tell the server to stop listening to events for this game
     socket.emit("leaveGame");
     returnToLobby();
   };
@@ -945,7 +1075,7 @@ const GamePage = ({
       );
       socket.emit("acceptTakeback");
       updateState((draftState) => {
-        const requesterIsCreator = clientRole === "Joiner";
+        const requesterIsCreator = draftState.clientRole === "Joiner";
         applyTakeback(draftState, requesterIsCreator);
       });
     } else {
@@ -958,14 +1088,14 @@ const GamePage = ({
   const handleGiveExtraTime = () => {
     socket.emit("giveExtraTime");
     updateState((draftState) => {
-      const receiverIndex = clientRole === "Creator" ? 1 : 0;
+      const receiverIndex = draftState.clientRole === "Creator" ? 1 : 0;
       applyAddExtraTime(draftState, receiverIndex);
     });
   };
   const handleResign = () => {
     socket.emit("resign");
     updateState((draftState) => {
-      applyResignGame(draftState, clientRole === "Creator");
+      applyResignGame(draftState, draftState.clientRole === "Creator");
     });
   };
 
@@ -1013,7 +1143,7 @@ const GamePage = ({
   const handleSelectedCell = (pos) => {
     updateState((draftState) => {
       const clientToMove =
-        creatorToMove(draftState) === (clientRole === "Creator");
+        creatorToMove(draftState) === (draftState.clientRole === "Creator");
       applySelectedCell(draftState, pos, clientToMove, true);
     });
   };
@@ -1031,15 +1161,13 @@ const GamePage = ({
   //this is necessary because the server does not keep its own clock
   //and does not understand the rules of the game
   useEffect(() => {
-    //only the creator sends these messages to avoid duplicates
-    if (clientRole !== "Creator") return;
     if (state.finishReason === "time") {
       socket.emit("playerWonOnTime", { winner: state.winner });
     }
     if (state.finishReason === "goal") {
       socket.emit("playerReachedGoal", { winner: state.winner });
     }
-  }, [clientRole, socket, state.winner, state.finishReason]);
+  }, [socket, state.clientRole, state.winner, state.finishReason]);
 
   const handleBoardClick = (clickedPos) => handleSelectedCell(clickedPos);
 
@@ -1169,21 +1297,7 @@ const GamePage = ({
   //===================================================
   const onBackButtonEvent = (e) => {
     e.preventDefault();
-    updateState((draftState) => {
-      draftState.showBackButtonWarning = true;
-    });
-  };
-  const handleAnswerConfirmBackButton = (confirmed) => {
-    if (confirmed) {
-      updateState((draftState) => {
-        draftState.showBackButtonWarning = false;
-      });
-      handleLeaveGame();
-    } else {
-      updateState((draftState) => {
-        draftState.showBackButtonWarning = false;
-      });
-    }
+    handleLeaveGame();
   };
   useEffect(() => {
     window.history.pushState(null, null, window.location.pathname);
@@ -1239,7 +1353,7 @@ const GamePage = ({
   return (
     <div className={isDarkModeOn ? "teal darken-4" : undefined}>
       <Header
-        gameName={clientRole === "Spectator" ? "" : state.joinCode}
+        gameName={state.clientRole === "Spectator" ? "" : state.joinCode}
         helpText={GameHelp()}
         isLargeScreen={isLargeScreen}
         isDarkModeOn={isDarkModeOn}
@@ -1266,6 +1380,7 @@ const GamePage = ({
           timeLeft={[displayTime1, displayTime2]}
           isLargeScreen={isLargeScreen}
           scores={state.gameWins}
+          arePlayersPresent={state.arePlayersPresent}
         />
         <StatusHeader
           lifeCycleStage={state.lifeCycleStage}
@@ -1299,7 +1414,7 @@ const GamePage = ({
           handleGiveExtraTime={handleGiveExtraTime}
           moveHistory={state.moveHistory}
           playerColors={globalSettings.playerColors}
-          clientRole={clientRole}
+          clientRole={state.clientRole}
           creatorStarts={state.creatorStarts}
           handleViewMove={handleViewMove}
           viewIndex={state.viewIndex}
@@ -1316,9 +1431,10 @@ const GamePage = ({
           handleDecreaseBoardSize={handleDecreaseBoardSize}
           zoomLevel={state.zoomLevel}
           boardHeight={boardHeight}
+          isOpponentPresent={isOpponentPresent(state)}
         />
       </div>
-      {state.lifeCycleStage === 4 && clientRole !== "Spectator" && (
+      {state.lifeCycleStage === 4 && state.clientRole !== "Spectator" && (
         <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
           <Col className="center" s={12}>
             <Button
@@ -1327,31 +1443,16 @@ const GamePage = ({
               node="button"
               waves="light"
               onClick={() => {
-                showToastNotification(
-                  "A rematch offer was sent to the opponent. A new game " +
-                    "will start if they accept.",
-                  5000
-                );
+                showToastNotification("Rematch offer sent.", 5000);
                 handleSendRematchOffer();
               }}
-              disabled={state.opponentLeft}
+              disabled={!isOpponentPresent(state)}
             >
               Rematch
             </Button>
           </Col>
         </Row>
       )}
-      <Dialog
-        isOpen={state.showBackButtonWarning}
-        title="Return to lobby"
-        body={
-          "Are you sure you want to return to the lobby? You will " +
-          "not be able to rejoin this game."
-        }
-        acceptButtonText="Quit game"
-        rejectButtonText="Stay in game"
-        callback={handleAnswerConfirmBackButton}
-      />
       <Dialog
         isOpen={state.showDrawDialog}
         title="Draw offer received"

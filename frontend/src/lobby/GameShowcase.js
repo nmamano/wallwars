@@ -98,7 +98,9 @@ const GameShowcase = ({
       goals={globalSettings.goals}
       ghostAction={null}
       premoveActions={[]}
-      handleClick={() => handleViewGame(state.game._id)}
+      handleClick={() => {
+        if (state.game) handleViewGame(state.game._id);
+      }}
       groundSize={
         isLargeScreen
           ? globalSettings.groundSize

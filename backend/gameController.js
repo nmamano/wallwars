@@ -48,6 +48,11 @@ const gameSchema = new Schema(
         "playerNames should have 2 entries",
       ],
     },
+    cookieIds: {
+      type: [String],
+      required: true,
+      validate: [(ids) => ids.length === 2, "cookieIds should have 2 entries"],
+    },
     playerTokens: {
       type: [String],
       required: true,
@@ -78,8 +83,10 @@ const gameSchema = new Schema(
           reason === "agreement" ||
           reason === "time" ||
           reason === "resign" ||
-          reason === "disconnect",
-        "finishReason should be 'goal', 'agreement', 'time', 'resign', or 'disconnect'",
+          reason === "disconnect" ||
+          reason === "abandon",
+        (reason) =>
+          `finishReason ${reason} should be 'goal', 'agreement', 'time', 'resign', or 'abandon'`,
       ],
     },
     creatorStarts: { type: Boolean, required: true },
@@ -99,6 +106,7 @@ const gameSchema = new Schema(
           ],
         },
         remainingTime: { type: Number, required: true },
+        timestamp: { type: String, required: true },
       },
     ],
     startDate: {
@@ -112,6 +120,7 @@ const Game = mongoose.model("Game", gameSchema);
 
 const storeGame = async (game) => {
   if (!connectedToDB) return;
+  if (game.moveHistory.length < 2) return;
   const gameToStore = new Game(game);
   try {
     await gameToStore.save();
