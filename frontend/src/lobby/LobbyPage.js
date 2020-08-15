@@ -9,7 +9,7 @@ import globalSettings from "../shared/globalSettings";
 import GamePage from "../game/GamePage";
 import Header from "../shared/Header";
 import LobbyForm from "./LobbyForm";
-import LobbyHelp from "./LobbyHelp";
+import { lobbyHelpText, aboutText } from "./lobbyHelp";
 import showToastNotification from "../shared/showToastNotification";
 import GameShowcase from "./GameShowcase";
 import RecentGameList from "./RecentGameList";
@@ -219,8 +219,9 @@ const LobbyPage = ({ socket }) => {
       {!isGamePageOpen && (
         <div>
           <Header
-            gameName={""}
-            helpText={LobbyHelp()}
+            joinCode={null}
+            helpText={lobbyHelpText}
+            aboutText={aboutText}
             isLargeScreen={isLargeScreen}
             isDarkModeOn={isDarkModeOn}
             handleToggleDarkMode={handleToggleDarkMode}

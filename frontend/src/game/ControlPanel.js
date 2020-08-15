@@ -148,7 +148,7 @@ const GameControlPanel = ({
       />
       <IconButton
         icon="home"
-        tooltip="Quit game"
+        tooltip="Leave game"
         onClick={handleLeaveGame}
       />
     </div>

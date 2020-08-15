@@ -37,7 +37,7 @@ import Header from "../shared/Header";
 import Dialog from "../shared/Dialog";
 import StatusHeader from "./StatusHeader";
 import TimerHeader from "./TimerHeader";
-import GameHelp from "./GameHelp";
+import gameHelp from "./gameHelp";
 import ControlPanel from "./ControlPanel";
 
 const moveSound = new UIfx(moveSoundAudio);
@@ -643,8 +643,9 @@ const GamePage = ({
   return (
     <div className={isDarkModeOn ? "teal darken-4" : undefined}>
       <Header
-        gameName={state.clientRole === "Spectator" ? "" : state.joinCode}
-        helpText={GameHelp()}
+        joinCode={state.clientRole === "Spectator" ? "" : state.joinCode}
+        helpText={gameHelp}
+        handleLeaveGame={handleLeaveGame}
         isLargeScreen={isLargeScreen}
         isDarkModeOn={isDarkModeOn}
         handleToggleDarkMode={handleToggleDarkMode}

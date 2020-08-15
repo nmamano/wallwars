@@ -7,14 +7,18 @@ import IconButton from "./IconButton";
 import showToastNotification from "./showToastNotification";
 
 function Header({
-  gameName,
   helpText,
+  aboutText,
+  joinCode,
+  handleLeaveGame,
   isLargeScreen,
   isDarkModeOn,
   handleToggleDarkMode,
 }) {
+  const isInGame = joinCode !== null;
+
   let brand;
-  if (!gameName) {
+  if (!isInGame) {
     brand = <span>WallWars</span>;
   } else {
     brand = (
@@ -22,33 +26,14 @@ function Header({
         {isLargeScreen && <span>WallWars&nbsp;&nbsp;</span>}
         <CopyToClipboard
           style={{ cursor: "pointer" }}
-          text={gameName}
+          text={joinCode}
           onCopy={() => showToastNotification("Join code copied to clipboard!")}
         >
-          <span>Game {gameName}</span>
+          <span>Code {joinCode}</span>
         </CopyToClipboard>
       </span>
     );
   }
-
-  const aboutText = (
-    <div>
-      <h6>
-        Wallwars is an online 2-player strategy game. The goal is to get to your
-        goal before the opponent gets to theirs, placing walls to reshape the
-        terrain to your advantage.
-      </h6>
-      <h6>
-        WallWars is inspired by board games Blockade and Quoridor. The main
-        difference is that in WallWars there is no limit to how many walls you
-        can place, and moves are more flexible (for instance, you can move and
-        place a wall in the same turn).
-      </h6>
-      <h6>
-        The source code is available at https://github.com/nmamano/WallWars
-      </h6>
-    </div>
-  );
 
   const color = isDarkModeOn ? "red darken-4" : "red lighten-1";
   const padding = isLargeScreen ? 20 : 11;
@@ -101,14 +86,25 @@ function Header({
             bgColor="red darken-1"
             padding={padding}
           />
-          <IconButton
-            icon="info"
-            tooltip="About"
-            modalTitle="About"
-            modalBody={aboutText}
-            bgColor="red darken-1"
-            padding={padding}
-          />
+          {!isInGame && (
+            <IconButton
+              icon="info"
+              tooltip="About"
+              modalTitle="About"
+              modalBody={aboutText}
+              bgColor="red darken-1"
+              padding={padding}
+            />
+          )}
+          {isInGame && (
+            <IconButton
+              icon="home"
+              tooltip="Leave game"
+              onClick={handleLeaveGame}
+              bgColor="red darken-1"
+              padding={padding}
+            />
+          )}
         </div>
       </div>
     </div>
