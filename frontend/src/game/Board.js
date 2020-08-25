@@ -20,7 +20,14 @@ const Board = ({
   isDarkModeOn,
   tokens,
 }) => {
-  const canHover = useMediaQuery({ query: "(hover: none)" });
+  const canHover = !useMediaQuery({ query: "(hover: none)" });
+  const [hoveredCell, setHoveredCell] = useState(null);
+  const handleMouseEnter = (pos) => {
+    setHoveredCell(pos);
+  };
+  const handleMouseLeave = () => {
+    setHoveredCell(null);
+  };
 
   //short-hand for getColor
   const getCol = (elem) => getColor(menuTheme, elem, isDarkModeOn);
@@ -41,14 +48,6 @@ const Board = ({
 
   const [repRows, repCols] = [(dims.h - 1) / 2, (dims.w - 1) / 2];
 
-  const [hoveredCell, setHoveredCell] = useState(null);
-
-  const handleMouseEnter = (pos) => {
-    setHoveredCell(pos);
-  };
-  const handleMouseLeave = () => {
-    setHoveredCell(null);
-  };
   const tokenSize = 0.8 * groundSize;
   const coordColor = getBoardCol("coord");
 
@@ -126,7 +125,17 @@ const Board = ({
         if (coordHere) justifyContent = letterCoordHere ? "start" : "flex-end";
         let alignItems = "center";
         if (coordHere) alignItems = letterCoordHere ? "flex-end" : "flex-start";
-
+        const style = {
+          backgroundColor: color,
+          display: "flex",
+          justifyContent: justifyContent,
+          alignItems: alignItems,
+          borderTop: pos.r === 0 ? borderStyle : "",
+          borderBottom: pos.r === dims.h - 1 ? borderStyle : "",
+          borderLeft: pos.c === 0 ? borderStyle : "",
+          borderRight: pos.c === dims.w - 1 ? borderStyle : "",
+        };
+        if (cellType !== "Pillar") style.cursor = "pointer";
         return (
           <div
             className={className}
@@ -137,17 +146,7 @@ const Board = ({
             }}
             onMouseEnter={() => handleMouseEnter(pos)}
             onMouseLeave={handleMouseLeave}
-            style={{
-              backgroundColor: color,
-              display: "flex",
-              justifyContent: justifyContent,
-              alignItems: alignItems,
-              cursor: "pointer",
-              borderTop: pos.r === 0 ? borderStyle : "",
-              borderBottom: pos.r === dims.h - 1 ? borderStyle : "",
-              borderLeft: pos.c === 0 ? borderStyle : "",
-              borderRight: pos.c === dims.w - 1 ? borderStyle : "",
-            }}
+            style={style}
           >
             {p1Here && (
               <i

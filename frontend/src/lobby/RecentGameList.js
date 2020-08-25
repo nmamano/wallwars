@@ -5,6 +5,7 @@ import cloneDeep from "lodash.clonedeep";
 import globalSettings from "../shared/globalSettings";
 import { cellTypeByPos, emptyGrid, distance } from "../shared/gameLogicUtils";
 import { getColor } from "../shared/colorThemes";
+import hoverHighlight from "../shared/hoverHighlight.module.css";
 
 //duplicated from StatusHeader
 const roundNum = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
@@ -76,25 +77,23 @@ const RecentGameList = ({
   isDarkModeOn,
   handleViewGame,
 }) => {
-  const thStyle = {
+  const [col1, col2, colBg] = [
+    getColor(menuTheme, "recentGamesBackground", isDarkModeOn),
+    getColor(menuTheme, "recentGamesAlternate", isDarkModeOn),
+    getColor(menuTheme, "container", isDarkModeOn),
+  ];
+  const headEntryStyle = {
     position: "sticky",
     top: "0px",
     paddingTop: "0.15rem",
     paddingBottom: "0.15rem",
     borderRadius: "0",
-    backgroundColor: getColor(menuTheme, "container", isDarkModeOn),
+    backgroundColor: colBg,
   };
-  const tdStyle = {
+  const entryStyle = {
     paddingTop: "0.15rem",
     paddingBottom: "0.15rem",
     borderRadius: "0",
-    backgroundColor: getColor(menuTheme, "recentGamesBackground", isDarkModeOn),
-  };
-  const tdStyle2 = {
-    paddingTop: "0.15rem",
-    paddingBottom: "0.15rem",
-    borderRadius: "0",
-    backgroundColor: getColor(menuTheme, "recentGamesAlternate", isDarkModeOn),
   };
   const borderStyle = `1px solid ${getColor(
     menuTheme,
@@ -121,35 +120,40 @@ const RecentGameList = ({
         <Table centered style={{ width: "100%" }}>
           <thead>
             <tr>
-              <th style={thStyle}>Time</th>
-              <th style={thStyle}>Player 1</th>
-              <th style={thStyle}></th>
-              <th style={thStyle}>Player 2</th>
-              <th style={thStyle}>Distance</th>
-              <th style={thStyle}>Turns</th>
-              <th style={thStyle}>Date</th>
+              <th style={headEntryStyle}>Time</th>
+              <th style={headEntryStyle}>Player 1</th>
+              <th style={headEntryStyle}></th>
+              <th style={headEntryStyle}>Player 2</th>
+              <th style={headEntryStyle}>Distance</th>
+              <th style={headEntryStyle}>Turns</th>
+              <th style={headEntryStyle}>Date</th>
             </tr>
           </thead>
           <tbody>
             {recentGames &&
               recentGames.map((game, i) => {
-                const sty = i % 2 ? tdStyle : tdStyle2;
                 const [d1, d2] = finalDists(game);
                 return (
                   <tr
                     onClick={() => handleViewGame(game._id)}
                     style={{
                       cursor: "pointer",
+                      backgroundColor: i % 2 ? col1 : col2,
                     }}
+                    className={hoverHighlight.hoveredGame}
                     key={i}
                   >
-                    <td style={sty}>{timeControlToString(game.timeControl)}</td>
-                    <td style={sty}>{game.playerNames[0]}</td>
-                    <td style={sty}>{winnerToString(game)}</td>
-                    <td style={sty}>{game.playerNames[1]}</td>
-                    <td style={sty}>{d1 + " - " + d2}</td>
-                    <td style={sty}>{game.moveHistory.length}</td>
-                    <td style={sty}>{prettyDate(game.startDate, true)}</td>
+                    <td style={entryStyle}>
+                      {timeControlToString(game.timeControl)}
+                    </td>
+                    <td style={entryStyle}>{game.playerNames[0]}</td>
+                    <td style={entryStyle}>{winnerToString(game)}</td>
+                    <td style={entryStyle}>{game.playerNames[1]}</td>
+                    <td style={entryStyle}>{d1 + " - " + d2}</td>
+                    <td style={entryStyle}>{game.moveHistory.length}</td>
+                    <td style={entryStyle}>
+                      {prettyDate(game.startDate, true)}
+                    </td>
                   </tr>
                 );
               })}
@@ -171,30 +175,35 @@ const RecentGameList = ({
         <Table centered style={{ width: "100%" }}>
           <thead>
             <tr>
-              <th style={thStyle}>Time</th>
-              <th style={thStyle}>Player 1</th>
-              <th style={thStyle}>Win</th>
-              <th style={thStyle}>Player 2</th>
-              <th style={thStyle}>Date</th>
+              <th style={headEntryStyle}>Time</th>
+              <th style={headEntryStyle}>Player 1</th>
+              <th style={headEntryStyle}>Win</th>
+              <th style={headEntryStyle}>Player 2</th>
+              <th style={headEntryStyle}>Date</th>
             </tr>
           </thead>
           <tbody>
             {recentGames &&
               recentGames.map((game, i) => {
-                const sty = i % 2 ? tdStyle : tdStyle2;
                 return (
                   <tr
                     onClick={() => handleViewGame(game._id)}
                     style={{
                       cursor: "pointer",
+                      backgroundColor: i % 2 ? col1 : col2,
                     }}
+                    className={hoverHighlight.hoveredGame}
                     key={i}
                   >
-                    <td style={sty}>{timeControlToString(game.timeControl)}</td>
-                    <td style={sty}>{game.playerNames[0]}</td>
-                    <td style={sty}>{winnerToString(game)}</td>
-                    <td style={sty}>{game.playerNames[1]}</td>
-                    <td style={sty}>{prettyDate(game.startDate, false)}</td>
+                    <td style={entryStyle}>
+                      {timeControlToString(game.timeControl)}
+                    </td>
+                    <td style={entryStyle}>{game.playerNames[0]}</td>
+                    <td style={entryStyle}>{winnerToString(game)}</td>
+                    <td style={entryStyle}>{game.playerNames[1]}</td>
+                    <td style={entryStyle}>
+                      {prettyDate(game.startDate, false)}
+                    </td>
                   </tr>
                 );
               })}

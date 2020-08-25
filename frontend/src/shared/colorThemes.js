@@ -29,6 +29,10 @@ const C = {
   indigoDarken2: "#303f9f",
   indigoDarken3: "#283593",
   indigoDarken4: "#1a237e",
+  amberLighten3: "#ffe082",
+  amberLighten2: "#ffd54f",
+  amberLighten1: "#ffca28",
+  amber: "#ffc107",
   amberDarken1: "#ffb300",
   amberDarken2: "#ffa000",
   orangeLighten2: "#ffb74d",
@@ -44,6 +48,7 @@ const C = {
   customGrayDarken1: "#cccccc",
   customGrayDarken3: "#454545",
   customGrayDarken4: "#313131",
+  lightOrange: "#fbe4D6",
 
   //for a potential future board theme, unused atm
   chessSquareLight: "#f0d9b5",
@@ -60,6 +65,7 @@ const greenMenuTheme = {
   headerButton: [C.redDarken1, "keep"],
   recentGamesBackground: [C.redLighten2, C.redDarken2],
   recentGamesAlternate: [C.redLighten1, C.redDarken1],
+  // hoveredGame: [C.amber, "keep"] (this is in hoverHighlight.module.css)
 };
 
 const blueMenuTheme = {
@@ -72,6 +78,7 @@ const blueMenuTheme = {
   headerButton: [C.customBlueLighten1, "keep"],
   recentGamesBackground: [C.customBlueLighten1, C.customBlueDarken1],
   recentGamesAlternate: [C.customBlue, "keep"],
+  // hoveredGame: [C.amber, "keep"] (this is in hoverHighlight.module.css)
 };
 
 //different board themes can be combined with different main themes
@@ -80,7 +87,7 @@ const monochromeBoardTheme = {
   ground: [C.customGray, C.customGrayDarken3],
   emptyWall: [C.customGrayLighten1, C.customGrayDarken4],
   pillar: [C.customGrayDarken1, C.customGrayDarken3],
-  hoveredGround: ["#fbe4D6", "flip"],
+  hoveredGround: [C.lightOrange, "flip"],
   hoveredWall: ["#f1bfa0", "flip"],
   player1: [C.red, C.redLighten1],
   player2: [C.indigo, C.indigoLighten1],
@@ -102,9 +109,12 @@ const monochromeBoardTheme = {
   move1: [C.redLighten2, "keep"],
   move2: [C.indigoLighten2, "keep"],
   currentMove: [C.amberDarken1, "keep"],
+  // hoveredMove: [C.amber, "keep"] (this is in hoverHighlight.module.css)
 };
 
 const getThemeColor = (theme, elem, isDarkModeOn) => {
+  if (theme[elem] === undefined)
+    console.error(`theme ${theme} does not have element ${elem}`);
   const lightColor = theme[elem][0];
   if (!isDarkModeOn) return lightColor;
   const darkColor = theme[elem][1];
