@@ -1,7 +1,9 @@
+//pure functions that compute things related to the game's logic
+
 /* In-game coordinate system:
 Walls and junctions between four cells (called pillars) also count for the coordinate
 system, so the number of rows/columns with "walkable" cells (called ground cells) is
-actually half of the board's size (rounding up). Both dimensions of the board should
+actually about half of the board's size. Both dimensions of the board should
 be odd, as they start and end with a row / column of walkable cells.
 The first coordinate is the row (y-axis / height), denoted with variable r by convention.
 The second coordinate is the column (x-axis / width), denoted with variable c by convention.

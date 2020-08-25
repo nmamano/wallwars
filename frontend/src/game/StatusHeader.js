@@ -1,5 +1,7 @@
 import React from "react";
 
+import { getColor } from "../shared/colorThemes";
+
 const StatusHeader = ({
   names,
   lifeCycleStage,
@@ -9,6 +11,8 @@ const StatusHeader = ({
   timeControl,
   creatorStarts,
   isLargeScreen,
+  menuTheme,
+  isDarkModeOn,
 }) => {
   let msg;
   const nameToMove = names[indexToMove];
@@ -59,8 +63,8 @@ const StatusHeader = ({
 
   return (
     <div
-      className={"teal darken-2"}
       style={{
+        backgroundColor: getColor(menuTheme, "container", isDarkModeOn),
         display: "grid",
         gridTemplateColumns: "auto",
         gridTemplateRows: "1fr 1fr 1fr",

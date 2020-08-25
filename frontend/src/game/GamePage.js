@@ -39,6 +39,7 @@ import StatusHeader from "./StatusHeader";
 import TimerHeader from "./TimerHeader";
 import gameHelp from "./gameHelp";
 import ControlPanel from "./ControlPanel";
+import { getColor } from "../shared/colorThemes";
 
 const moveSound = new UIfx(moveSoundAudio);
 const playMoveSound = () => {
@@ -53,8 +54,11 @@ const GamePage = ({
   clientParams,
   returnToLobby,
   isLargeScreen,
+  menuTheme,
+  boardTheme,
   isDarkModeOn,
   handleToggleDarkMode,
+  handleToggleTheme,
   handleSetCookieId,
 }) => {
   //cosmetic state stored between sessions
@@ -642,15 +646,17 @@ const GamePage = ({
   }
 
   return (
-    <div className={isDarkModeOn ? "teal darken-4" : undefined}>
+    <div>
       <Header
         context={state.clientRole === "Spectator" ? "Spectator" : "Player"}
         joinCode={state.joinCode}
         helpText={gameHelp}
         handleLeaveGame={handleLeaveGame}
         isLargeScreen={isLargeScreen}
+        menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
         handleToggleDarkMode={handleToggleDarkMode}
+        handleToggleTheme={handleToggleTheme}
       />
       <div
         style={{
@@ -669,11 +675,13 @@ const GamePage = ({
           lifeCycleStage={state.lifeCycleStage}
           names={state.names}
           indexToMove={indexToMove(state)}
-          playerColors={globalSettings.playerColors}
           timeLeft={[displayTime1, displayTime2]}
           isLargeScreen={isLargeScreen}
           scores={state.gameWins}
           arePlayersPresent={state.arePlayersPresent}
+          menuTheme={menuTheme}
+          boardTheme={boardTheme}
+          isDarkModeOn={isDarkModeOn}
         />
         <StatusHeader
           lifeCycleStage={state.lifeCycleStage}
@@ -684,10 +692,11 @@ const GamePage = ({
           timeControl={state.timeControl}
           creatorStarts={state.creatorStarts}
           isLargeScreen={isLargeScreen}
+          menuTheme={menuTheme}
+          isDarkModeOn={isDarkModeOn}
         />
         <Board
           creatorToMove={creatorToMove(state)}
-          playerColors={globalSettings.playerColors}
           grid={state.moveHistory[state.viewIndex].grid}
           playerPos={state.moveHistory[state.viewIndex].playerPos}
           goals={globalSettings.goals}
@@ -696,6 +705,8 @@ const GamePage = ({
           handleClick={handleBoardClick}
           groundSize={scaledGroundSize}
           wallWidth={scaledWallWidth}
+          menuTheme={menuTheme}
+          boardTheme={boardTheme}
           isDarkModeOn={isDarkModeOn}
           tokens={state.tokens}
         />
@@ -706,7 +717,6 @@ const GamePage = ({
           handleRequestTakeback={handleRequestTakeback}
           handleGiveExtraTime={handleGiveExtraTime}
           moveHistory={state.moveHistory}
-          playerColors={globalSettings.playerColors}
           clientRole={state.clientRole}
           creatorStarts={state.creatorStarts}
           handleViewMove={handleViewMove}
@@ -719,6 +729,8 @@ const GamePage = ({
           handleToggleVolume={handleToggleVolume}
           isVolumeOn={state.isVolumeOn}
           handleLeaveGame={handleLeaveGame}
+          menuTheme={menuTheme}
+          boardTheme={boardTheme}
           isDarkModeOn={isDarkModeOn}
           handleIncreaseBoardSize={handleIncreaseBoardSize}
           handleDecreaseBoardSize={handleDecreaseBoardSize}
@@ -732,7 +744,13 @@ const GamePage = ({
           <Col className="center" s={12}>
             <Button
               large
-              className="red"
+              style={{
+                backgroundColor: getColor(
+                  menuTheme,
+                  "importantButton",
+                  isDarkModeOn
+                ),
+              }}
               node="button"
               waves="light"
               onClick={() => {
@@ -746,6 +764,7 @@ const GamePage = ({
           </Col>
         </Row>
       )}
+      <div style={{ height: "100%" }}></div>
       <Dialog
         isOpen={state.showDrawDialog}
         title="Draw offer received"
@@ -753,6 +772,8 @@ const GamePage = ({
         acceptButtonText="Accept"
         rejectButtonText="Decline"
         callback={handleAnswerDrawOffer}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
       <Dialog
         isOpen={state.showRematchDialog}
@@ -761,6 +782,8 @@ const GamePage = ({
         acceptButtonText="Accept"
         rejectButtonText="Decline"
         callback={handleAnswerRematchOffer}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
       <Dialog
         isOpen={state.showTakebackDialog}
@@ -772,6 +795,8 @@ const GamePage = ({
         acceptButtonText="Accept"
         rejectButtonText="Decline"
         callback={handleAnswerTakebackRequest}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
     </div>
   );

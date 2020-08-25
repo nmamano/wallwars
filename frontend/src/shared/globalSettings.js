@@ -15,7 +15,6 @@ export default {
   //of length 2, with the data for the creator first
   initialPlayerPos: [corners.tl, corners.tr],
   goals: [corners.br, corners.bl],
-  playerColors: ["red", "indigo"],
   groundSize: 37, //in pixels
   wallWidth: 12, //in pixels
   smallScreenGroundSize: 23,

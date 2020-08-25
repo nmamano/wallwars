@@ -1,6 +1,8 @@
 import React from "react";
 import { Button, Icon, Modal } from "react-materialize";
 
+import { getColor } from "./colorThemes";
+
 const IconButton = ({
   icon,
   tooltip,
@@ -11,11 +13,15 @@ const IconButton = ({
   bgColor,
   padding,
   disabled,
+  menuTheme,
+  isDarkModeOn,
 }) => {
+  if (!bgColor) bgColor = getColor(menuTheme, "button", isDarkModeOn);
+
   if (!modalBody) {
     return (
       <Button
-        className={bgColor ? bgColor : "teal"}
+        style={{ backgroundColor: bgColor }}
         node="button"
         waves="light"
         icon={<Icon className="large">{icon}</Icon>}
@@ -31,7 +37,7 @@ const IconButton = ({
     actions = [
       <Button
         style={{
-          backgroundColor: "#009688",
+          backgroundColor: bgColor,
           color: "white",
           marginRight: "1rem",
         }}
@@ -45,7 +51,7 @@ const IconButton = ({
       </Button>,
       <Button
         style={{
-          backgroundColor: "#009688",
+          backgroundColor: bgColor,
           color: "white",
         }}
         flat
@@ -60,7 +66,7 @@ const IconButton = ({
     actions = (
       <Button
         style={{
-          backgroundColor: "#009688",
+          backgroundColor: bgColor,
           color: "white",
         }}
         flat
@@ -75,8 +81,7 @@ const IconButton = ({
 
   const trigger = (
     <Button
-      style={{ padding: `0px ${padding}px` }}
-      className={bgColor ? bgColor : "teal"}
+      style={{ padding: `0px ${padding}px`, backgroundColor: bgColor }}
       node="button"
       waves="light"
       icon={<Icon className="large">{icon}</Icon>}

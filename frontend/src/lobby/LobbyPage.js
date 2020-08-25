@@ -5,6 +5,9 @@ import { useMediaQuery } from "react-responsive";
 import { ToastContainer } from "react-toastify";
 import { useCookies } from "react-cookie";
 
+import { getColor } from "../shared/colorThemes";
+import blueBgDark from "./../static/blueBgDark.jfif";
+import blueBgLight from "./../static/blueBgLight.jfif";
 import globalSettings from "../shared/globalSettings";
 import GamePage from "../game/GamePage";
 import Header from "../shared/Header";
@@ -33,7 +36,9 @@ const LobbyPage = ({ socket }) => {
     //used to allow players to return to games they already started, even if they close the browser
     "cookieId",
     "isDarkModeOn",
+    "menuTheme",
   ]);
+  const boardTheme = "boardMonochrome";
 
   const [playerName, setPlayerName] = useState(
     cookies.playerName || randPlayerName()
@@ -47,6 +52,10 @@ const LobbyPage = ({ socket }) => {
   const [isDarkModeOn, setIsDarkModeOn] = useState(
     cookies.isDarkModeOn && cookies.isDarkModeOn === "true" ? true : false
   );
+  const [menuTheme, setMenuTheme] = useState(
+    cookies.menuTheme && cookies.menuTheme === "green" ? "green" : "blue"
+  );
+
   const [hasOngoingGame, setHasOngoingGame] = useState(false);
 
   const handlePlayerName = (props) => {
@@ -144,6 +153,11 @@ const LobbyPage = ({ socket }) => {
     setCookie("isDarkModeOn", isDarkModeOn ? "false" : "true", { path: "/" });
     setIsDarkModeOn(!isDarkModeOn);
   };
+  const handleToggleTheme = () => {
+    const newTheme = menuTheme === "green" ? "blue" : "green";
+    setCookie("menuTheme", newTheme, { path: "/" });
+    setMenuTheme(newTheme);
+  };
 
   useEffect(() => {
     if (
@@ -162,14 +176,19 @@ const LobbyPage = ({ socket }) => {
 
   //effect to set the background color of the entire site based on dark mode
   useEffect(() => {
-    const backgroundColors = {
-      dark: "#004d40",
-      light: "#009688",
-    };
-    if (isDarkModeOn)
-      document.body.style.backgroundColor = backgroundColors.dark;
-    else document.body.style.backgroundColor = backgroundColors.light;
-  }, [isDarkModeOn]);
+    document.body.style.backgroundColor = getColor(
+      menuTheme,
+      "background",
+      isDarkModeOn
+    );
+    if (menuTheme === "blue") {
+      document.body.style.backgroundImage = `url('${
+        isDarkModeOn ? blueBgDark : blueBgLight
+      }')`;
+    } else {
+      document.body.style.backgroundImage = "none";
+    }
+  }, [isDarkModeOn, menuTheme]);
 
   //preparing props for layout (duplicated with GamePage)
   const isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
@@ -211,8 +230,11 @@ const LobbyPage = ({ socket }) => {
           clientParams={clientParams}
           returnToLobby={returnToLobby}
           isLargeScreen={isLargeScreen}
+          menuTheme={menuTheme}
+          boardTheme={boardTheme}
           isDarkModeOn={isDarkModeOn}
           handleToggleDarkMode={handleToggleDarkMode}
+          handleToggleTheme={handleToggleTheme}
           handleSetCookieId={handleSetCookieId}
         />
       )}
@@ -223,8 +245,10 @@ const LobbyPage = ({ socket }) => {
             helpText={lobbyHelpText}
             aboutText={aboutText}
             isLargeScreen={isLargeScreen}
+            menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn}
             handleToggleDarkMode={handleToggleDarkMode}
+            handleToggleTheme={handleToggleTheme}
           />
           <LobbyForm
             playerName={playerName}
@@ -241,6 +265,8 @@ const LobbyPage = ({ socket }) => {
             token={token}
             handleToken={handleToken}
             isLargeScreen={isLargeScreen}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
           />
           {hasOngoingGame &&
             cookies.cookieId &&
@@ -249,7 +275,13 @@ const LobbyPage = ({ socket }) => {
                 <Col className="center" s={12}>
                   <Button
                     large
-                    className="red"
+                    style={{
+                      backgroundColor: getColor(
+                        menuTheme,
+                        "importantButton",
+                        isDarkModeOn
+                      ),
+                    }}
                     node="button"
                     waves="light"
                     onClick={() => {
@@ -289,6 +321,8 @@ const LobbyPage = ({ socket }) => {
               <GameShowcase
                 socket={socket}
                 isLargeScreen={isLargeScreen}
+                menuTheme={menuTheme}
+                boardTheme={boardTheme}
                 isDarkModeOn={isDarkModeOn}
                 handleViewGame={handleViewGame}
               />
@@ -301,12 +335,13 @@ const LobbyPage = ({ socket }) => {
                 fontSize: "20px",
               }}
             >
-              Recent games
+              Recent Games
             </div>
             <div style={{ gridArea: "recentGameList" }}>
               <RecentGameList
                 socket={socket}
                 isLargeScreen={isLargeScreen}
+                menuTheme={menuTheme}
                 isDarkModeOn={isDarkModeOn}
                 handleViewGame={handleViewGame}
               />

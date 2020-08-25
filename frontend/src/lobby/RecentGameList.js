@@ -3,22 +3,8 @@ import { Table } from "react-materialize";
 import cloneDeep from "lodash.clonedeep";
 
 import globalSettings from "../shared/globalSettings";
-import { cellTypeByPos, emptyGrid, distance } from "../gameLogic/mainLogic";
-
-//duplicated from MoveHistory
-const thClassName = "teal darken-2";
-const thStyle = {
-  position: "sticky",
-  top: "0px",
-  paddingTop: "0.15rem",
-  paddingBottom: "0.15rem",
-  borderRadius: "0",
-};
-const tdStyle = {
-  paddingTop: "0.15rem",
-  paddingBottom: "0.15rem",
-  borderRadius: "0",
-};
+import { cellTypeByPos, emptyGrid, distance } from "../shared/gameLogicUtils";
+import { getColor } from "../shared/colorThemes";
 
 //duplicated from StatusHeader
 const roundNum = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
@@ -61,33 +47,55 @@ function prettyDate(date, longFormat) {
   const curTime = new Date().getTime();
   const dateTime = new Date(date).getTime();
   const seconds = Math.floor((curTime - dateTime) / 1000);
-
   let interval = Math.floor(seconds / 2592000);
   if (interval > 1) return date.toDateString.substring(4, 10);
-
   interval = Math.floor(seconds / 86400);
   if (interval === 1) return longFormat ? "1 day ago" : "1d ago";
   if (interval > 1) return interval + (longFormat ? " days" : "d") + " ago";
-
   interval = Math.floor(seconds / 3600);
   if (interval === 1) return longFormat ? "1 hour ago" : "1h ago";
   if (interval > 1) return interval + (longFormat ? " hours" : "h") + " ago";
-
   interval = Math.floor(seconds / 60);
   if (interval === 1) return longFormat ? "1 minute ago" : "1m ago";
   if (interval > 1) return interval + (longFormat ? " minutes" : "m") + " ago";
-
   return "Just now";
 }
 
 const RecentGameList = ({
   socket,
   isLargeScreen,
+  menuTheme,
   isDarkModeOn,
   handleViewGame,
 }) => {
   const [recentGames, setRecentGames] = useState([]);
   const [needToRequestGames, setNeedToRequestGames] = useState(true);
+
+  const thStyle = {
+    position: "sticky",
+    top: "0px",
+    paddingTop: "0.15rem",
+    paddingBottom: "0.15rem",
+    borderRadius: "0",
+    backgroundColor: getColor(menuTheme, "container", isDarkModeOn),
+  };
+  const tdStyle = {
+    paddingTop: "0.15rem",
+    paddingBottom: "0.15rem",
+    borderRadius: "0",
+    backgroundColor: getColor(menuTheme, "recentGamesBackground", isDarkModeOn),
+  };
+  const tdStyle2 = {
+    paddingTop: "0.15rem",
+    paddingBottom: "0.15rem",
+    borderRadius: "0",
+    backgroundColor: getColor(menuTheme, "recentGamesAlternate", isDarkModeOn),
+  };
+  const borderStyle = `1px solid ${getColor(
+    menuTheme,
+    "container",
+    isDarkModeOn
+  )}`;
 
   useEffect(() => {
     if (!needToRequestGames) return;
@@ -109,41 +117,30 @@ const RecentGameList = ({
           overflowY: "scroll",
           display: "block",
           height: "100%",
-          border: "1px solid #00796d",
-          backgroundColor: isDarkModeOn ? "#d32f2f" : "#e57373",
+          border: borderStyle,
+          backgroundColor: getColor(
+            menuTheme,
+            "recentGamesBackground",
+            isDarkModeOn
+          ),
         }}
       >
         <Table centered style={{ width: "100%" }}>
           <thead>
             <tr>
-              <th className={thClassName} style={thStyle}>
-                Time
-              </th>
-              <th className={thClassName} style={thStyle}>
-                Player 1
-              </th>
-              <th className={thClassName} style={thStyle}></th>
-              <th className={thClassName} style={thStyle}>
-                Player 2
-              </th>
-              <th className={thClassName} style={thStyle}>
-                Distance
-              </th>
-              <th className={thClassName} style={thStyle}>
-                Turns
-              </th>
-              <th className={thClassName} style={thStyle}>
-                Date
-              </th>
+              <th style={thStyle}>Time</th>
+              <th style={thStyle}>Player 1</th>
+              <th style={thStyle}></th>
+              <th style={thStyle}>Player 2</th>
+              <th style={thStyle}>Distance</th>
+              <th style={thStyle}>Turns</th>
+              <th style={thStyle}>Date</th>
             </tr>
           </thead>
           <tbody>
             {recentGames &&
               recentGames.map((game, i) => {
-                let color = "red";
-                color += isDarkModeOn ? " darken-" : " lighten-";
-                color += 1 + (i % 2);
-
+                const sty = i % 2 ? tdStyle : tdStyle2;
                 return (
                   <tr
                     onClick={() => handleViewGame(game._id)}
@@ -151,17 +148,14 @@ const RecentGameList = ({
                       cursor: "pointer",
                     }}
                     key={i}
-                    className={color}
                   >
-                    <td style={tdStyle}>
-                      {timeControlToString(game.timeControl)}
-                    </td>
-                    <td style={tdStyle}>{game.playerNames[0]}</td>
-                    <td style={tdStyle}>{winnerToString(game)}</td>
-                    <td style={tdStyle}>{game.playerNames[1]}</td>
-                    <td style={tdStyle}>{finalDistsToString(game)}</td>
-                    <td style={tdStyle}>{game.moveHistory.length}</td>
-                    <td style={tdStyle}>{prettyDate(game.startDate, true)}</td>
+                    <td style={sty}>{timeControlToString(game.timeControl)}</td>
+                    <td style={sty}>{game.playerNames[0]}</td>
+                    <td style={sty}>{winnerToString(game)}</td>
+                    <td style={sty}>{game.playerNames[1]}</td>
+                    <td style={sty}>{finalDistsToString(game)}</td>
+                    <td style={sty}>{game.moveHistory.length}</td>
+                    <td style={sty}>{prettyDate(game.startDate, true)}</td>
                   </tr>
                 );
               })}
@@ -177,36 +171,23 @@ const RecentGameList = ({
           overflowY: "scroll",
           display: "block",
           height: "100%",
-          border: "1px solid #00796d",
+          border: borderStyle,
         }}
       >
         <Table centered style={{ width: "100%" }}>
           <thead>
             <tr>
-              <th className={thClassName} style={thStyle}>
-                Time
-              </th>
-              <th className={thClassName} style={thStyle}>
-                Player 1
-              </th>
-              <th className={thClassName} style={thStyle}>
-                Win
-              </th>
-              <th className={thClassName} style={thStyle}>
-                Player 2
-              </th>
-              <th className={thClassName} style={thStyle}>
-                Date
-              </th>
+              <th style={thStyle}>Time</th>
+              <th style={thStyle}>Player 1</th>
+              <th style={thStyle}>Win</th>
+              <th style={thStyle}>Player 2</th>
+              <th style={thStyle}>Date</th>
             </tr>
           </thead>
           <tbody>
             {recentGames &&
               recentGames.map((game, i) => {
-                let color = "red";
-                color += isDarkModeOn ? " darken-" : " lighten-";
-                color += 1 + (i % 2);
-
+                const sty = i % 2 ? tdStyle : tdStyle2;
                 return (
                   <tr
                     onClick={() => handleViewGame(game._id)}
@@ -214,15 +195,12 @@ const RecentGameList = ({
                       cursor: "pointer",
                     }}
                     key={i}
-                    className={color}
                   >
-                    <td style={tdStyle}>
-                      {timeControlToString(game.timeControl)}
-                    </td>
-                    <td style={tdStyle}>{game.playerNames[0]}</td>
-                    <td style={tdStyle}>{winnerToString(game)}</td>
-                    <td style={tdStyle}>{game.playerNames[1]}</td>
-                    <td style={tdStyle}>{prettyDate(game.startDate, false)}</td>
+                    <td style={sty}>{timeControlToString(game.timeControl)}</td>
+                    <td style={sty}>{game.playerNames[0]}</td>
+                    <td style={sty}>{winnerToString(game)}</td>
+                    <td style={sty}>{game.playerNames[1]}</td>
+                    <td style={sty}>{prettyDate(game.startDate, false)}</td>
                   </tr>
                 );
               })}

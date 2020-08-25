@@ -9,7 +9,7 @@ import {
   distance,
   isDistanceAtMost,
   canBuildWall,
-} from "../gameLogic/mainLogic";
+} from "../shared/gameLogicUtils";
 import globalSettings from "../shared/globalSettings";
 
 /* this file contains functions that modify a copy of the state of GamePage

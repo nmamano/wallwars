@@ -1,7 +1,9 @@
 import React, { useEffect } from "react";
 import { Row, Col, TextInput, Button, Icon, Dropdown } from "react-materialize";
 
+import { getColor } from "../shared/colorThemes";
 import showToastNotification from "../shared/showToastNotification";
+import TextButton from "../shared/TextButton";
 
 //random icons until I find a nicer set to use
 const tokens = [
@@ -49,6 +51,8 @@ const LobbyForm = ({
   token,
   handleToken,
   isLargeScreen,
+  menuTheme,
+  isDarkModeOn,
 }) => {
   useEffect(() => {
     window.addEventListener("keydown", downHandler);
@@ -68,7 +72,7 @@ const LobbyForm = ({
   };
 
   const defaultToken = (
-    <div className={"white-text"} style={{ fontSize: "30px" }}>
+    <div style={{ fontSize: "30px" }}>
       <i className={`material-icons white-text`} style={{ height: `100%` }}>
         face
       </i>
@@ -79,7 +83,13 @@ const LobbyForm = ({
     </div>
   );
   return (
-    <div className="container teal darken-2" style={{ marginTop: "2rem" }}>
+    <div
+      className="container"
+      style={{
+        marginTop: "2rem",
+        backgroundColor: getColor(menuTheme, "container", isDarkModeOn),
+      }}
+    >
       <Row className="valign-wrapper">
         <Col className="center" s={4} m={4}>
           <h5>{isLargeScreen ? "Your name:" : "Name:"}</h5>
@@ -93,12 +103,14 @@ const LobbyForm = ({
         </Col>
         <Col s={1} m={1}>
           <Button
-            className="teal lighten-2"
             node="button"
             waves="light"
             small
             floating
-            style={{ color: "white" }}
+            style={{
+              color: "white",
+              backgroundColor: getColor(menuTheme, "button", isDarkModeOn),
+            }}
             icon={<Icon>refresh</Icon>}
             onClick={handleRefreshName}
             tooltip={"Get a new name"}
@@ -143,14 +155,34 @@ const LobbyForm = ({
                 onOpenStart: null,
                 outDuration: 250,
               }}
-              trigger={<Button node="button">Change</Button>}
+              trigger={
+                <Button
+                  node="button"
+                  style={{
+                    backgroundColor: getColor(
+                      menuTheme,
+                      "button",
+                      isDarkModeOn
+                    ),
+                  }}
+                >
+                  Change
+                </Button>
+              }
             >
               {tokens.map((token) => {
                 return (
                   <div
-                    style={{ width: "100%" }}
+                    style={{
+                      width: "100%",
+                      color: "white",
+                      backgroundColor: getColor(
+                        menuTheme,
+                        "button",
+                        isDarkModeOn
+                      ),
+                    }}
                     key={token}
-                    className={"teal"}
                     node="button"
                     onClick={() => handleToken(token)}
                   >
@@ -184,9 +216,12 @@ const LobbyForm = ({
       </Row>
       <Row className="valign-wrapper">
         <Col className="center" s={5} m={4}>
-          <Button node="button" waves="light" onClick={handleCreateGame}>
-            Create game
-          </Button>
+          <TextButton
+            text="Create Game"
+            onClick={handleCreateGame}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
+          />
         </Col>
         <Col s={2} m={1} style={{ paddingRight: "0" }}>
           <TextInput
@@ -214,9 +249,12 @@ const LobbyForm = ({
       </Row>
       <Row className="valign-wrapper">
         <Col className="center" s={5} m={4}>
-          <Button node="button" waves="light" onClick={handleJoinGame}>
-            Join game
-          </Button>
+          <TextButton
+            text="Join Game"
+            onClick={handleJoinGame}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
+          />
         </Col>
         <Col s={6} m={5}>
           <TextInput

@@ -1,4 +1,5 @@
 import React from "react";
+import { getColor } from "../shared/colorThemes";
 
 const dot = (color, title) => (
   <span
@@ -21,12 +22,14 @@ const isPresentDot = (isPresent, name) => {
 const TimerHeader = ({
   lifeCycleStage,
   names,
-  playerColors,
   timeLeft,
   indexToMove,
   isLargeScreen,
   scores,
   arePlayersPresent,
+  menuTheme,
+  boardTheme,
+  isDarkModeOn,
 }) => {
   const [min1, min2] = [
     Math.floor(timeLeft[0] / 60),
@@ -41,22 +44,16 @@ const TimerHeader = ({
     timesAsStrings[0] = "_:__";
     timesAsStrings[1] = "_:__";
   }
-  const highlightNameToMove = ["", ""];
-  if (lifeCycleStage < 4) {
-    //only if the game has not ended yet
-    const turnHighlight = " lighten-1 z-depth-2";
-    highlightNameToMove[indexToMove] =
-      playerColors[indexToMove] + turnHighlight;
-  }
+  let pToMove = [false, false];
+  if (lifeCycleStage < 4) pToMove[indexToMove] = true;
 
-  const highlightLowTime = ["", ""];
-  const lowTime = 15;
-  const lowTimeColor = " orange lighten-2 z-depth-2";
+  let isLowOnTime = [false, false];
+  const lowTimeLimit = 15;
   if (lifeCycleStage === 3) {
     if (indexToMove === 0) {
-      if (timeLeft[0] < lowTime) highlightLowTime[0] = lowTimeColor;
+      if (timeLeft[0] < lowTimeLimit) isLowOnTime[0] = true;
     } else if (indexToMove === 1) {
-      if (timeLeft[1] < lowTime) highlightLowTime[1] = lowTimeColor;
+      if (timeLeft[1] < lowTimeLimit) isLowOnTime[1] = true;
     }
   }
 
@@ -66,15 +63,23 @@ const TimerHeader = ({
   else if (isLargeScreen && showScores) sep = "12px";
   else if (!isLargeScreen && !showScores) sep = "8px";
   else sep = "6px";
+  const fontSize = isLargeScreen ? "18px" : "14px";
   const childStyle = {
     padding: sep,
-    fontSize: isLargeScreen ? "18px" : "14px",
+    fontSize: fontSize,
   };
+
+  const [timer1, timer2, timerBg, lowTimeCol] = [
+    getColor(boardTheme, "timer1", isDarkModeOn),
+    getColor(boardTheme, "timer2", isDarkModeOn),
+    getColor(menuTheme, "container", isDarkModeOn),
+    getColor(boardTheme, "lowTime", isDarkModeOn),
+  ];
 
   return (
     <div
-      className={"teal darken-2"}
       style={{
+        backgroundColor: getColor(menuTheme, "container", isDarkModeOn),
         display: "grid",
         gridTemplateColumns: showScores
           ? "0.5fr 1.7fr 0.2fr 1fr 1fr 0.2fr 1.7fr 0.5fr"
@@ -92,26 +97,48 @@ const TimerHeader = ({
         </div>
       )}
       <div
-        style={childStyle}
-        className={highlightNameToMove[0] + " center truncate"}
+        style={{
+          padding: sep,
+          fontSize: fontSize,
+          backgroundColor: pToMove[0] ? timer1 : timerBg,
+        }}
+        className={"center truncate" + (pToMove[0] ? " z-depth-2" : "")}
       >
         {names[0]}
       </div>
       <div style={childStyle} className={"center"}>
         {isPresentDot(arePlayersPresent[0], names[0])}
       </div>
-      <div style={childStyle} className={highlightLowTime[0] + " center"}>
+      <div
+        style={{
+          padding: sep,
+          fontSize: fontSize,
+          backgroundColor: isLowOnTime[0] ? lowTimeCol : timerBg,
+        }}
+        className={"center" + (isLowOnTime[0] ? " z-depth-2" : "")}
+      >
         {timesAsStrings[0]}
       </div>
-      <div style={childStyle} className={highlightLowTime[1] + " center"}>
+      <div
+        style={{
+          padding: sep,
+          fontSize: fontSize,
+          backgroundColor: isLowOnTime[1] ? lowTimeCol : timerBg,
+        }}
+        className={"center" + (isLowOnTime[1] ? " z-depth-2" : "")}
+      >
         {timesAsStrings[1]}
       </div>
       <div style={childStyle} className={"center"}>
         {isPresentDot(arePlayersPresent[1], names[1])}
       </div>
       <div
-        style={childStyle}
-        className={highlightNameToMove[1] + " center truncate"}
+        style={{
+          padding: sep,
+          fontSize: fontSize,
+          backgroundColor: pToMove[1] ? timer2 : timerBg,
+        }}
+        className={"center truncate" + (pToMove[1] ? " z-depth-2" : "")}
       >
         {names[1] === null ? "______" : names[1]}
       </div>

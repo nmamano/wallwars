@@ -1,42 +1,40 @@
 import React, { useState } from "react";
-import invert from "invert-color";
 
-import { cellTypeByPos, posEq } from "../gameLogic/mainLogic";
-
-//cosmetic parameters of the board
-const displayParams = {
-  groundColor: "#d2d2d2",
-  groundHoverColor: "#fbe4D6",
-  emptyWallColor: "#eaeaea",
-  emptyWallHoverColor: "#f1bfa0",
-  pillarColor: "#cccccc",
-  playerIcons: ["face", "outlet"],
-  borderStyle: "1px solid #00796d",
-};
+import { cellTypeByPos, posEq } from "../shared/gameLogicUtils";
+import { getColor } from "../shared/colorThemes";
 
 //stateless component to display the board. all the state is at GamePage
 const Board = ({
   grid,
   ghostAction,
   premoveActions,
-  playerColors: [color1, color2],
   playerPos: [p1, p2],
   goals: [g1, g2],
   handleClick,
   creatorToMove,
   groundSize,
   wallWidth,
+  menuTheme,
+  boardTheme,
   isDarkModeOn,
   tokens,
 }) => {
+  //short-hand for getColor
+  const getCol = (elem) => getColor(menuTheme, elem, isDarkModeOn);
+  const getBoardCol = (elem) => getColor(boardTheme, elem, isDarkModeOn);
+
+  const borderStyle = `1px solid ${getCol("container")}`;
+  const [color1, color2] = [getBoardCol("player1"), getBoardCol("player2")];
+
+  const defaultTokens = ["face", "outlet"];
+  let [token1, token2] = tokens;
+  if (token1 === "default") token1 = defaultTokens[0];
+  if (token2 === "default") token2 = defaultTokens[1];
+
   const dims = { h: grid.length, w: grid[0].length };
   const allPos = [];
   for (let r = 0; r < dims.h; r++)
     for (let c = 0; c < dims.w; c++) allPos[r * dims.w + c] = { r: r, c: c };
-
-  let [icon1, icon2] = tokens;
-  if (icon1 === "default") icon1 = displayParams.playerIcons[0];
-  if (icon2 === "default") icon2 = displayParams.playerIcons[1];
 
   const [repRows, repCols] = [(dims.h - 1) / 2, (dims.w - 1) / 2];
 
@@ -48,9 +46,8 @@ const Board = ({
   const handleMouseLeave = () => {
     setHoveredCell(null);
   };
-  const iconSize = 0.8 * groundSize;
-  let coordColor = "white";
-  if (isDarkModeOn) coordColor = "black";
+  const tokenSize = 0.8 * groundSize;
+  const coordColor = getBoardCol("coord");
 
   return (
     <div
@@ -83,22 +80,10 @@ const Board = ({
         ];
         const cellType = cellTypeByPos(pos);
 
-        let color;
-        if (cellType === "Ground") {
-          if (hoveredCell && posEq(pos, hoveredCell))
-            color = displayParams.groundHoverColor;
-          else color = displayParams.groundColor;
-        } else if (cellType === "Wall") {
-          if (hoveredCell && posEq(pos, hoveredCell))
-            color = displayParams.emptyWallHoverColor;
-          else color = displayParams.emptyWallColor;
-        } else color = displayParams.pillarColor;
-        if (isDarkModeOn) color = invert(color);
-
-        let className = "";
         //add waves cosmetic effect when clicking a cell
-        if (cellType === "Ground") className += " waves-effect waves-light";
-        if (cellType === "Wall") className += " waves-effect waves-dark";
+        let className = "";
+        if (cellType === "Ground") className += "waves-effect waves-light";
+        if (cellType === "Wall") className += "waves-effect waves-dark";
 
         const ghostOrPlayerHere =
           p1Here || p2Here || p1GhostHere || p2GhostHere;
@@ -109,27 +94,30 @@ const Board = ({
         const numberCoordHere =
           coordFits && pos.c === dims.w - 1 && pos.r % 2 === 0;
         const coordHere = letterCoordHere || numberCoordHere;
-        //special coloring for Ground cells containing the goals goals
-        if (goal1Here || goal2Here) {
-          className = goal1Here ? color1 : color2;
-          className += isDarkModeOn ? " darken-4" : " lighten-4";
-        }
-        //wall coloring for built walls (depending on builder)
-        if (cellType === "Wall") {
-          const solidWallHere = grid[pos.r][pos.c] !== 0;
-          if (solidWallHere || ghostHere || premoveHere) {
-            if (solidWallHere) {
-              className = grid[pos.r][pos.c] === 1 ? color1 : color2;
-              className += isDarkModeOn ? "" : " darken-3";
-            } else if (ghostHere) {
-              className = creatorToMove ? color1 : color2;
-              className += isDarkModeOn ? " lighten-2" : " lighten-3";
-            } else {
-              className = !creatorToMove ? color1 : color2;
-              className += isDarkModeOn ? " lighten-2" : " lighten-3";
-            }
+
+        let color;
+        if (cellType === "Ground") {
+          if (goal1Here || goal2Here) {
+            color = getBoardCol(`goalBackground${goal1Here ? "1" : "2"}`);
+          } else if (hoveredCell && posEq(pos, hoveredCell)) {
+            color = getBoardCol("hoveredGround");
+          } else {
+            color = getBoardCol("ground");
           }
-        }
+        } else if (cellType === "Wall") {
+          const solidWallHere = grid[pos.r][pos.c] !== 0;
+          if (solidWallHere) {
+            color = getBoardCol(`wall${grid[pos.r][pos.c]}`);
+          } else if (ghostHere) {
+            color = getBoardCol(`ghostWall${creatorToMove ? "1" : "2"}`);
+          } else if (premoveHere) {
+            color = getBoardCol(`ghostWall${!creatorToMove ? "1" : "2"}`);
+          } else if (hoveredCell && posEq(pos, hoveredCell)) {
+            color = getBoardCol("hoveredWall");
+          } else {
+            color = getBoardCol("emptyWall");
+          }
+        } else color = getBoardCol("pillar");
 
         let justifyContent = "center";
         if (coordHere) justifyContent = letterCoordHere ? "start" : "flex-end";
@@ -152,60 +140,43 @@ const Board = ({
               justifyContent: justifyContent,
               alignItems: alignItems,
               cursor: "pointer",
-              borderTop: pos.r === 0 ? displayParams.borderStyle : "",
-              borderBottom:
-                pos.r === dims.h - 1 ? displayParams.borderStyle : "",
-              borderLeft: pos.c === 0 ? displayParams.borderStyle : "",
-              borderRight:
-                pos.c === dims.w - 1 ? displayParams.borderStyle : "",
+              borderTop: pos.r === 0 ? borderStyle : "",
+              borderBottom: pos.r === dims.h - 1 ? borderStyle : "",
+              borderLeft: pos.c === 0 ? borderStyle : "",
+              borderRight: pos.c === dims.w - 1 ? borderStyle : "",
             }}
           >
-            {p1Here && (
+            {(p1Here || p2Here) && (
               <i
-                className={`material-icons ${color1}-text`}
-                style={{ fontSize: `${iconSize}px` }}
+                className={`material-icons`}
+                style={{
+                  fontSize: `${tokenSize}px`,
+                  color: p1Here ? color1 : color2,
+                }}
               >
-                {icon1}
+                {p1Here ? token1 : token2}
               </i>
             )}
-            {p2Here && (
+            {(goal1Here || goal2Here) && !ghostOrPlayerHere && (
               <i
-                className={`material-icons ${color2}-text`}
-                style={{ fontSize: `${iconSize}px` }}
+                className={`material-icons`}
+                style={{
+                  fontSize: `${tokenSize}px`,
+                  color: getBoardCol("goalToken"),
+                }}
               >
-                {icon2}
+                {goal1Here ? token1 : token2}
               </i>
             )}
-            {goal1Here && !ghostOrPlayerHere && (
-              <i
-                className={`material-icons white-text`}
-                style={{ fontSize: `${iconSize}px` }}
-              >
-                {icon1}
-              </i>
-            )}
-            {goal2Here && !ghostOrPlayerHere && (
-              <i
-                className={`material-icons white-text`}
-                style={{ fontSize: `${iconSize}px` }}
-              >
-                {icon2}
-              </i>
-            )}
-            {p1GhostHere && cellType === "Ground" && (
+            {(p1GhostHere || p2GhostHere) && cellType === "Ground" && (
               <i
                 className={`material-icons ${color1}-text text-lighten-4`}
-                style={{ fontSize: `${iconSize}px` }}
+                style={{
+                  fontSize: `${tokenSize}px`,
+                  color: getBoardCol(`ghost${p1GhostHere ? "1" : "2"}`),
+                }}
               >
-                {icon1}
-              </i>
-            )}
-            {p2GhostHere && cellType === "Ground" && (
-              <i
-                className={`material-icons ${color2}-text text-lighten-4`}
-                style={{ fontSize: `${iconSize}px` }}
-              >
-                {icon2}
+                {p1GhostHere ? token1 : token2}
               </i>
             )}
             {letterCoordHere && (

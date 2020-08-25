@@ -1,7 +1,8 @@
 import React from "react";
 import { Table } from "react-materialize";
 
-import { cellTypeByPos } from "../gameLogic/mainLogic";
+import { cellTypeByPos } from "../shared/gameLogicUtils";
+import { getColor } from "../shared/colorThemes";
 
 const moveToString = (move) => {
   if (move.index === 0) return "__";
@@ -16,14 +17,6 @@ const moveToString = (move) => {
   return "WW";
 };
 
-const thClassName = "teal darken-2";
-const thStyle = {
-  position: "sticky",
-  top: "0px",
-  paddingTop: "0.15rem",
-  paddingBottom: "0.15rem",
-  borderRadius: "0",
-};
 const tdStyle = {
   paddingTop: "0.15rem",
   paddingBottom: "0.15rem",
@@ -32,12 +25,23 @@ const tdStyle = {
 
 const MoveHistory = ({
   moveHistory,
-  playerColors,
   creatorStarts,
   handleViewMove,
   viewIndex,
   height,
+  menuTheme,
+  boardTheme,
+  isDarkModeOn,
 }) => {
+  const thStyle = {
+    position: "sticky",
+    top: "0px",
+    paddingTop: "0.15rem",
+    paddingBottom: "0.15rem",
+    borderRadius: "0",
+    backgroundColor: getColor(menuTheme, "container", isDarkModeOn),
+  };
+
   return (
     <div
       id={"movehistory"}
@@ -55,39 +59,31 @@ const MoveHistory = ({
       <Table centered style={{ width: "100%" }}>
         <thead>
           <tr>
-            <th className={thClassName} style={thStyle}>
-              Move
-            </th>
-            <th className={thClassName} style={thStyle}>
-              Actions
-            </th>
-            <th className={thClassName} style={thStyle}>
-              Distance
-            </th>
-            <th className={thClassName} style={thStyle}>
-              # Walls
-            </th>
+            <th style={thStyle}>Move</th>
+            <th style={thStyle}>Actions</th>
+            <th style={thStyle}>Distance</th>
+            <th style={thStyle}># Walls</th>
           </tr>
         </thead>
         <tbody>
           {moveHistory.map((move, i) => {
-            let color;
-            if (i === 0) color = undefined;
-            else {
-              if (creatorStarts) color = playerColors[(i + 1) % 2];
-              else color = playerColors[i % 2];
-              color += " lighten-2";
+            let bgColor;
+            if (i === 0) {
+              bgColor = getColor(menuTheme, `container`, isDarkModeOn);
+            } else if (viewIndex === i && i < moveHistory.length - 1) {
+              bgColor = getColor(boardTheme, `currentMove`, isDarkModeOn);
+            } else {
+              const playerIdx = 1 + ((i + (creatorStarts ? 1 : 0)) % 2);
+              bgColor = getColor(boardTheme, `move${playerIdx}`, isDarkModeOn);
             }
-            if (viewIndex === i && i < moveHistory.length - 1)
-              color = "amber darken-1";
             return (
               <tr
                 onClick={() => handleViewMove(i)}
                 style={{
                   cursor: "pointer",
+                  backgroundColor: bgColor,
                 }}
                 key={i}
-                className={color}
               >
                 <td style={tdStyle}>{i}</td>
                 <td style={tdStyle}>{moveToString(move)}</td>

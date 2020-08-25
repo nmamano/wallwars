@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 import IconButton from "./IconButton";
 import showToastNotification from "./showToastNotification";
+import { getColor } from "./colorThemes";
 
 function Header({
   context, //Player, Spectator, or Lobby
@@ -13,8 +14,10 @@ function Header({
   joinCode,
   handleLeaveGame,
   isLargeScreen,
+  menuTheme,
   isDarkModeOn,
   handleToggleDarkMode,
+  handleToggleTheme,
 }) {
   let mainText;
   if (context === "Lobby") {
@@ -44,14 +47,11 @@ function Header({
       </span>
     );
   }
-
-  const color = isDarkModeOn ? "red darken-4" : "red lighten-1";
   const padding = isLargeScreen ? 20 : 11;
-
+  const buttonCol = getColor(menuTheme, "headerButton", isDarkModeOn);
   return (
     <div>
       <div
-        className={color}
         style={{
           height: "50px",
           display: "grid",
@@ -59,6 +59,7 @@ function Header({
           gridTemplateColumns: "auto auto",
           justifyContent: "space-between",
           alignItems: "center",
+          backgroundColor: getColor(menuTheme, "header", isDarkModeOn),
         }}
       >
         <div
@@ -74,27 +75,42 @@ function Header({
             height: "auto",
             display: "grid",
             padding: "5px",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: `repeat(${isLargeScreen ? 4 : 3}, 1fr)`,
             gridTemplateRows: `auto`,
             columnGap: "5px",
             rowGap: "5px",
             marginRight: isLargeScreen ? "15px" : "5px",
           }}
         >
+          {isLargeScreen && (
+            <IconButton
+              icon={"color_lens"}
+              tooltip={"Change theme"}
+              onClick={handleToggleTheme}
+              bgColor={buttonCol}
+              padding={padding}
+              menuTheme={menuTheme}
+              isDarkModeOn={isDarkModeOn}
+            />
+          )}
           <IconButton
             icon={isDarkModeOn ? "brightness_2" : "brightness_4"}
             tooltip={isDarkModeOn ? "Turn off dark mode" : "Turn on dark mode"}
             onClick={handleToggleDarkMode}
-            bgColor="red darken-1"
+            bgColor={buttonCol}
             padding={padding}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
           />
           <IconButton
             icon="help"
             tooltip="Help"
             modalTitle="Help"
             modalBody={helpText}
-            bgColor="red darken-1"
+            bgColor={buttonCol}
             padding={padding}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
           />
           {context === "Lobby" && (
             <IconButton
@@ -102,8 +118,10 @@ function Header({
               tooltip="About"
               modalTitle="About"
               modalBody={aboutText}
-              bgColor="red darken-1"
+              bgColor={buttonCol}
               padding={padding}
+              menuTheme={menuTheme}
+              isDarkModeOn={isDarkModeOn}
             />
           )}
           {context !== "Lobby" && (
@@ -111,8 +129,10 @@ function Header({
               icon="home"
               tooltip="Leave game"
               onClick={handleLeaveGame}
-              bgColor="red darken-1"
+              bgColor={buttonCol}
               padding={padding}
+              menuTheme={menuTheme}
+              isDarkModeOn={isDarkModeOn}
             />
           )}
         </div>

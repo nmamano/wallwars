@@ -1,7 +1,9 @@
 import React from "react";
+
 import MoveHistory from "./MoveHistory";
 import IconButton from "./../shared/IconButton";
 import showToastNotification from "../shared/showToastNotification";
+import { getColor } from "../shared/colorThemes";
 
 const GameControlPanel = ({
   lifeCycleStage,
@@ -10,7 +12,6 @@ const GameControlPanel = ({
   handleRequestTakeback,
   handleGiveExtraTime,
   moveHistory,
-  playerColors,
   clientRole,
   creatorStarts,
   handleViewMove,
@@ -28,6 +29,9 @@ const GameControlPanel = ({
   zoomLevel,
   boardHeight,
   isOpponentPresent,
+  menuTheme,
+  boardTheme,
+  isDarkModeOn,
 }) => {
   const padding = 5;
   const gapHeight = 5;
@@ -44,8 +48,8 @@ const GameControlPanel = ({
 
   return (
     <div
-      className="teal darken-2"
       style={{
+        backgroundColor: getColor(menuTheme, "container", isDarkModeOn),
         width: "100%",
         height: "auto",
         display: "grid",
@@ -65,6 +69,8 @@ const GameControlPanel = ({
         modalConfirmButtonText={"Resign"}
         onClick={handleResign}
         disabled={isSpectator || lifeCycleStage !== 3}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
       <IconButton
         icon={"local_florist"}
@@ -74,6 +80,8 @@ const GameControlPanel = ({
         modalConfirmButtonText={"Offer draw"}
         onClick={handleOfferDraw}
         disabled={isSpectator || !isOpponentPresent || lifeCycleStage !== 3}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
       <IconButton
         icon={"replay"}
@@ -86,6 +94,8 @@ const GameControlPanel = ({
           handleRequestTakeback();
         }}
         disabled={isSpectator || !isOpponentPresent || !takebackEnabled}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
       <IconButton
         icon={"add_alarm"}
@@ -95,36 +105,48 @@ const GameControlPanel = ({
           handleGiveExtraTime();
         }}
         disabled={isSpectator || lifeCycleStage !== 3}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
       <div style={{ gridColumnStart: "1", gridColumnEnd: "5" }}>
         <MoveHistory
           moveHistory={moveHistory}
-          playerColors={playerColors}
           creatorStarts={creatorStarts}
           handleViewMove={handleViewMove}
           viewIndex={viewIndex}
           height={moveHistoryHeight}
+          menuTheme={menuTheme}
+          boardTheme={boardTheme}
+          isDarkModeOn={isDarkModeOn}
         />
       </div>
       <IconButton
         icon={"fast_rewind"}
         onClick={handleSeeFirstMove}
         disabled={lifeCycleStage <= 1 || viewIndex === 0}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
       <IconButton
         icon={"navigate_before"}
         onClick={handleSeePreviousMove}
         disabled={lifeCycleStage <= 1 || viewIndex === 0}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
       <IconButton
         icon={"navigate_next"}
         onClick={handleSeeNextMove}
         disabled={lifeCycleStage <= 1 || viewIndex === turnCount}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
       <IconButton
         icon={"fast_forward"}
         onClick={handleSeeLastMove}
         disabled={lifeCycleStage <= 1 || viewIndex === turnCount}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
       <IconButton
         icon={isVolumeOn ? "volume_up" : "volume_off"}
@@ -133,23 +155,31 @@ const GameControlPanel = ({
         }
         onClick={handleToggleVolume}
         disabled={isSpectator}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
       <IconButton
         icon={"zoom_out"}
         tooltip={"Decrease board size"}
         onClick={handleDecreaseBoardSize}
         disabled={zoomLevel === 0}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
       <IconButton
         icon={"zoom_in"}
         tooltip={"Increase board size"}
         onClick={handleIncreaseBoardSize}
         disabled={zoomLevel === 10}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
       <IconButton
         icon="home"
-        tooltip="Leave game"
+        tooltip="Return to lobby"
         onClick={handleLeaveGame}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
       />
     </div>
   );

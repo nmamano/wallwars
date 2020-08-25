@@ -1,6 +1,8 @@
 import React from "react";
 import { Button, Modal } from "react-materialize";
 
+import { getColor } from "./colorThemes";
+
 const Dialog = ({
   title,
   body,
@@ -8,7 +10,10 @@ const Dialog = ({
   rejectButtonText, //defaults to Cancel
   isOpen,
   callback, //callback function will receive true or false
+  menuTheme,
+  isDarkModeOn,
 }) => {
+  const buttonCol = getColor(menuTheme, "button", isDarkModeOn);
   return (
     <Modal
       style={{ color: "black", backgroundColor: "white" }}
@@ -26,7 +31,7 @@ const Dialog = ({
       actions={[
         <Button
           style={{
-            backgroundColor: "#009688",
+            backgroundColor: buttonCol,
             color: "white",
             marginRight: "1rem",
           }}
@@ -42,7 +47,7 @@ const Dialog = ({
         </Button>,
         <Button
           style={{
-            backgroundColor: "#009688",
+            backgroundColor: buttonCol,
             color: "white",
           }}
           flat

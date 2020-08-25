@@ -32,10 +32,10 @@ place a wall in the same turn).
 - Clients ping the server periodically to detect connection issues early.
 - Responsive design for mobile (except that there are 437 cells, so it is hard to tap the right one in a small screen).
 - Optional sound effect for moves.
-- Optional dark theme.
+- Two color themes, each with a night mode.
 - Adjustable board scaling to fit different screen sizes.
 - Customizable tokens (the look of your piece)
-- Settings are stored in cookies for convenience (username, time control, token image, dark mode, sound, and board scaling).
+- Settings are stored in cookies for convenience (username, time control, token image, color theme, night mode, ...).
 - Watch recent past games played by anyone.
 - Past games are chosen randomly to be showcased (auto-played) in the lobby.
 
@@ -44,7 +44,7 @@ place a wall in the same turn).
 - Create public games that anyone can see and join from the lobby without a join code.
 - List ongoing public games in the lobby and allow to spectate them in real time.
 - Offline/local game mode to be able to play with someone else on the same computer without connecting to the server.
-- Study session: mode where you can explore a game with more flexibility (e.g., you can branch off and return to the main move sequence). This mode will be online so you can invite other people to a study session with a join code. 
+- Study session: mode where you can explore a game with more flexibility (e.g., you can branch off and return to the main move sequence). This mode will be online so you can invite other people to a study session with a join code.
 - On mobile, place walls by sliding the finger between two ground cells (to require less precision).
 - If the server restarts (which Heroku does, from time to time), restore ongoing games behind the scenes by sending the game state from the clients to the server.
 - Visual highlight of the last move played on the board, to direct the attention of the players to the action (since walls can be placed anywhere, the move that was made may be not obvious. Currently, players can look at the last move in the move history to be sure).
@@ -66,4 +66,3 @@ place a wall in the same turn).
 ## License
 
 MIT
-

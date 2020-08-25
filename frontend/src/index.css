@@ -4,12 +4,16 @@
 
 html {
   font-family: sans-serif;
+  min-height: 100%;
 }
 
 body {
   margin: 0;
-  background-color: #009688;
+  background-color: #355393;
   color: white;
+  background-size: cover;
+  background-repeat: no-repeat;
+  min-height: 100%;
 }
 
 input,

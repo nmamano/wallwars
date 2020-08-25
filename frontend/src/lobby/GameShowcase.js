@@ -3,11 +3,13 @@ import React, { useEffect } from "react";
 import globalSettings from "../shared/globalSettings";
 import { useImmer } from "use-immer";
 import Board from "../game/Board";
-import { cellTypeByPos, emptyGrid } from "../gameLogic/mainLogic";
+import { cellTypeByPos, emptyGrid } from "../shared/gameLogicUtils";
 
 const GameShowcase = ({
   socket,
   isLargeScreen,
+  menuTheme,
+  boardTheme,
   isDarkModeOn,
   handleViewGame,
 }) => {
@@ -111,6 +113,8 @@ const GameShowcase = ({
           ? globalSettings.wallWidth
           : globalSettings.smallScreenWallWidth
       }
+      menuTheme={menuTheme}
+      boardTheme={boardTheme}
       isDarkModeOn={isDarkModeOn}
       tokens={state.game ? state.game.playerTokens : ["default", "default"]}
     />
