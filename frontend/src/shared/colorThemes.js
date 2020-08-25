@@ -42,6 +42,8 @@ const C = {
   customGray: "#d2d2d2",
   customGrayLighten1: "#eaeaea",
   customGrayDarken1: "#cccccc",
+  customGrayDarken3: "#454545",
+  customGrayDarken4: "#313131",
 
   //for a potential future board theme, unused atm
   chessSquareLight: "#f0d9b5",
@@ -75,21 +77,21 @@ const blueMenuTheme = {
 //different board themes can be combined with different main themes
 //but for now there is a single board theme
 const monochromeBoardTheme = {
-  ground: [C.customGray, "flip"],
-  emptyWall: [C.customGrayLighten1, "flip"],
-  pillar: [C.customGrayDarken1, "flip"],
+  ground: [C.customGray, C.customGrayDarken3],
+  emptyWall: [C.customGrayLighten1, C.customGrayDarken4],
+  pillar: [C.customGrayDarken1, C.customGrayDarken3],
   hoveredGround: ["#fbe4D6", "flip"],
   hoveredWall: ["#f1bfa0", "flip"],
-  player1: [C.red, "keep"],
-  player2: [C.indigo, "keep"],
+  player1: [C.red, C.redLighten1],
+  player2: [C.indigo, C.indigoLighten1],
   timer1: [C.redLighten1, "keep"],
   timer2: [C.indigoLighten1, "keep"],
   lowTime: [C.orangeLighten2, "keep"],
-  wall1: [C.red, C.redDarken3],
-  wall2: [C.indigo, C.indigoDarken3],
+  wall1: [C.red, C.redLighten1],
+  wall2: [C.indigo, C.indigoLighten1],
   goalBackground1: [C.redLighten4, C.redDarken2],
   goalBackground2: [C.indigoLighten4, C.indigoDarken2],
-  goalToken: [C.customGrayLighten1, "flip"],
+  goalToken: [C.customGrayLighten1, C.customGrayDarken4],
   ghost1: [C.redLighten4, C.redLighten4],
   ghost2: [C.indigoLighten4, C.indigoLighten4],
   ghostWall1: [C.redLighten3, C.redLighten2],

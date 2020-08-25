@@ -94,8 +94,10 @@ function Header({
             />
           )}
           <IconButton
-            icon={isDarkModeOn ? "brightness_2" : "brightness_4"}
-            tooltip={isDarkModeOn ? "Turn off dark mode" : "Turn on dark mode"}
+            icon={isDarkModeOn ? "wb_sunny" : "brightness_2"}
+            tooltip={
+              isDarkModeOn ? "Turn off night mode" : "Turn on night mode"
+            }
             onClick={handleToggleDarkMode}
             bgColor={buttonCol}
             padding={padding}

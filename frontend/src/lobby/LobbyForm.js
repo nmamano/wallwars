@@ -92,7 +92,9 @@ const LobbyForm = ({
     >
       <Row className="valign-wrapper">
         <Col className="center" s={4} m={4}>
-          <h5>{isLargeScreen ? "Your name:" : "Name:"}</h5>
+          <span style={{ fontSize: "23px" }}>
+            {isLargeScreen ? "Your name:" : "Name:"}
+          </span>
         </Col>
         <Col s={6} m={3}>
           <TextInput
@@ -120,7 +122,9 @@ const LobbyForm = ({
       </Row>
       <Row className="valign-wrapper">
         <Col className="center" s={4} m={4}>
-          <h5>{isLargeScreen ? "Your token:" : "Token:"}</h5>
+          <span style={{ fontSize: "23px" }}>
+            {isLargeScreen ? "Your token:" : "Token:"}
+          </span>
         </Col>
         <Col s={3} m={2} className="center">
           {token === "default" ? (
@@ -223,7 +227,7 @@ const LobbyForm = ({
             isDarkModeOn={isDarkModeOn}
           />
         </Col>
-        <Col s={2} m={1} style={{ paddingRight: "0" }}>
+        <Col s={2} m={2} style={{ paddingRight: "0" }}>
           <TextInput
             id="durationInput"
             label="Duration"
@@ -234,7 +238,7 @@ const LobbyForm = ({
         <Col s={1} m={1} style={{ paddingLeft: "0" }}>
           m
         </Col>
-        <Col s={2} m={1} style={{ paddingRight: "0" }}>
+        <Col s={2} m={2} style={{ paddingRight: "0" }}>
           <TextInput
             id="incrementInput"
             label="Increment"
@@ -245,7 +249,7 @@ const LobbyForm = ({
         <Col s={1} m={1} style={{ paddingLeft: "0" }}>
           s
         </Col>
-        <Col s={1} m={4}></Col>
+        <Col s={1} m={2}></Col>
       </Row>
       <Row className="valign-wrapper">
         <Col className="center" s={5} m={4}>
