@@ -551,7 +551,7 @@ const GamePage = ({
   useEffect(() => {
     const moveHistoryDiv = document.getElementById("movehistory");
     moveHistoryDiv.scrollTop = moveHistoryDiv.scrollHeight;
-  }, [state.moveHistory]);
+  }, [state.moveHistory.length]);
 
   const handleSeePreviousMove = () => handleViewMove(state.viewIndex - 1);
   const handleSeeNextMove = () => handleViewMove(state.viewIndex + 1);

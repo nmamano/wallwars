@@ -1,17 +1,20 @@
 # Context
 
+This file documents how the state changes when a player selects a ground or wall cell.
+
 In this game, each "move" consists of two "actions". There are two types of cells: 'ground' and 'wall' cells. Building a wall counts as one action. Taking one step to an adjacent ground cell also counts as one action. This means that, if the player clicks a cell at distance 2, that single click accounts for 2 actions.
 
-# Ghost moves
-
 Players can do (and undo) one action applied individually in their local view, without it being sent to the server. This is called a "ghost action", because the other client does not see it. Once the player adds a second action, the two actions together are applied to the board as a full move and also sent to the other client through the server.
+
+To save time, during the opponent's turn, players can set their actions (full actions or ghost actions) for their next turn. These are called "premoves".
 
 ## Terminology
 
 - Cell: a position in the board. There are Ground and Wall cells.
 - Action: a ground cell at distance 1 from the player or an empty wall.
-- Full move (or just move): a set of two actions played by the player.
-- Ghost action: a single action selected by the player
+- Full move (or just move): a set of two actions actually played by the player and received by the opponent.
+- Ghost action: a single action selected by the player during their turn.
+- Premoves: one or two actions selected by the player during the opponent's turn.
 
 ## Case analysis
 
@@ -53,8 +56,6 @@ Otherwise, here is what should happen, based on the ghost state and where the pl
 - a cell G2 at distance 2 -> full move: {G2}
 
 # Premoves
-
-During the opponent's turn, you can prepare actions that you want to make in your next turn without spending any time. These are called premoves.
 
 There can be 0 to 2 premove actions. Once the opponent moves, the game behaves as if the client inputted the premove actions during their turn. That means they can become an actual move, a ghost action, or do nothing if not legal.
 
