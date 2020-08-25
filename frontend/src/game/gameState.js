@@ -660,6 +660,8 @@ const closeDialogs = (draftState) => {
   draftState.showRematchDialog = false;
   draftState.showDrawDialog = false;
   draftState.showTakebackDialog = false;
+  draftState.ghostAction = null;
+  draftState.premoveActions = [];
 };
 
 export const applyDrawGame = (draftState, finishReason) => {
@@ -670,7 +672,6 @@ export const applyDrawGame = (draftState, finishReason) => {
   draftState.gameWins[0] += 0.5;
   draftState.gameWins[1] += 0.5;
   draftState.finishReason = finishReason;
-  draftState.ghostAction = null;
   closeDialogs(draftState);
 };
 
@@ -680,7 +681,6 @@ export const applyResignGame = (draftState, resignerIsCreator) => {
   draftState.winner = resignerIsCreator ? "joiner" : "creator";
   draftState.gameWins[resignerIsCreator ? 1 : 0] += 1;
   draftState.finishReason = "resign";
-  draftState.ghostAction = null;
   closeDialogs(draftState);
 };
 
@@ -690,7 +690,6 @@ export const applyAbandonGame = (draftState, abandonerIsCreator) => {
   draftState.winner = abandonerIsCreator ? "joiner" : "creator";
   draftState.gameWins[abandonerIsCreator ? 1 : 0] += 1;
   draftState.finishReason = "abandon";
-  draftState.ghostAction = null;
   closeDialogs(draftState);
 };
 export const applyTakeback = (draftState, requesterIsCreator) => {
@@ -700,11 +699,11 @@ export const applyTakeback = (draftState, requesterIsCreator) => {
   const requesterToMove = requesterIsCreator === creatorToMove(draftState);
   const numMovesToUndo = requesterToMove ? 2 : 1;
   for (let k = 0; k < numMovesToUndo; k++) draftState.moveHistory.pop();
-  draftState.ghostAction = null;
   const tc = turnCount(draftState);
   draftState.viewIndex = tc;
   if (tc === 0) draftState.lifeCycleStage = 1;
   else if (tc === 1) draftState.lifeCycleStage = 2;
+  closeDialogs(draftState);
 };
 
 export const applySetupRematch = (draftState) => {
@@ -732,8 +731,6 @@ export const applySetupRematch = (draftState) => {
   draftState.finishReason = "";
   draftState.lifeCycleStage = 1;
   draftState.viewIndex = 0;
-  draftState.ghostAction = null;
-  draftState.premoveActions = [];
   closeDialogs(draftState);
 };
 
@@ -748,10 +745,9 @@ const applyWonOnTime = (draftState, winnerIndex) => {
   draftState.gameWins[winnerIndex] += 1;
   draftState.finishReason = "time";
   draftState.lifeCycleStage = 4;
-  draftState.ghostAction = null;
-  draftState.premoveActions = [];
   closeDialogs(draftState);
 };
+
 export const applyClockTick = (draftState) => {
   //clocks only run after each player have made the first move,
   //and the game has not ended

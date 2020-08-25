@@ -16,7 +16,7 @@ const Dialog = ({
   const buttonCol = getColor(menuTheme, "button", isDarkModeOn);
   return (
     <Modal
-      style={{ color: "black", backgroundColor: "white" }}
+      style={{ color: "black", backgroundColor: "#e0e0e0" }}
       header={title}
       open={isOpen}
       options={{

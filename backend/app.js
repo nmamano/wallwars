@@ -123,7 +123,7 @@ io.on(M.connectionMsg, (socket) => {
       if (playerToMoveHasTimeLeft(game)) {
         const winner =
           clientCookieId === game.cookieIds[0] ? "joiner" : "creator";
-        setResult(game, winner, "abandonment");
+        setResult(game, winner, "abandon");
       } else {
         const winner = creatorToMove(game) ? "joiner" : "creator";
         setResult(game, winner, "time");

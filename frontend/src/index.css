@@ -30,3 +30,11 @@ label.active {
   color: white;
   font-size: 16px;
 }
+
+div.Toastify__toast-body {
+  color: #101010;
+}
+div.modal-content,
+div.modal-footer {
+  background-color: #e0e0e0 !important;
+}
