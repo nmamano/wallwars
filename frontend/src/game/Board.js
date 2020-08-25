@@ -146,15 +146,26 @@ const Board = ({
               borderRight: pos.c === dims.w - 1 ? borderStyle : "",
             }}
           >
-            {(p1Here || p2Here) && (
+            {p1Here && (
               <i
                 className={`material-icons`}
                 style={{
                   fontSize: `${tokenSize}px`,
-                  color: p1Here ? color1 : color2,
+                  color: color1,
                 }}
               >
-                {p1Here ? token1 : token2}
+                {token1}
+              </i>
+            )}
+            {p2Here && (
+              <i
+                className={`material-icons`}
+                style={{
+                  fontSize: `${tokenSize}px`,
+                  color: color2,
+                }}
+              >
+                {token2}
               </i>
             )}
             {(goal1Here || goal2Here) && !ghostOrPlayerHere && (

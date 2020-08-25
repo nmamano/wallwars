@@ -544,6 +544,7 @@ const GamePage = ({
       if (i > turnCount(draftState)) return;
       draftState.viewIndex = i;
       draftState.ghostAction = null;
+      draftState.premoveActions = [];
     });
   };
 

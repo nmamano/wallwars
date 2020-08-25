@@ -99,7 +99,7 @@ const boardMonochromeTheme = {
   //for the move history
   move1: [C.redLighten2, "keep"],
   move2: [C.indigoLighten2, "keep"],
-  currentMove: [C.amberDarken1],
+  currentMove: [C.amberDarken1, "keep"],
 };
 
 const getThemeColor = (theme, elem, isDarkModeOn) => {

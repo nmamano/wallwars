@@ -68,10 +68,10 @@ const MoveHistory = ({
         <tbody>
           {moveHistory.map((move, i) => {
             let bgColor;
-            if (i === 0) {
-              bgColor = getColor(menuTheme, `container`, isDarkModeOn);
-            } else if (viewIndex === i && i < moveHistory.length - 1) {
+            if (viewIndex === i && i < moveHistory.length - 1) {
               bgColor = getColor(boardTheme, `currentMove`, isDarkModeOn);
+            } else if (i === 0) {
+              bgColor = getColor(menuTheme, `container`, isDarkModeOn);
             } else {
               const playerIdx = 1 + ((i + (creatorStarts ? 1 : 0)) % 2);
               bgColor = getColor(boardTheme, `move${playerIdx}`, isDarkModeOn);
