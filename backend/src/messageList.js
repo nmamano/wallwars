@@ -11,6 +11,7 @@ module.exports = {
   joinGameMsg: "joinGame",
   gameJoinedMsg: "gameJoined",
   gameJoinFailedMsg: "gameJoinFailed",
+  joinSelfGameFailedMsg: "joinSelfGameFailed",
   joinerJoinedMsg: "joinerJoined",
   moveMsg: "move",
   movedMsg: "moved",

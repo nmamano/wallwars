@@ -162,12 +162,16 @@ io.on(M.connectionMsg, (socket) => {
       const ongoingGame = GM.getOngoingGameByCookieId(cookieId);
       if (ongoingGame) dealWithLingeringGame(ongoingGame, cookieId);
     }
-    GM.removeGamesByCookieId(cookieId); //ensure there's no other game for this client
     const game = GM.unjoinedGame(joinCode);
     if (!game) {
       emitMessage(M.gameJoinFailedMsg);
       return;
     }
+    if (game.cookieIds[0] === cookieId) {
+      emitMessage(M.joinSelfGameFailedMsg);
+      return;
+    }
+    GM.removeGamesByCookieId(cookieId); //ensure there's no other game for this client
     if (!cookieId || cookieId === "undefined") cookieId = genRandomCookieId();
     clientCookieId = cookieId;
     addJoiner(game, socket.id, name, token, cookieId);

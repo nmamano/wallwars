@@ -128,10 +128,17 @@ const GamePage = ({
       showToastNotification("Couldn't find the game anymore.", 5000);
       returnToLobby();
     });
-    socket.once("gameJoinFailed", () => {
+    socket.on("gameJoinFailed", () => {
       showToastNotification(
         "There is no game with this code waiting for someone to join.",
         5000
+      );
+      returnToLobby();
+    });
+    socket.on("joinSelfGameFailed", () => {
+      showToastNotification(
+        "You cannot play against yourself. To play as both sides from the same browser, play one of the sides from an Incognito window.",
+        12000
       );
       returnToLobby();
     });
