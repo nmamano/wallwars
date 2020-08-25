@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMediaQuery } from "react-responsive";
 
 import { cellTypeByPos, posEq } from "../shared/gameLogicUtils";
 import { getColor } from "../shared/colorThemes";
@@ -19,6 +20,8 @@ const Board = ({
   isDarkModeOn,
   tokens,
 }) => {
+  const canHover = useMediaQuery({ query: "(hover: none)" });
+
   //short-hand for getColor
   const getCol = (elem) => getColor(menuTheme, elem, isDarkModeOn);
   const getBoardCol = (elem) => getColor(boardTheme, elem, isDarkModeOn);
@@ -99,7 +102,7 @@ const Board = ({
         if (cellType === "Ground") {
           if (goal1Here || goal2Here) {
             color = getBoardCol(`goalBackground${goal1Here ? "1" : "2"}`);
-          } else if (hoveredCell && posEq(pos, hoveredCell)) {
+          } else if (canHover && hoveredCell && posEq(pos, hoveredCell)) {
             color = getBoardCol("hoveredGround");
           } else {
             color = getBoardCol("ground");
@@ -112,7 +115,7 @@ const Board = ({
             color = getBoardCol(`ghostWall${creatorToMove ? "1" : "2"}`);
           } else if (premoveHere) {
             color = getBoardCol(`ghostWall${!creatorToMove ? "1" : "2"}`);
-          } else if (hoveredCell && posEq(pos, hoveredCell)) {
+          } else if (canHover && hoveredCell && posEq(pos, hoveredCell)) {
             color = getBoardCol("hoveredWall");
           } else {
             color = getBoardCol("emptyWall");
