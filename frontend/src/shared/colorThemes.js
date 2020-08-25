@@ -48,7 +48,7 @@ const C = {
   chessSquareDark: "#b58863",
 };
 
-const greenTheme = {
+const greenMenuTheme = {
   background: [C.teal, C.tealDarken4],
   backgroundImage: ["none", "none"],
   container: [C.tealDarken2, "keep"],
@@ -60,7 +60,7 @@ const greenTheme = {
   recentGamesAlternate: [C.redLighten1, C.redDarken1],
 };
 
-const blueTheme = {
+const blueMenuTheme = {
   background: [C.customBlueDarken3, "keep"],
   backgroundImage: ["blueBgLight", "blueBgDark"],
   container: [C.customBlueDarken3, C.customBlueDarken2],
@@ -74,7 +74,7 @@ const blueTheme = {
 
 //different board themes can be combined with different main themes
 //but for now there is a single board theme
-const boardMonochromeTheme = {
+const monochromeBoardTheme = {
   ground: [C.customGray, "flip"],
   emptyWall: [C.customGrayLighten1, "flip"],
   pillar: [C.customGrayDarken1, "flip"],
@@ -113,11 +113,11 @@ const getThemeColor = (theme, elem, isDarkModeOn) => {
 
 export const getColor = (themeName, elem, isDarkModeOn) => {
   if (themeName === "green") {
-    return getThemeColor(greenTheme, elem, isDarkModeOn);
+    return getThemeColor(greenMenuTheme, elem, isDarkModeOn);
   } else if (themeName === "blue") {
-    return getThemeColor(blueTheme, elem, isDarkModeOn);
-  } else if (themeName === "boardMonochrome") {
-    return getThemeColor(boardMonochromeTheme, elem, isDarkModeOn);
+    return getThemeColor(blueMenuTheme, elem, isDarkModeOn);
+  } else if (themeName === "monochromeBoard") {
+    return getThemeColor(monochromeBoardTheme, elem, isDarkModeOn);
   }
   console.error("unknown theme " + themeName);
   return "#00FF00";

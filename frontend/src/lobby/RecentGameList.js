@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Table } from "react-materialize";
 import cloneDeep from "lodash.clonedeep";
 
@@ -18,7 +18,14 @@ const winnerToString = (serverGame) => {
   else if (serverGame.winner === "draw") return "=";
   else return ">";
 };
-const finalDistsToString = (serverGame) => {
+
+const cachedFinalDists = new Map();
+const finalDists = (serverGame) => {
+  //limit the size so old games don't accrue indefinitely
+  if (cachedFinalDists.size > 1000) cachedFinalDists.clear();
+  if (cachedFinalDists.has(serverGame._id))
+    return cachedFinalDists.get(serverGame._id);
+
   const grid = emptyGrid(globalSettings.boardDims);
   const playerPos = cloneDeep(globalSettings.initialPlayerPos);
   let idxToMove = serverGame.creatorStarts ? 0 : 1;
@@ -39,7 +46,8 @@ const finalDistsToString = (serverGame) => {
     distance(grid, playerPos[0], g1),
     distance(grid, playerPos[1], g2),
   ];
-  return d1 + " - " + d2;
+  cachedFinalDists.set(serverGame._id, [d1, d2]);
+  return [d1, d2];
 };
 
 function prettyDate(date, longFormat) {
@@ -62,15 +70,12 @@ function prettyDate(date, longFormat) {
 }
 
 const RecentGameList = ({
-  socket,
+  recentGames,
   isLargeScreen,
   menuTheme,
   isDarkModeOn,
   handleViewGame,
 }) => {
-  const [recentGames, setRecentGames] = useState([]);
-  const [needToRequestGames, setNeedToRequestGames] = useState(true);
-
   const thStyle = {
     position: "sticky",
     top: "0px",
@@ -96,18 +101,6 @@ const RecentGameList = ({
     "container",
     isDarkModeOn
   )}`;
-
-  useEffect(() => {
-    if (!needToRequestGames) return;
-    setNeedToRequestGames(false);
-    socket.emit("getRecentGames");
-  }, [socket, needToRequestGames]);
-
-  useEffect(() => {
-    socket.on("requestedRecentGames", ({ games }) => {
-      setRecentGames(games);
-    });
-  }, [socket, needToRequestGames]);
 
   if (isLargeScreen) {
     return (
@@ -141,6 +134,7 @@ const RecentGameList = ({
             {recentGames &&
               recentGames.map((game, i) => {
                 const sty = i % 2 ? tdStyle : tdStyle2;
+                const [d1, d2] = finalDists(game);
                 return (
                   <tr
                     onClick={() => handleViewGame(game._id)}
@@ -153,7 +147,7 @@ const RecentGameList = ({
                     <td style={sty}>{game.playerNames[0]}</td>
                     <td style={sty}>{winnerToString(game)}</td>
                     <td style={sty}>{game.playerNames[1]}</td>
-                    <td style={sty}>{finalDistsToString(game)}</td>
+                    <td style={sty}>{d1 + " - " + d2}</td>
                     <td style={sty}>{game.moveHistory.length}</td>
                     <td style={sty}>{prettyDate(game.startDate, true)}</td>
                   </tr>

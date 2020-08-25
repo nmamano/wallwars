@@ -38,7 +38,7 @@ const LobbyPage = ({ socket }) => {
     "isDarkModeOn",
     "menuTheme",
   ]);
-  const boardTheme = "boardMonochrome";
+  const boardTheme = "monochromeBoard";
 
   const [playerName, setPlayerName] = useState(
     cookies.playerName || randPlayerName()
@@ -55,7 +55,8 @@ const LobbyPage = ({ socket }) => {
   const [menuTheme, setMenuTheme] = useState(
     cookies.menuTheme && cookies.menuTheme === "green" ? "green" : "blue"
   );
-
+  const [recentGames, setRecentGames] = useState([]);
+  const [needToRequestGames, setNeedToRequestGames] = useState(true);
   const [hasOngoingGame, setHasOngoingGame] = useState(false);
 
   const handlePlayerName = (props) => {
@@ -145,6 +146,7 @@ const LobbyPage = ({ socket }) => {
   const returnToLobby = () => {
     setIsGamePageOpen(false);
     setHasOngoingGame(false);
+    setNeedToRequestGames(true);
     setClientParams(null);
     setJoinCode("");
   };
@@ -174,7 +176,7 @@ const LobbyPage = ({ socket }) => {
     });
   });
 
-  //effect to set the background color of the entire site based on dark mode
+  //effect to set the background of the entire site based on theme and dark mode
   useEffect(() => {
     document.body.style.backgroundColor = getColor(
       menuTheme,
@@ -189,6 +191,19 @@ const LobbyPage = ({ socket }) => {
       document.body.style.backgroundImage = "none";
     }
   }, [isDarkModeOn, menuTheme]);
+
+  //logic to get list of recent games
+  useEffect(() => {
+    if (!needToRequestGames) return;
+    setNeedToRequestGames(false);
+    socket.emit("getRecentGames");
+  }, [socket, needToRequestGames]);
+
+  useEffect(() => {
+    socket.on("requestedRecentGames", ({ games }) => {
+      setRecentGames(games);
+    });
+  }, [socket, needToRequestGames]);
 
   //preparing props for layout (duplicated with GamePage)
   const isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
@@ -339,7 +354,7 @@ const LobbyPage = ({ socket }) => {
             </div>
             <div style={{ gridArea: "recentGameList" }}>
               <RecentGameList
-                socket={socket}
+                recentGames={recentGames}
                 isLargeScreen={isLargeScreen}
                 menuTheme={menuTheme}
                 isDarkModeOn={isDarkModeOn}
