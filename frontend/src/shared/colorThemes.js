@@ -36,6 +36,12 @@ const C = {
   amberDarken1: "#ffb300",
   amberDarken2: "#ffa000",
   orangeLighten2: "#ffb74d",
+  yellowLighten5: "#fffde7",
+  yellowLighten4: "#fff9c4",
+  yellowLighten2: "#fff176",
+  yellowDarken1: "#fdd835",
+  yellowDarken2: "#fbc02d",
+  yellowDarken4: "#f57f17",
 
   //custom colors
   customBlueLighten1: "#6583C3",
@@ -49,7 +55,8 @@ const C = {
   customGrayDarken3: "#454545",
   customGrayDarken4: "#313131",
   lightOrange: "#fbe4D6",
-
+  customLightYellow: "rgb(240,240,170)",
+  customDarkYellow: "#656505",
   //for a potential future board theme, unused atm
   chessSquareLight: "#f0d9b5",
   chessSquareDark: "#b58863",
@@ -65,7 +72,7 @@ const greenMenuTheme = {
   headerButton: [C.redDarken1, "keep"],
   recentGamesBackground: [C.redLighten2, C.redDarken2],
   recentGamesAlternate: [C.redLighten1, C.redDarken1],
-  // hoveredGame: [C.amber, "keep"] (this is in hoverHighlight.module.css)
+  // hoveredGame: [C.amberDarken1, "keep"] (this is in hoverHighlight.module.css)
 };
 
 const blueMenuTheme = {
@@ -103,6 +110,9 @@ const monochromeBoardTheme = {
   ghost2: [C.indigoLighten4, C.indigoLighten4],
   ghostWall1: [C.redLighten3, C.redLighten2],
   ghostWall2: [C.indigoLighten3, C.indigoLighten4],
+  traceGround: [C.customLightYellow, C.customDarkYellow],
+  lastMoveTokenBorder: [C.customLightYellow, "yellow"],
+  lastMoveWallBorder: [C.customLightYellow, C.yellowDarken1],
   coord: [C.white, C.black],
 
   //for the move history

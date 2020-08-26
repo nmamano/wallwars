@@ -28,6 +28,9 @@ export const turnCount = (state) => state.moveHistory.length - 1;
 export const creatorToMove = (state) =>
   turnCount(state) % 2 === (state.creatorStarts ? 0 : 1);
 
+export const creatorToMoveAtIndex = (state) =>
+  state.viewIndex % 2 === (state.creatorStarts ? 0 : 1);
+
 export const indexToMove = (state) => (creatorToMove(state) ? 0 : 1);
 
 //one of 'None', 'Ground', 'Wall'
@@ -35,6 +38,28 @@ export const ghostType = (pos) => (pos === null ? "None" : cellTypeByPos(pos));
 
 export const isOpponentPresent = (state) => {
   return state.arePlayersPresent[state.clientRole === "Creator" ? 1 : 0];
+};
+
+//the latest position of the player, if they moved in the last turn
+//(based on the current move index, not the last move played)
+export const getTracePos = (state) => {
+  const creatorStarts = state.creatorStarts;
+  const playerPos = state.moveHistory[state.viewIndex].playerPos;
+  let tracePos;
+  if (state.viewIndex === 0) tracePos = null;
+  else if (state.viewIndex === 1)
+    tracePos = globalSettings.initialPlayerPos[creatorStarts ? 0 : 1];
+  else if (state.viewIndex === 2)
+    tracePos = globalSettings.initialPlayerPos[creatorStarts ? 1 : 0];
+  else {
+    const prevPos = state.moveHistory[state.viewIndex - 2].playerPos;
+    if (creatorToMoveAtIndex(state)) {
+      if (!posEq(prevPos[1], playerPos[1])) tracePos = prevPos[1];
+    } else {
+      if (!posEq(prevPos[0], playerPos[0])) tracePos = prevPos[0];
+    }
+  }
+  return tracePos;
 };
 
 //when the player selects a cell, it can trigger a different

@@ -5,6 +5,10 @@ import { useImmer } from "use-immer";
 import Board from "../game/Board";
 import { cellTypeByPos, emptyGrid } from "../shared/gameLogicUtils";
 
+//not the same state as in GamePage. This is based on the server's game representation
+const creatorToMove = (state) =>
+  state.nextMove % 2 === (state.game.creatorStarts ? 0 : 1);
+
 const GameShowcase = ({
   socket,
   isLargeScreen,
@@ -14,13 +18,14 @@ const GameShowcase = ({
   handleViewGame,
 }) => {
   const [state, updateState] = useImmer({
+    needToRequestGame: true,
+    // when a game stops playing, animation will wait 3 cycles to start a new game
+    finishedGameWait: 3,
     game: null,
     nextMove: 0,
     grid: emptyGrid(globalSettings.boardDims),
     playerPos: globalSettings.initialPlayerPos,
-    needToRequestGame: true,
-    // when a game stops playing, animation will wait 3 cycles to start a new game
-    finishedGameWait: 3,
+    prevPos: [null, null],
   });
 
   //timer interval to play a move every 3 seconds
@@ -44,9 +49,13 @@ const GameShowcase = ({
         updateState((draftState) => {
           if (draftState.finishedGameWait > 0) draftState.finishedGameWait--;
           else {
-            draftState.game = null;
             draftState.needToRequestGame = true;
             draftState.finishedGameWait = 3;
+            draftState.game = null;
+            draftState.nextMove = 0;
+            draftState.grid = emptyGrid(globalSettings.boardDims);
+            draftState.playerPos = globalSettings.initialPlayerPos;
+            draftState.prevPos = [null, null];
           }
         });
         return;
@@ -60,14 +69,13 @@ const GameShowcase = ({
         )
           return;
 
-        const creatorToMove =
-          draftState.nextMove % 2 === (draftState.game.creatorStarts ? 0 : 1);
-        const idxToMove = creatorToMove ? 0 : 1;
+        const idxToMove = creatorToMove(draftState) ? 0 : 1;
         const actions =
           draftState.game.moveHistory[draftState.nextMove].actions;
         for (let k = 0; k < actions.length; k++) {
           const pos = actions[k];
           if (cellTypeByPos(pos) === "Ground") {
+            draftState.prevPos[idxToMove] = draftState.playerPos[idxToMove];
             draftState.playerPos[idxToMove] = pos;
           } else {
             draftState.grid[pos.r][pos.c] = idxToMove + 1;
@@ -84,35 +92,47 @@ const GameShowcase = ({
     socket.on("requestedRandomGame", ({ game }) => {
       updateState((draftState) => {
         draftState.game = game;
-        draftState.nextMove = 0;
-        draftState.grid = emptyGrid(globalSettings.boardDims);
-        draftState.playerPos = globalSettings.initialPlayerPos;
       });
     });
   }, [socket, updateState, state.needToRequestGame]);
 
+  let lastActions = [];
+  if (state.nextMove > 0)
+    lastActions = state.game.moveHistory[state.nextMove - 1].actions;
+
+  const groundSize = isLargeScreen
+    ? globalSettings.groundSize
+    : globalSettings.smallScreenGroundSize;
+  const wallWidth = isLargeScreen
+    ? globalSettings.wallWidth
+    : globalSettings.smallScreenWallWidth;
+
+  const cToMove = state.game && creatorToMove(state);
+  let tracePos = null;
+  if (
+    lastActions.length === 1 ||
+    (lastActions.length === 2 &&
+      (cellTypeByPos(lastActions[0]) === "Ground" ||
+        cellTypeByPos(lastActions[1]) === "Ground"))
+  )
+    tracePos = cToMove ? state.prevPos[1] : state.prevPos[0];
+
   return (
     <Board
-      creatorToMove={false}
       playerColors={globalSettings.playerColors}
       grid={state.grid}
       playerPos={state.playerPos}
       goals={globalSettings.goals}
       ghostAction={null}
+      creatorToMove={cToMove}
       premoveActions={[]}
+      lastActions={lastActions}
+      tracePos={tracePos}
       handleClick={() => {
         if (state.game) handleViewGame(state.game._id);
       }}
-      groundSize={
-        isLargeScreen
-          ? globalSettings.groundSize
-          : globalSettings.smallScreenGroundSize
-      }
-      wallWidth={
-        isLargeScreen
-          ? globalSettings.wallWidth
-          : globalSettings.smallScreenWallWidth
-      }
+      groundSize={groundSize}
+      wallWidth={wallWidth}
       menuTheme={menuTheme}
       boardTheme={boardTheme}
       isDarkModeOn={isDarkModeOn}

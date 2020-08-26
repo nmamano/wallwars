@@ -9,6 +9,8 @@ const Board = ({
   grid,
   ghostAction,
   premoveActions,
+  lastActions,
+  tracePos,
   playerPos: [p1, p2],
   goals: [g1, g2],
   handleClick,
@@ -51,6 +53,13 @@ const Board = ({
   const tokenSize = 0.8 * groundSize;
   const coordColor = getBoardCol("coord");
 
+  const isOneOf = (pos, actions) => {
+    // if (!actions) return false;
+    if (actions.length > 0 && actions[0] && posEq(pos, actions[0])) return true;
+    if (actions.length > 1 && actions[1] && posEq(pos, actions[1])) return true;
+    return false;
+  };
+
   return (
     <div
       style={{
@@ -66,30 +75,28 @@ const Board = ({
       }}
     >
       {allPos.map((pos) => {
-        const [p1Here, p2Here] = [posEq(pos, p1), posEq(pos, p2)];
+        const [player1Here, player2Here] = [posEq(pos, p1), posEq(pos, p2)];
         const [goal1Here, goal2Here] = [posEq(pos, g1), posEq(pos, g2)];
-        //ghosts are the partial moves that are only displayed locally
+        const playerHere = player1Here || player2Here;
+        const goalHere = goal1Here || goal2Here;
+        const ghostHere = isOneOf(pos, [ghostAction]);
+        const premoveHere = isOneOf(pos, premoveActions);
+        const traceHere = tracePos && posEq(pos, tracePos);
+        const lastMoveHere = isOneOf(pos, lastActions);
+        const shadowHere = ghostHere || premoveHere;
+        const anyIconHere = playerHere || goalHere || shadowHere;
 
-        const ghostHere = ghostAction !== null && posEq(ghostAction, pos);
-        const premoveHere =
-          (premoveActions.length > 0 && posEq(premoveActions[0], pos)) ||
-          (premoveActions.length > 1 && posEq(premoveActions[1], pos));
-
-        //premoves are treated as ghost moves with respect to displaying them
-        const [p1GhostHere, p2GhostHere] = [
+        //premoves and ghost moves are displayed the same. We call
+        //the combination of both "shadow"
+        const [shadow1Here, shadow2Here] = [
           (ghostHere && creatorToMove) || (premoveHere && !creatorToMove),
           (ghostHere && !creatorToMove) || (premoveHere && creatorToMove),
         ];
-        const cellType = cellTypeByPos(pos);
+        const [lastMove1Here, lastMove2Here] = [
+          lastMoveHere && !creatorToMove,
+          lastMoveHere && creatorToMove,
+        ];
 
-        //add waves cosmetic effect when clicking a cell
-        let className = "";
-        if (cellType === "Ground") className += "waves-effect waves-light";
-        if (cellType === "Wall") className += "waves-effect waves-dark";
-
-        const ghostOrPlayerHere =
-          p1Here || p2Here || p1GhostHere || p2GhostHere;
-        const anyIconHere = ghostOrPlayerHere || goal1Here || goal2Here;
         const coordFits = groundSize > 27 && !anyIconHere;
         const letterCoordHere =
           coordFits && pos.r === dims.h - 1 && pos.c % 2 === 0;
@@ -97,12 +104,22 @@ const Board = ({
           coordFits && pos.c === dims.w - 1 && pos.r % 2 === 0;
         const coordHere = letterCoordHere || numberCoordHere;
 
+        const hoveredHere = canHover && hoveredCell && posEq(pos, hoveredCell);
+
+        //add waves cosmetic effect when clicking a cell
+        const cellType = cellTypeByPos(pos);
+        let className = "";
+        if (cellType === "Ground") className += "waves-effect waves-light";
+        if (cellType === "Wall") className += "waves-effect waves-dark";
+
         let color;
         if (cellType === "Ground") {
-          if (goal1Here || goal2Here) {
-            color = getBoardCol(`goalBackground${goal1Here ? "1" : "2"}`);
-          } else if (canHover && hoveredCell && posEq(pos, hoveredCell)) {
+          if (hoveredHere) {
             color = getBoardCol("hoveredGround");
+          } else if (traceHere) {
+            color = getBoardCol("traceGround");
+          } else if (goalHere) {
+            color = getBoardCol(`goalBackground${goal1Here ? "1" : "2"}`);
           } else {
             color = getBoardCol("ground");
           }
@@ -113,18 +130,19 @@ const Board = ({
           } else if (ghostHere) {
             color = getBoardCol(`ghostWall${creatorToMove ? "1" : "2"}`);
           } else if (premoveHere) {
-            color = getBoardCol(`ghostWall${!creatorToMove ? "1" : "2"}`);
-          } else if (canHover && hoveredCell && posEq(pos, hoveredCell)) {
+            color = getBoardCol(`ghostWall${creatorToMove ? "2" : "1"}`);
+          } else if (hoveredHere) {
             color = getBoardCol("hoveredWall");
           } else {
             color = getBoardCol("emptyWall");
           }
         } else color = getBoardCol("pillar");
 
-        let justifyContent = "center";
-        if (coordHere) justifyContent = letterCoordHere ? "start" : "flex-end";
-        let alignItems = "center";
-        if (coordHere) alignItems = letterCoordHere ? "flex-end" : "flex-start";
+        let [justifyContent, alignItems] = ["center", "center"];
+        if (coordHere) {
+          justifyContent = letterCoordHere ? "flex-start" : "flex-end";
+          alignItems = letterCoordHere ? "flex-end" : "flex-start";
+        }
         const style = {
           backgroundColor: color,
           display: "flex",
@@ -136,10 +154,19 @@ const Board = ({
           borderRight: pos.c === dims.w - 1 ? borderStyle : "",
         };
         if (cellType !== "Pillar") style.cursor = "pointer";
+        if (cellType === "Wall" && lastMoveHere)
+          style.border = `${isDarkModeOn ? "1" : "2"}px solid ${getBoardCol(
+            "lastMoveWallBorder"
+          )}`;
+
+        const lastMoveTextShadow = `0 0 4px ${getBoardCol(
+          "lastMoveTokenBorder"
+        )}`;
+
         return (
           <div
             className={className}
-            key={`cell_${pos.r}_${pos.c}`}
+            key={`${pos.r}_${pos.c}`}
             onClick={() => {
               if (cellType !== "Pillar" && handleClick !== null)
                 handleClick(pos);
@@ -148,29 +175,42 @@ const Board = ({
             onMouseLeave={handleMouseLeave}
             style={style}
           >
-            {p1Here && (
+            {player1Here && (
               <i
                 className={`material-icons`}
                 style={{
                   fontSize: `${tokenSize}px`,
                   color: color1,
+                  textShadow: lastMove1Here ? lastMoveTextShadow : "none",
                 }}
               >
                 {token1}
               </i>
             )}
-            {p2Here && (
+            {player2Here && (
               <i
                 className={`material-icons`}
                 style={{
                   fontSize: `${tokenSize}px`,
                   color: color2,
+                  textShadow: lastMove2Here ? lastMoveTextShadow : "none",
                 }}
               >
                 {token2}
               </i>
             )}
-            {(goal1Here || goal2Here) && !ghostOrPlayerHere && (
+            {cellType === "Ground" && (shadow1Here || shadow2Here) && (
+              <i
+                className={`material-icons ${color1}-text text-lighten-4`}
+                style={{
+                  fontSize: `${tokenSize}px`,
+                  color: getBoardCol(`ghost${shadow1Here ? "1" : "2"}`),
+                }}
+              >
+                {shadow1Here ? token1 : token2}
+              </i>
+            )}
+            {(goal1Here || goal2Here) && !playerHere && !shadowHere && (
               <i
                 className={`material-icons`}
                 style={{
@@ -179,17 +219,6 @@ const Board = ({
                 }}
               >
                 {goal1Here ? token1 : token2}
-              </i>
-            )}
-            {(p1GhostHere || p2GhostHere) && cellType === "Ground" && (
-              <i
-                className={`material-icons ${color1}-text text-lighten-4`}
-                style={{
-                  fontSize: `${tokenSize}px`,
-                  color: getBoardCol(`ghost${p1GhostHere ? "1" : "2"}`),
-                }}
-              >
-                {p1GhostHere ? token1 : token2}
               </i>
             )}
             {letterCoordHere && (

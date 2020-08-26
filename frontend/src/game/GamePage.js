@@ -30,6 +30,8 @@ import {
   applySetupRematch,
   applyAddExtraTime,
   applyClockTick,
+  getTracePos,
+  creatorToMoveAtIndex,
 } from "./gameState";
 
 import Board from "./Board";
@@ -653,6 +655,11 @@ const GamePage = ({
     gridTemplateAreas = "'timer' 'board' 'status' 'panel'";
   }
 
+  const playerPos = state.moveHistory[state.viewIndex].playerPos;
+  const tracePos = getTracePos(state);
+  const lastActions =
+    state.viewIndex > 0 ? state.moveHistory[state.viewIndex].actions : [];
+
   return (
     <div>
       <Header
@@ -704,12 +711,14 @@ const GamePage = ({
           isDarkModeOn={isDarkModeOn}
         />
         <Board
-          creatorToMove={creatorToMove(state)}
+          creatorToMove={creatorToMoveAtIndex(state)}
           grid={state.moveHistory[state.viewIndex].grid}
-          playerPos={state.moveHistory[state.viewIndex].playerPos}
+          playerPos={playerPos}
           goals={globalSettings.goals}
           ghostAction={state.ghostAction}
           premoveActions={state.premoveActions}
+          lastActions={lastActions}
+          tracePos={tracePos}
           handleClick={handleBoardClick}
           groundSize={scaledGroundSize}
           wallWidth={scaledWallWidth}
