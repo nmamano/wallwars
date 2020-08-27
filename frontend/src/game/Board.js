@@ -153,6 +153,7 @@ const Board = ({
           display: "flex",
           justifyContent: justifyContent,
           alignItems: alignItems,
+          position: "relative",
         };
         if (cellType !== "Pillar") style.cursor = "pointer";
         if (cellType === "Wall" && lastMoveHere) {
@@ -170,18 +171,56 @@ const Board = ({
           "lastMoveTokenBorder"
         )}`;
 
+        //To mitigate misclicks, we make it so that if you click a ground
+        //cell very close to a wall (within the closest 5%), nothing happens.
+        //we don't do the same for walls because walls are already narrow,
+        //so we don't want to make them harder to click
+        const clickableGroundStyle = {
+          position: "absolute",
+          height: "90%",
+          width: "90%",
+          top: "5%",
+          left: "5%",
+          cursor: "pointer",
+        };
+        if (pos.r === 0 || pos.r === dims.h - 1) {
+          clickableGroundStyle.height = "95%";
+          if (pos.r === 0) clickableGroundStyle.top = "0";
+          else clickableGroundStyle.top = "5%";
+        }
+        if (pos.c === 0 || pos.c === dims.w - 1) {
+          clickableGroundStyle.width = "95%";
+          if (pos.c === 0) clickableGroundStyle.left = "0";
+          else clickableGroundStyle.left = "5%";
+        }
+
         return (
           <div
             className={className}
             key={`${pos.r}_${pos.c}`}
-            onClick={() => {
-              if (cellType !== "Pillar" && handleClick !== null)
-                handleClick(pos);
-            }}
             onMouseEnter={() => handleMouseEnter(pos)}
             onMouseLeave={handleMouseLeave}
             style={style}
+            onClick={
+              cellType === "Wall" && handleClick !== null
+                ? () => {
+                    handleClick(pos);
+                  }
+                : undefined
+            }
           >
+            {cellType === "Ground" && (
+              <div
+                style={clickableGroundStyle}
+                onClick={
+                  handleClick !== null
+                    ? () => {
+                        handleClick(pos);
+                      }
+                    : undefined
+                }
+              ></div>
+            )}
             {player1Here && (
               <i
                 className={`material-icons`}
