@@ -143,3 +143,47 @@ export function canBuildWall(grid, playerPos, goals, pos) {
   grid[pos.r][pos.c] = 0;
   return res;
 }
+
+export function rowNotation(pos) {
+  if (pos.r === 0) return "X";
+  return "" + (10 - pos.r / 2);
+}
+
+export function columnNotation(pos) {
+  return String.fromCharCode(97 + pos.c / 2);
+}
+
+export function actionNotation(pos) {
+  if (cellTypeByPos(pos) === "Ground")
+    return columnNotation(pos) + rowNotation(pos);
+  else {
+    const isVWall = pos.c % 2 === 1;
+    if (isVWall)
+      return (
+        columnNotation({ r: pos.r, c: pos.c - 1 }) +
+        columnNotation({ r: pos.r, c: pos.c + 1 }) +
+        rowNotation(pos)
+      );
+    else
+      return (
+        columnNotation(pos) +
+        rowNotation({ r: pos.r + 1, c: pos.c }) +
+        rowNotation({ r: pos.r - 1, c: pos.c })
+      );
+  }
+}
+
+export function moveNotation(actions) {
+  if (actions.length === 1) return actionNotation(actions[0]);
+  const [a1, a2] = actions;
+  //canonical order: ground moves first, then sorted by increasing columns,
+  //then sorted by decreasing rows
+  const a1First =
+    cellTypeByPos(a1) === "Ground" ||
+    cellTypeByPos(a1) !== "Ground" ||
+    a1.c < a2.c ||
+    (a1.c === a2.c && a1.r > a2.r);
+  return a1First
+    ? actionNotation(a1) + " " + actionNotation(a2)
+    : actionNotation(a2) + " " + actionNotation(a1);
+}

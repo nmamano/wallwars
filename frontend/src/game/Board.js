@@ -1,7 +1,12 @@
 import React, { useState } from "react";
 import { useMediaQuery } from "react-responsive";
 
-import { cellTypeByPos, posEq } from "../shared/gameLogicUtils";
+import {
+  cellTypeByPos,
+  posEq,
+  rowNotation,
+  columnNotation,
+} from "../shared/gameLogicUtils";
 import { getColor } from "../shared/colorThemes";
 
 //stateless component to display the board. all the state is at GamePage
@@ -148,16 +153,18 @@ const Board = ({
           display: "flex",
           justifyContent: justifyContent,
           alignItems: alignItems,
-          borderTop: pos.r === 0 ? borderStyle : "",
-          borderBottom: pos.r === dims.h - 1 ? borderStyle : "",
-          borderLeft: pos.c === 0 ? borderStyle : "",
-          borderRight: pos.c === dims.w - 1 ? borderStyle : "",
         };
         if (cellType !== "Pillar") style.cursor = "pointer";
-        if (cellType === "Wall" && lastMoveHere)
+        if (cellType === "Wall" && lastMoveHere) {
           style.border = `${isDarkModeOn ? "1" : "2"}px solid ${getBoardCol(
             "lastMoveWallBorder"
           )}`;
+        } else {
+          if (pos.r === 0) style.borderTop = borderStyle;
+          if (pos.r === dims.h - 1) style.borderBottom = borderStyle;
+          if (pos.c === 0) style.borderLeft = borderStyle;
+          if (pos.c === dims.w - 1) style.borderRight = borderStyle;
+        }
 
         const lastMoveTextShadow = `0 0 4px ${getBoardCol(
           "lastMoveTokenBorder"
@@ -225,14 +232,14 @@ const Board = ({
               <div
                 style={{ color: coordColor, padding: "0", marginLeft: "4px" }}
               >
-                {String.fromCharCode(97 + pos.c / 2)}
+                {columnNotation(pos)}
               </div>
             )}
             {numberCoordHere && (
               <div
                 style={{ color: coordColor, padding: "0", marginRight: "4px" }}
               >
-                {"" + (1 + pos.r / 2)}
+                {rowNotation(pos)}
               </div>
             )}
           </div>

@@ -2,21 +2,13 @@ import React from "react";
 import { Table } from "react-materialize";
 import { useMediaQuery } from "react-responsive";
 
-import { cellTypeByPos } from "../shared/gameLogicUtils";
+import { moveNotation } from "../shared/gameLogicUtils";
 import { getColor } from "../shared/colorThemes";
 import hoverHighlight from "../shared/hoverHighlight.module.css";
 
 const moveToString = (move) => {
-  if (move.index === 0) return "__";
-  let wallCount = 0;
-  for (let k = 0; k < move.actions.length; k++) {
-    const aPos = move.actions[k];
-    const aType = cellTypeByPos(aPos);
-    if (aType === "Wall") wallCount += 1;
-  }
-  if (wallCount === 0) return "GG";
-  else if (wallCount === 1) return "GW";
-  return "WW";
+  if (move.index === 0) return "_______";
+  return moveNotation(move.actions);
 };
 
 const tdStyle = {
@@ -68,8 +60,8 @@ const MoveHistory = ({
       <Table centered style={{ width: "100%" }}>
         <thead>
           <tr>
+            <th style={headEntryStyle}>#</th>
             <th style={headEntryStyle}>Move</th>
-            <th style={headEntryStyle}>Actions</th>
             <th style={headEntryStyle}>Distance</th>
             <th style={headEntryStyle}># Walls</th>
           </tr>
