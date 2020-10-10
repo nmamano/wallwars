@@ -56,17 +56,20 @@ function prettyDate(date, longFormat) {
   const curTime = new Date().getTime();
   const dateTime = new Date(date).getTime();
   const seconds = Math.floor((curTime - dateTime) / 1000);
-  let interval = Math.floor(seconds / 2592000);
-  if (interval > 1) return date.toDateString.substring(4, 10);
-  interval = Math.floor(seconds / 86400);
-  if (interval === 1) return longFormat ? "1 day ago" : "1d ago";
-  if (interval > 1) return interval + (longFormat ? " days" : "d") + " ago";
-  interval = Math.floor(seconds / 3600);
-  if (interval === 1) return longFormat ? "1 hour ago" : "1h ago";
-  if (interval > 1) return interval + (longFormat ? " hours" : "h") + " ago";
-  interval = Math.floor(seconds / 60);
-  if (interval === 1) return longFormat ? "1 minute ago" : "1m ago";
-  if (interval > 1) return interval + (longFormat ? " minutes" : "m") + " ago";
+  const secondsIn30Days = 30 * 24 * 60 * 60;
+  const months = Math.floor(seconds / secondsIn30Days);
+  if (months > 1) return months + (longFormat ? " months" : "mth") + " ago";
+  if (months === 1) return "1" + (longFormat ? " month" : "mth") + " ago";
+  const secondsInADay = 24 * 60 * 60;
+  const days = Math.floor(seconds / secondsInADay);
+  if (days > 1) return days + (longFormat ? " days" : "d") + " ago";
+  if (days === 1) return "1" + (longFormat ? " day" : "d") + " ago";
+  const hours = Math.floor(seconds / 3600);
+  if (hours > 1) return hours + (longFormat ? " hours" : "h") + " ago";
+  if (hours === 1) return "1" + (longFormat ? " hour" : "h") + " ago";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes > 1) return minutes + (longFormat ? " minutes" : "m") + " ago";
+  if (minutes === 1) return "1" + (longFormat ? " minute" : "m") + " ago";
   return "Just now";
 }
 
