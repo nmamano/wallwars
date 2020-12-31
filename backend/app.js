@@ -393,14 +393,14 @@ io.on(M.connectionMsg, (socket) => {
     else emitMessage(M.randomGameNotFoundMsg);
   });
 
-  socket.on(M.getRecentGamesMsg, async () => {
-    logReceivedMessage(M.getRecentGamesMsg);
-    const games = await gameController.getRecentGames();
+  socket.on(M.getRecentGamesMsg, async ({ count }) => {
+    logReceivedMessage(M.getRecentGamesMsg, { count });
+    const games = await gameController.getRecentGames(count);
     if (games)
       emitMessage(M.requestedRecentGamesMsg, {
         games: games,
       });
-    else emitMessage(M.randomGameNotFoundMsg);
+    else emitMessage(M.recentGamesNotFoundMsg);
   });
 
   socket.on(M.checkHasOngoingGameMsg, ({ cookieId }) => {

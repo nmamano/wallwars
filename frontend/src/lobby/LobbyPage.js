@@ -4,6 +4,7 @@ import { uniqueNamesGenerator, names } from "unique-names-generator";
 import { useMediaQuery } from "react-responsive";
 import { ToastContainer } from "react-toastify";
 import { useCookies } from "react-cookie";
+import { useImmer } from "use-immer";
 
 import { getColor } from "../shared/colorThemes";
 import blueBgDark from "./../static/blueBgDark.jfif";
@@ -18,6 +19,7 @@ import GameShowcase from "./GameShowcase";
 import RecentGameList from "./RecentGameList";
 
 const maxPlayerNameLen = 9;
+const numStartingRecentGames = 16;
 
 const randPlayerName = () =>
   uniqueNamesGenerator({
@@ -48,6 +50,7 @@ const LobbyPage = ({ socket }) => {
   const [increment, setIncrement] = useState(cookies.increment || 5);
   const [joinCode, setJoinCode] = useState("");
   const [isGamePageOpen, setIsGamePageOpen] = useState(false);
+  const [hasOngoingGame, setHasOngoingGame] = useState(false);
   const [clientParams, setClientParams] = useState(null);
   const [isDarkModeOn, setIsDarkModeOn] = useState(
     cookies.isDarkModeOn && cookies.isDarkModeOn === "true" ? true : false
@@ -55,9 +58,10 @@ const LobbyPage = ({ socket }) => {
   const [menuTheme, setMenuTheme] = useState(
     cookies.menuTheme && cookies.menuTheme === "green" ? "green" : "blue"
   );
-  const [recentGames, setRecentGames] = useState([]);
-  const [needToRequestGames, setNeedToRequestGames] = useState(true);
-  const [hasOngoingGame, setHasOngoingGame] = useState(false);
+  const [recentGamesState, updateRecentGamesState] = useImmer({
+    games: [],
+    numGamesToRequest: numStartingRecentGames,
+  });
 
   const handlePlayerName = (props) => {
     setPlayerName(props.target.value.slice(0, maxPlayerNameLen));
@@ -146,7 +150,9 @@ const LobbyPage = ({ socket }) => {
   const returnToLobby = () => {
     setIsGamePageOpen(false);
     setHasOngoingGame(false);
-    setNeedToRequestGames(true);
+    updateRecentGamesState((draftState) => {
+      draftState.numGamesToRequest = numStartingRecentGames;
+    });
     setClientParams(null);
     setJoinCode("");
   };
@@ -170,6 +176,7 @@ const LobbyPage = ({ socket }) => {
       socket.emit("checkHasOngoingGame", { cookieId: cookies.cookieId });
     }
   });
+
   useEffect(() => {
     socket.on("respondHasOngoingGame", ({ res }) => {
       if (!isGamePageOpen) setHasOngoingGame(res);
@@ -192,18 +199,29 @@ const LobbyPage = ({ socket }) => {
     }
   }, [isDarkModeOn, menuTheme]);
 
-  //logic to get list of recent games
+  // logic to get list of recent games
   useEffect(() => {
-    if (!needToRequestGames) return;
-    setNeedToRequestGames(false);
-    socket.emit("getRecentGames");
-  }, [socket, needToRequestGames]);
+    if (
+      recentGamesState.numGamesToRequest === 0 ||
+      recentGamesState.numGamesToRequest > 100
+    )
+      return;
+    updateRecentGamesState((draftState) => {
+      draftState.numGamesToRequest = 0;
+    });
+    socket.emit("getRecentGames", {
+      count: recentGamesState.numGamesToRequest,
+    });
+  }, [socket, recentGamesState, updateRecentGamesState]);
 
   useEffect(() => {
-    socket.on("requestedRecentGames", ({ games }) => {
-      setRecentGames(games);
+    socket.once("requestedRecentGames", ({ games }) => {
+      updateRecentGamesState((draftState) => {
+        draftState.games = games;
+        draftState.numGamesToRequest = games.length * 2;
+      });
     });
-  }, [socket, needToRequestGames]);
+  }, [socket, updateRecentGamesState, recentGamesState.numGamesToRequest]);
 
   //preparing props for layout (duplicated with GamePage)
   const isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
@@ -354,7 +372,7 @@ const LobbyPage = ({ socket }) => {
             </div>
             <div style={{ gridArea: "recentGameList" }}>
               <RecentGameList
-                recentGames={recentGames}
+                recentGames={recentGamesState.games}
                 isLargeScreen={isLargeScreen}
                 menuTheme={menuTheme}
                 isDarkModeOn={isDarkModeOn}

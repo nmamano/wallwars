@@ -58,4 +58,5 @@ module.exports = {
   randomGameNotFoundMsg: "randomGameNotFound",
   getRecentGamesMsg: "getRecentGames",
   requestedRecentGamesMsg: "requestedRecentGames",
+  recentGamesNotFoundMsg: "recentGamesNotFound",
 };

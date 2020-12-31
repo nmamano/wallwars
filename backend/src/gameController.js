@@ -150,14 +150,16 @@ const getRandomGame = async () => {
   return res;
 };
 
-const getRecentGames = async () => {
+const getRecentGames = async (count) => {
   if (!connectedToDB) return null;
+  if (count < 1) return null;
   const conditions = {
     "moveHistory.4": { $exists: true }, //only games with 4+ moves
   };
-  //up to 100 games
-  const games = await Game.find(conditions).sort({ startDate: 1 }).limit(100);
-  games.reverse();
+  //up to count games
+  const games = await Game.find(conditions)
+    .sort({ startDate: -1 })
+    .limit(count);
   return games;
 };
 
