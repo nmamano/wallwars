@@ -269,6 +269,8 @@ export const applyReturnToGame = (
   serverGame,
   timeLeft
 ) => {
+  //if game is already initialized, don't return to game again
+  if (draftState.timeControl) return;
   const clientRole =
     cookieId === serverGame.cookieIds[0] ? "Creator" : "Joiner";
   if (clientRole === "Creator") {
