@@ -6,8 +6,9 @@ import moveSoundAudio from "./../static/moveSound.mp3";
 import showToastNotification from "../shared/showToastNotification";
 import { useCookies } from "react-cookie";
 
-import globalSettings from "../shared/globalSettings";
+import { cellSizes, maxBoardDims } from "../shared/globalSettings";
 import {
+  roleEnum,
   turnCount,
   creatorToMove,
   indexToMove,
@@ -42,27 +43,28 @@ import TimerHeader from "./TimerHeader";
 import gameHelp from "./gameHelp";
 import ControlPanel from "./ControlPanel";
 import { getColor } from "../shared/colorThemes";
+import { cellEnum } from "../shared/gameLogicUtils";
 
 const moveSound = new UIfx(moveSoundAudio);
 const playMoveSound = () => {
   moveSound.play();
 };
-const boardDims = globalSettings.boardDims;
 
 const GamePage = ({
   socket,
   //clientParams contains 'clientRole' as well as other fields
-  //that depend on the client role
+  //that are needed depending on the client role
   clientParams,
-  returnToLobby,
   isLargeScreen,
-  menuTheme,
   boardTheme,
-  isDarkModeOn,
+  handleReturnToLobby,
   handleToggleDarkMode,
   handleToggleTheme,
   handleSetCookieId,
 }) => {
+  const menuTheme = clientParams.menuTheme;
+  const isDarkModeOn = clientParams.isDarkModeOn;
+
   //cosmetic state stored between sessions
   const [cookies, setCookie] = useCookies(["isVolumeOn", "zoomLevel"]);
 
@@ -85,6 +87,7 @@ const GamePage = ({
         creatorName,
         creatorToken,
         timeControl,
+        boardSettings,
         creatorStarts,
         cookieId,
         creatorPresent,
@@ -96,6 +99,7 @@ const GamePage = ({
             creatorName,
             creatorToken,
             timeControl,
+            boardSettings,
             creatorStarts,
             creatorPresent
           );
@@ -121,28 +125,28 @@ const GamePage = ({
     socket.on("opponentReturned", () => {
       updateState((draftState) => {
         draftState.arePlayersPresent[
-          draftState.clientRole === "Creator" ? 1 : 0
+          draftState.clientRole === roleEnum.creator ? 1 : 0
         ] = true;
         draftState.waitingForPing = 0;
       });
     });
     socket.on("ongoingGameNotFound", () => {
       showToastNotification("Couldn't find the game anymore.", 5000);
-      returnToLobby();
+      handleReturnToLobby();
     });
     socket.on("gameJoinFailed", () => {
       showToastNotification(
         "There is no game with this code waiting for someone to join.",
         5000
       );
-      returnToLobby();
+      handleReturnToLobby();
     });
     socket.on("joinSelfGameFailed", () => {
       showToastNotification(
         "You cannot play against yourself. To play as both sides from the same browser, play one of the sides from an Incognito window.",
         12000
       );
-      returnToLobby();
+      handleReturnToLobby();
     });
     socket.on("gameNotFoundError", () => {
       showToastNotification(
@@ -156,7 +160,7 @@ const GamePage = ({
     socket.once("joinerJoined", ({ joinerName, joinerToken }) => {
       updateState((draftState) => {
         if (draftState.lifeCycleStage === 1) return;
-        if (draftState.isVolumeOn) playMoveSound();
+        draftState.shouldPlaySound = true;
         applyJoinerJoined(draftState, joinerName, joinerToken);
         draftState.arePlayersPresent[1] = true;
         draftState.waitingForPing = 0;
@@ -200,7 +204,7 @@ const GamePage = ({
     socket.on("takebackAccepted", () => {
       showToastNotification("The opponent agreed to the takeback.", 5000);
       updateState((draftState) => {
-        const requesterIsCreator = draftState.clientRole === "Creator";
+        const requesterIsCreator = draftState.clientRole === roleEnum.creator;
         applyTakeback(draftState, requesterIsCreator);
         draftState.waitingForPing = 0;
       });
@@ -220,7 +224,7 @@ const GamePage = ({
     socket.on("rematchAccepted", () => {
       showToastNotification("The opponent accepted the rematch offer.", 5000);
       updateState((draftState) => {
-        if (draftState.isVolumeOn) playMoveSound();
+        draftState.shouldPlaySound = true;
         applySetupRematch(draftState);
         draftState.waitingForPing = 0;
       });
@@ -228,7 +232,7 @@ const GamePage = ({
     socket.on("extraTimeReceived", () => {
       showToastNotification("The opponent added 60s to your clock.", 5000);
       updateState((draftState) => {
-        const playerIndex = draftState.clientRole === "Creator" ? 0 : 1;
+        const playerIndex = draftState.clientRole === roleEnum.creator ? 0 : 1;
         applyAddExtraTime(draftState, playerIndex);
         draftState.waitingForPing = 0;
       });
@@ -236,16 +240,15 @@ const GamePage = ({
     socket.on("resigned", () => {
       showToastNotification("The opponent resigned.", 5000);
       updateState((draftState) => {
-        if (draftState.isVolumeOn) playMoveSound();
-        const resignerIsCreator = draftState.clientRole !== "Creator";
+        draftState.shouldPlaySound = true;
+        const resignerIsCreator = draftState.clientRole !== roleEnum.creator;
         applyResignGame(draftState, resignerIsCreator);
         draftState.waitingForPing = 0;
       });
     });
     socket.on("moved", ({ actions, moveIndex, remainingTime }) => {
       updateState((draftState) => {
-        console.log(`move ${moveIndex} received (${remainingTime}s)`);
-        if (draftState.isVolumeOn) playMoveSound();
+        draftState.shouldPlaySound = true;
         applyMove(draftState, actions, remainingTime, moveIndex);
         draftState.waitingForPing = 0;
       });
@@ -253,7 +256,7 @@ const GamePage = ({
     socket.on("leftGame", () => {
       updateState((draftState) => {
         draftState.arePlayersPresent[
-          draftState.clientRole === "Creator" ? 1 : 0
+          draftState.clientRole === roleEnum.creator ? 1 : 0
         ] = false;
         draftState.waitingForPing = 0;
       });
@@ -262,7 +265,7 @@ const GamePage = ({
       showToastNotification("The opponent abandoned the game.", 5000);
       updateState((draftState) => {
         const abandonerIsCreator =
-          draftState.clientRole === "Creator" ? false : true;
+          draftState.clientRole === roleEnum.creator ? false : true;
         applyAbandonGame(draftState, abandonerIsCreator);
         draftState.waitingForPing = 0;
       });
@@ -278,7 +281,7 @@ const GamePage = ({
   }, [
     socket,
     updateState,
-    returnToLobby,
+    handleReturnToLobby,
     handleSetCookieId,
     clientParams.cookieId,
   ]);
@@ -290,41 +293,44 @@ const GamePage = ({
   useEffect(() => {
     //first contact only from lifecycle stage -2
     if (state.lifeCycleStage !== -2) return;
-    if (clientParams.clientRole === "Creator") {
+    if (clientParams.clientRole === roleEnum.creator) {
       updateState((draftState) => {
         applyAddCreator(
           draftState,
           clientParams.timeControl,
-          clientParams.name,
+          clientParams.boardSettings,
+          clientParams.playerName,
           clientParams.token
         );
         draftState.arePlayersPresent[0] = true;
       });
       socket.emit("createGame", {
-        name: clientParams.name,
-        timeControl: clientParams.timeControl,
+        name: clientParams.playerName,
         token: clientParams.token,
+        timeControl: clientParams.timeControl,
+        boardSettings: clientParams.boardSettings,
         cookieId: clientParams.cookieId,
+        isPublic: clientParams.isPublic,
       });
-    } else if (clientParams.clientRole === "Joiner") {
+    } else if (clientParams.clientRole === roleEnum.joiner) {
       updateState((draftState) => {
         applyAddJoiner(
           draftState,
           clientParams.joinCode,
-          clientParams.name,
+          clientParams.playerName,
           clientParams.token
         );
         draftState.arePlayersPresent[1] = true;
       });
       socket.emit("joinGame", {
         joinCode: clientParams.joinCode,
-        name: clientParams.name,
+        name: clientParams.playerName,
         token: clientParams.token,
         cookieId: clientParams.cookieId,
       });
-    } else if (clientParams.clientRole === "Spectator") {
-      socket.emit("getGame", { gameId: clientParams.gameId });
-    } else if (clientParams.clientRole === "Returner") {
+    } else if (clientParams.clientRole === roleEnum.spectator) {
+      socket.emit("getGame", { gameId: clientParams.watchGameId });
+    } else if (clientParams.clientRole === roleEnum.returner) {
       socket.emit("returnToOngoingGame", { cookieId: clientParams.cookieId });
     } else {
       console.error("unknown client role", clientParams.clientRole);
@@ -333,7 +339,7 @@ const GamePage = ({
 
   const handleLeaveGame = () => {
     socket.emit("leaveGame");
-    returnToLobby();
+    handleReturnToLobby();
   };
   const handleSendRematchOffer = () => {
     socket.emit("offerRematch");
@@ -378,7 +384,7 @@ const GamePage = ({
       );
       socket.emit("acceptTakeback");
       updateState((draftState) => {
-        const requesterIsCreator = draftState.clientRole === "Joiner";
+        const requesterIsCreator = draftState.clientRole === roleEnum.joiner;
         applyTakeback(draftState, requesterIsCreator);
       });
     } else {
@@ -391,16 +397,28 @@ const GamePage = ({
   const handleGiveExtraTime = () => {
     socket.emit("giveExtraTime");
     updateState((draftState) => {
-      const receiverIndex = draftState.clientRole === "Creator" ? 1 : 0;
+      const receiverIndex = draftState.clientRole === roleEnum.creator ? 1 : 0;
       applyAddExtraTime(draftState, receiverIndex);
     });
   };
   const handleResign = () => {
     socket.emit("resign");
     updateState((draftState) => {
-      applyResignGame(draftState, draftState.clientRole === "Creator");
+      applyResignGame(draftState, draftState.clientRole === roleEnum.creator);
     });
   };
+
+  //===================================================
+  //sound logic
+  //===================================================
+  useEffect(() => {
+    if (state.isVolumeOn && state.shouldPlaySound) {
+      playMoveSound();
+      updateState((draftState) => {
+        draftState.shouldPlaySound = false;
+      });
+    }
+  }, [updateState, state.isVolumeOn, state.shouldPlaySound]);
 
   //===================================================
   //timers logic
@@ -446,8 +464,9 @@ const GamePage = ({
   const handleSelectedCell = (pos) => {
     updateState((draftState) => {
       const clientToMove =
-        creatorToMove(draftState) === (draftState.clientRole === "Creator");
-      applySelectedCell(draftState, pos, clientToMove, true);
+        creatorToMove(draftState) ===
+        (draftState.clientRole === roleEnum.creator);
+      applySelectedCell(draftState, pos, clientToMove);
     });
   };
 
@@ -464,7 +483,7 @@ const GamePage = ({
   //this is necessary because the server does not run its own clock
   //and does not understand the rules of the game
   useEffect(() => {
-    if (state.clientRole === "Spectator") return;
+    if (state.clientRole === roleEnum.spectator) return;
     if (state.finishReason === "goal") {
       socket.emit("playerReachedGoal", { winner: state.winner });
     }
@@ -517,16 +536,16 @@ const GamePage = ({
     }
     //normal case: use arrow keys to move the player token
     let p;
-    if (state.ghostAction && ghostType(state.ghostAction) === "Ground")
+    if (state.ghostAction && ghostType(state.ghostAction) === cellEnum.ground)
       p = state.ghostAction;
     else {
       const tc = turnCount(state);
       p = state.moveHistory[tc].playerPos[indexToMove(state)];
     }
-    if (key === "ArrowDown") p = { r: p.r + 2, c: p.c };
-    else if (key === "ArrowUp") p = { r: p.r - 2, c: p.c };
-    else if (key === "ArrowLeft") p = { r: p.r, c: p.c - 2 };
-    else if (key === "ArrowRight") p = { r: p.r, c: p.c + 2 };
+    if (key === "ArrowDown") p = [p[0] + 2, p[1]];
+    else if (key === "ArrowUp") p = [p[0] - 2, p[1]];
+    else if (key === "ArrowLeft") p = [p[0], p[1] - 2];
+    else if (key === "ArrowRight") p = [p[0], p[1] + 2];
     else return;
     handleSelectedCell(p);
   };
@@ -624,35 +643,59 @@ const GamePage = ({
   }
 
   let [gSize, wWidth] = isLargeScreen
-    ? [globalSettings.groundSize, globalSettings.wallWidth]
-    : [
-        globalSettings.smallScreenGroundSize,
-        globalSettings.smallScreenWallWidth,
-      ];
+    ? [cellSizes.groundSize, cellSizes.wallWidth]
+    : [cellSizes.smallScreenGroundSize, cellSizes.smallScreenWallWidth];
+
   const scalingFactor = Math.pow(1.1, state.zoomLevel - 5);
   const scaledGroundSize = gSize * scalingFactor;
   const scaledWallWidth = wWidth * scalingFactor;
-  const boardHeight =
-    (scaledWallWidth * (boardDims.h - 1)) / 2 +
-    (scaledGroundSize * (boardDims.h + 1)) / 2;
-  const boardWidth =
-    (scaledWallWidth * (boardDims.w - 1)) / 2 +
-    (scaledGroundSize * (boardDims.w + 1)) / 2;
+  const groundWallRatio = gSize / wWidth;
 
+  //scale up for boards with fewer fewer rows/columns than max board dims
+  const maxGroundRows = (maxBoardDims[0] + 1) / 2;
+  const maxGroundCols = (maxBoardDims[1] + 1) / 2;
+  const maxWallRows = (maxBoardDims[0] - 1) / 2;
+  const maxWallCols = (maxBoardDims[1] - 1) / 2;
+  const groundRows = (state.boardSettings.dims[0] + 1) / 2;
+  const groundCols = (state.boardSettings.dims[1] + 1) / 2;
+  const wallRows = (state.boardSettings.dims[0] - 1) / 2;
+  const wallCols = (state.boardSettings.dims[1] - 1) / 2;
+  const boardHeightWithMaxRows =
+    scaledWallWidth * maxWallRows + scaledGroundSize * maxGroundRows;
+  const boardWidthWithMaxCols =
+    scaledWallWidth * maxWallCols + scaledGroundSize * maxGroundCols;
+  //using: groundRows * maxGroundSizeWithCurRows + wallRows * maxWallSizeWithCurRows = boardHeightWithMaxRows
+  //and: maxGroundSizeWithCurRows/maxWallSizeWithCurRows = groundWallRatio
+  //to isolate maxGroundSizeWithCurRows
+  const maxGroundSizeWithCurRows =
+    boardHeightWithMaxRows / (groundRows + wallRows / groundWallRatio);
+  const maxGroundSizeWithCurCols =
+    boardWidthWithMaxCols / (groundCols + wallCols / groundWallRatio);
+  const newScaledGroundSize = Math.min(
+    maxGroundSizeWithCurRows,
+    maxGroundSizeWithCurCols
+  );
+  const newScaledWallWidth = newScaledGroundSize / groundWallRatio;
+  const boardHeight =
+    newScaledWallWidth * wallRows + newScaledGroundSize * groundRows;
+  const boardWidth =
+    newScaledWallWidth * wallCols + newScaledGroundSize * groundCols;
   const gapSize = isLargeScreen ? 15 : 6;
+  const controlPanelWidth = 360;
+  const controlPanelHeight = Math.max(boardHeight, 360);
   let gridTemplateRows, gridTemplateColumns, gridTemplateAreas;
   if (isLargeScreen) {
     const timersHeight = 100;
-    const controlPanelWidth = 360;
-    gridTemplateRows = `${timersHeight}px ${boardHeight}px`;
-    gridTemplateColumns = `${boardWidth}px ${controlPanelWidth}px`;
+    const timersWidth = Math.max(boardWidth, 560);
     gridTemplateAreas = "'timer status' 'board panel'";
+    gridTemplateRows = `${timersHeight}px ${controlPanelHeight}px`;
+    gridTemplateColumns = `${timersWidth}px ${controlPanelWidth}px`;
   } else {
     const timersHeight = 50;
     const statusHeaderHeight = 80;
-    gridTemplateRows = `${timersHeight}px ${boardHeight}px ${statusHeaderHeight}px ${boardHeight}px`;
-    gridTemplateColumns = `${boardWidth}px`;
     gridTemplateAreas = "'timer' 'board' 'status' 'panel'";
+    gridTemplateRows = `${timersHeight}px ${boardHeight}px ${statusHeaderHeight}px ${controlPanelHeight}px`;
+    gridTemplateColumns = `${boardWidthWithMaxCols}px`;
   }
 
   const playerPos = state.moveHistory[state.viewIndex].playerPos;
@@ -663,7 +706,9 @@ const GamePage = ({
   return (
     <div>
       <Header
-        context={state.clientRole === "Spectator" ? "Spectator" : "Player"}
+        context={
+          state.clientRole === roleEnum.spectator ? "spectator" : "player"
+        }
         joinCode={state.joinCode}
         helpText={gameHelp}
         handleLeaveGame={handleLeaveGame}
@@ -692,7 +737,7 @@ const GamePage = ({
           indexToMove={indexToMove(state)}
           timeLeft={[displayTime1, displayTime2]}
           isLargeScreen={isLargeScreen}
-          scores={state.gameWins}
+          scores={state.matchScore}
           arePlayersPresent={state.arePlayersPresent}
           menuTheme={menuTheme}
           boardTheme={boardTheme}
@@ -714,14 +759,14 @@ const GamePage = ({
           creatorToMove={creatorToMoveAtIndex(state)}
           grid={state.moveHistory[state.viewIndex].grid}
           playerPos={playerPos}
-          goals={globalSettings.goals}
+          goals={state.boardSettings.goalPos}
           ghostAction={state.ghostAction}
           premoveActions={state.premoveActions}
           lastActions={lastActions}
           tracePos={tracePos}
           handleClick={handleBoardClick}
-          groundSize={scaledGroundSize}
-          wallWidth={scaledWallWidth}
+          groundSize={newScaledGroundSize}
+          wallWidth={newScaledWallWidth}
           menuTheme={menuTheme}
           boardTheme={boardTheme}
           isDarkModeOn={isDarkModeOn}
@@ -752,11 +797,11 @@ const GamePage = ({
           handleIncreaseBoardSize={handleIncreaseBoardSize}
           handleDecreaseBoardSize={handleDecreaseBoardSize}
           zoomLevel={state.zoomLevel}
-          boardHeight={boardHeight}
+          controlPanelHeight={controlPanelHeight}
           isOpponentPresent={isOpponentPresent(state)}
         />
       </div>
-      {state.lifeCycleStage === 4 && state.clientRole !== "Spectator" && (
+      {state.lifeCycleStage === 4 && state.clientRole !== roleEnum.spectator && (
         <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
           <Col className="center" s={12}>
             <Button

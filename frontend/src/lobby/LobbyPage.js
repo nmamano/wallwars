@@ -1,96 +1,281 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { Row, Col, Button } from "react-materialize";
-import { uniqueNamesGenerator, names } from "unique-names-generator";
 import { useMediaQuery } from "react-responsive";
 import { ToastContainer } from "react-toastify";
 import { useCookies } from "react-cookie";
 import { useImmer } from "use-immer";
 
+import { randPlayerName } from "../shared/utils";
 import { getColor } from "../shared/colorThemes";
 import blueBgDark from "./../static/blueBgDark.jfif";
 import blueBgLight from "./../static/blueBgLight.jfif";
-import globalSettings from "../shared/globalSettings";
-import GamePage from "../game/GamePage";
-import Header from "../shared/Header";
+import {
+  defaultInitialPlayerPos,
+  defaultGoalPos,
+  defaultBoardSettings,
+  maxBoardDims,
+  cellSizes,
+} from "../shared/globalSettings";
 import LobbyForm from "./LobbyForm";
+import GameListsTabs from "./LobbyTabs";
+import GamePage from "../game/GamePage";
+import GameShowcase from "./GameShowcase";
+import Header from "../shared/Header";
 import { lobbyHelpText, aboutText } from "./lobbyHelp";
 import showToastNotification from "../shared/showToastNotification";
-import GameShowcase from "./GameShowcase";
-import RecentGameList from "./RecentGameList";
+import { emptyBoardDistances, boardPixelDims } from "../shared/gameLogicUtils";
 
+const boardTheme = "monochromeBoard";
 const maxPlayerNameLen = 9;
 const numStartingRecentGames = 16;
 
-const randPlayerName = () =>
-  uniqueNamesGenerator({
-    dictionaries: [names],
-    length: 1,
-  }).slice(0, maxPlayerNameLen);
+const initalLobbyState = (cookies) => {
+  let nr = parseFloat(cookies.numRows);
+  nr = isNaN(nr) ? defaultBoardSettings.dims[0] : nr;
+  let nc = parseFloat(cookies.numCols);
+  nc = isNaN(nc) ? defaultBoardSettings.dims[1] : nc;
+  return {
+    playerName: cookies.playerName || randPlayerName(maxPlayerNameLen),
+    token: cookies.token || "default",
+    timeControl: {
+      duration: cookies.duration || "5",
+      increment: cookies.increment || "5",
+    },
+    boardSettings: {
+      dims: [nr, nc],
+      startPos: defaultInitialPlayerPos([nr, nc]),
+      goalPos: defaultGoalPos([nr, nc]),
+    },
+    joinCode: "",
+    clientRole: "", //creator, joiner, returner, spectator
+    watchGameId: null,
+    cookieId: cookies.cookieId ? cookies.cookieId : "undefined",
+    isPublic: cookies.isPublic && cookies.isPublic === "true" ? true : false,
+    isGamePageOpen: false,
+    hasOngoingGame: false,
+    isDarkModeOn:
+      cookies.isDarkModeOn && cookies.isDarkModeOn === "true" ? true : false,
+    menuTheme:
+      cookies.menuTheme && cookies.menuTheme === "green" ? "green" : "blue",
+    recentGames: {
+      games: [],
+      numGamesToRequest: numStartingRecentGames,
+    },
+    showMoreOptions: false,
+  };
+};
 
 const LobbyPage = ({ socket }) => {
   const [cookies, setCookie] = useCookies([
-    //the name and token are saved when the player creates or joins a game
-    "playerName",
-    "token",
-    //the time control is saved when the player creates a game
-    "duration",
-    "increment",
-    //used to allow players to return to games they already started, even if they close the browser
-    "cookieId",
     "isDarkModeOn",
     "menuTheme",
+    "token",
+    "playerName",
+    "duration",
+    "increment",
+    "numRows",
+    "numCols",
+    "cookieId",
+    "isPublic",
   ]);
-  const boardTheme = "monochromeBoard";
+  const [state, updateState] = useImmer(initalLobbyState(cookies));
 
-  const [playerName, setPlayerName] = useState(
-    cookies.playerName || randPlayerName()
-  );
-  const [token, setToken] = useState(cookies.token || "default");
-  const [duration, setDuration] = useState(cookies.duration || 5);
-  const [increment, setIncrement] = useState(cookies.increment || 5);
-  const [joinCode, setJoinCode] = useState("");
-  const [isGamePageOpen, setIsGamePageOpen] = useState(false);
-  const [hasOngoingGame, setHasOngoingGame] = useState(false);
-  const [clientParams, setClientParams] = useState(null);
-  const [isDarkModeOn, setIsDarkModeOn] = useState(
-    cookies.isDarkModeOn && cookies.isDarkModeOn === "true" ? true : false
-  );
-  const [menuTheme, setMenuTheme] = useState(
-    cookies.menuTheme && cookies.menuTheme === "green" ? "green" : "blue"
-  );
-  const [recentGamesState, updateRecentGamesState] = useImmer({
-    games: [],
-    numGamesToRequest: numStartingRecentGames,
-  });
-
-  const handlePlayerName = (props) => {
-    setPlayerName(props.target.value.slice(0, maxPlayerNameLen));
+  const handleToggleTheme = () => {
+    const newTheme = state.menuTheme === "green" ? "blue" : "green";
+    updateState((draftState) => {
+      draftState.menuTheme = newTheme;
+    });
+    setCookie("menuTheme", newTheme, { path: "/" });
   };
-  const handleSetCookieId = (cookieId) => {
-    setCookie("cookieId", cookieId, { path: "/" });
+  const handleToggleDarkMode = () => {
+    const newSetting = !state.isDarkModeOn;
+    updateState((draftState) => {
+      draftState.isDarkModeOn = newSetting;
+    });
+    setCookie("isDarkModeOn", newSetting ? "true" : "false", {
+      path: "/",
+    });
   };
-  const handleToken = (icon) => {
-    setToken(icon);
-    setCookie("token", icon, { path: "/" });
+  const handlePlayerName = (name) => {
+    updateState((draftState) => {
+      draftState.playerName = name.slice(0, maxPlayerNameLen);
+    });
   };
   const handleRefreshName = () => {
-    setPlayerName(randPlayerName());
+    updateState((draftState) => {
+      draftState.playerName = randPlayerName(maxPlayerNameLen);
+    });
   };
-  const handleDuration = (props) => setDuration(props.target.value);
-  const handleIncrement = (props) => setIncrement(props.target.value);
-  const handleJoinCode = (props) => setJoinCode(props.target.value);
-
+  const handleToken = (icon) => {
+    updateState((draftState) => {
+      draftState.token = icon;
+    });
+    setCookie("token", icon, { path: "/" });
+  };
+  const handleDuration = (val) => {
+    updateState((draftState) => {
+      draftState.timeControl.duration = val;
+    });
+  };
+  const handleIncrement = (val) => {
+    updateState((draftState) => {
+      draftState.timeControl.increment = val;
+    });
+  };
+  const handleIsPublic = (val) => {
+    updateState((draftState) => {
+      draftState.isPublic = val;
+    });
+    setCookie("isPublic", val ? "true" : "false", {
+      path: "/",
+    });
+  };
+  const handleNumRows = (nr) => {
+    updateState((draftState) => {
+      const curNr = draftState.boardSettings.dims[0];
+      draftState.boardSettings.dims[0] = nr;
+      for (let i = 0; i < 2; i++) {
+        let pRow = draftState.boardSettings.startPos[i][0];
+        if (pRow >= nr - 1 || pRow === curNr - 1) {
+          draftState.boardSettings.startPos[i][0] = nr - 1;
+        }
+        let gRow = draftState.boardSettings.goalPos[i][0];
+        if (gRow >= nr - 1 || gRow === curNr - 1) {
+          draftState.boardSettings.goalPos[i][0] = nr - 1;
+        }
+      }
+    });
+  };
+  const handleNumCols = (nc) => {
+    updateState((draftState) => {
+      const curNc = draftState.boardSettings.dims[1];
+      draftState.boardSettings.dims[1] = nc;
+      for (let i = 0; i < 2; i++) {
+        let pCol = draftState.boardSettings.startPos[i][1];
+        if (pCol >= nc - 1 || pCol === curNc - 1) {
+          draftState.boardSettings.startPos[i][1] = nc - 1;
+        }
+        let gCol = draftState.boardSettings.goalPos[i][1];
+        if (gCol >= nc - 1 || gCol === curNc - 1) {
+          draftState.boardSettings.goalPos[i][1] = nc - 1;
+        }
+      }
+    });
+  };
+  const handleShowMoreOptions = () => {
+    updateState((draftState) => {
+      draftState.showMoreOptions = !draftState.showMoreOptions;
+    });
+  };
+  const handleStartPos = (player, coord, val) => {
+    updateState((draftState) => {
+      draftState.boardSettings.startPos[player][coord] = val;
+    });
+  };
+  const handleGoalPos = (player, coord, val) => {
+    updateState((draftState) => {
+      draftState.boardSettings.goalPos[player][coord] = val;
+    });
+  };
+  const handleJoinCode = (code) => {
+    updateState((draftState) => {
+      draftState.joinCode = code;
+    });
+  };
+  const handleSetCookieId = (cookieId) => {
+    updateState((draftState) => {
+      draftState.cookieId = cookieId;
+    });
+    setCookie("cookieId", cookieId, { path: "/" });
+  };
   const handleCreateGame = () => {
-    let [dur, inc] = [parseFloat(duration), parseFloat(increment)];
-    if (isNaN(dur) || dur < 0.1) {
+    const dur = validateDuration();
+    const inc = validateIncrement();
+    const bs = validateBoardSettings();
+    const name = validateName();
+    updateState((draftState) => {
+      draftState.clientRole = "creator";
+      //note: duration and increment are converted from string to number here
+      draftState.timeControl.duration = dur;
+      draftState.timeControl.increment = inc;
+      draftState.boardSettings = bs;
+      draftState.playerName = name;
+      draftState.cookieId = cookies.cookieId ? cookies.cookieId : "undefined";
+      draftState.hasOngoingGame = false;
+      draftState.isGamePageOpen = true;
+    });
+  };
+  const handleJoinGame = () => {
+    const name = validateName();
+    updateState((draftState) => {
+      draftState.clientRole = "joiner";
+      draftState.playerName = name;
+      draftState.cookieId = cookies.cookieId ? cookies.cookieId : "undefined";
+      draftState.hasOngoingGame = false;
+      draftState.isGamePageOpen = true;
+    });
+  };
+  const handleAcceptChallenge = (joinCode) => {
+    const name = validateName();
+    updateState((draftState) => {
+      draftState.joinCode = joinCode;
+      draftState.clientRole = "joiner";
+      draftState.playerName = name;
+      draftState.cookieId = cookies.cookieId ? cookies.cookieId : "undefined";
+      draftState.hasOngoingGame = false;
+      draftState.isGamePageOpen = true;
+    });
+  };
+  const handleReturnToGame = () => {
+    updateState((draftState) => {
+      draftState.clientRole = "returner";
+      draftState.cookieId = cookies.cookieId;
+      draftState.hasOngoingGame = false;
+      draftState.isGamePageOpen = true;
+    });
+  };
+  const handleViewGame = (watchGameId) => {
+    updateState((draftState) => {
+      draftState.clientRole = "spectator";
+      draftState.watchGameId = watchGameId;
+      draftState.hasOngoingGame = false;
+      draftState.isGamePageOpen = true;
+    });
+  };
+  const handleReturnToLobby = () => {
+    updateState((draftState) => {
+      draftState.hasOngoingGame = false;
+      draftState.isGamePageOpen = false;
+      draftState.recentGames.numGamesToRequest = numStartingRecentGames;
+      draftState.clientRole = "";
+      draftState.joinCode = "";
+    });
+  };
+
+  const validateName = () => {
+    let name = state.playerName;
+    if (name === "") name = "Anon";
+    else setCookie("playerName", name, { path: "/" });
+    return name;
+  };
+  const validateDuration = () => {
+    let dur = parseFloat(state.timeControl.duration);
+    if (isNaN(dur)) {
+      dur = 5;
+      showToastNotification("Invalid duration, using 5m instead", 5000);
+    } else if (dur < 0.1) {
       dur = 5 / 60;
-      showToastNotification("Invalid duration, using 5s instead", 5000);
+      showToastNotification("Duration too short, using 5s instead", 5000);
     } else if (dur > 120) {
       dur = 120;
       showToastNotification("Duration too long, using 2h instead", 5000);
     } else {
       setCookie("duration", dur, { path: "/" });
     }
+    return dur;
+  };
+  const validateIncrement = () => {
+    let inc = parseFloat(state.timeControl.increment);
     if (isNaN(inc) || inc < 0) {
       inc = 0;
       showToastNotification("Invalid increment, using 0s instead", 5000);
@@ -100,155 +285,148 @@ const LobbyPage = ({ socket }) => {
     } else {
       setCookie("increment", inc, { path: "/" });
     }
-    let name = playerName;
-    if (name === "") name = "Anon";
-    else setCookie("playerName", name, { path: "/" });
-    setClientParams({
-      clientRole: "Creator",
-      timeControl: {
-        duration: dur,
-        increment: inc,
-      },
-      name: name,
-      token: token,
-      cookieId: cookies.cookieId ? cookies.cookieId : "undefined",
-    });
-    setHasOngoingGame(false);
-    setIsGamePageOpen(true);
+    return inc;
   };
-  const handleJoinGame = () => {
-    let name = playerName;
-    if (name === "") name = "Anon";
-    else setCookie("playerName", name, { path: "/" });
-    setClientParams({
-      clientRole: "Joiner",
-      joinCode: joinCode,
-      name: name,
-      token: token,
-      cookieId: cookies.cookieId ? cookies.cookieId : "undefined",
-    });
-    setHasOngoingGame(false);
-    setIsGamePageOpen(true);
-  };
-  const handleReturnToGame = () => {
-    setClientParams({
-      clientRole: "Returner",
-      cookieId: cookies.cookieId,
-    });
-    setHasOngoingGame(false);
-    setIsGamePageOpen(true);
-  };
-  const handleViewGame = (watchGameId) => {
-    setClientParams({
-      clientRole: "Spectator",
-      gameId: watchGameId,
-    });
-    setHasOngoingGame(false);
-    setIsGamePageOpen(true);
+  const validateBoardSettings = () => {
+    const bs = state.boardSettings;
+    const dists = emptyBoardDistances(bs);
+    if (dists[0] <= 2 || dists[1] <= 2) {
+      showToastNotification(
+        "The goal is too close to the player, using default board instead",
+        5000
+      );
+      return defaultBoardSettings;
+    } else {
+      setCookie("numRows", state.boardSettings.dims[0], {
+        path: "/",
+      });
+      setCookie("numCols", state.boardSettings.dims[1], {
+        path: "/",
+      });
+      return bs;
+    }
   };
 
-  const returnToLobby = () => {
-    setIsGamePageOpen(false);
-    setHasOngoingGame(false);
-    updateRecentGamesState((draftState) => {
-      draftState.numGamesToRequest = numStartingRecentGames;
-    });
-    setClientParams(null);
-    setJoinCode("");
-  };
-
-  const handleToggleDarkMode = () => {
-    setCookie("isDarkModeOn", isDarkModeOn ? "false" : "true", { path: "/" });
-    setIsDarkModeOn(!isDarkModeOn);
-  };
-  const handleToggleTheme = () => {
-    const newTheme = menuTheme === "green" ? "blue" : "green";
-    setCookie("menuTheme", newTheme, { path: "/" });
-    setMenuTheme(newTheme);
-  };
-
+  //determine if the "Return To Game" button needs to be shown
   useEffect(() => {
     if (
       cookies.cookieId &&
       cookies.cookieId !== "undefined" &&
-      !hasOngoingGame
+      !state.hasOngoingGame &&
+      !state.isGamePageOpen
     ) {
       socket.emit("checkHasOngoingGame", { cookieId: cookies.cookieId });
     }
-  });
-
+  }, [socket, cookies.cookieId, state.hasOngoingGame, state.isGamePageOpen]);
   useEffect(() => {
     socket.on("respondHasOngoingGame", ({ res }) => {
-      if (!isGamePageOpen) setHasOngoingGame(res);
+      updateState((draftState) => {
+        if (!draftState.isGamePageOpen) draftState.hasOngoingGame = res;
+      });
     });
   });
 
-  //effect to set the background of the entire site based on theme and dark mode
+  //set the background of the entire site based on theme and dark mode
   useEffect(() => {
     document.body.style.backgroundColor = getColor(
-      menuTheme,
+      state.menuTheme,
       "background",
-      isDarkModeOn
+      state.isDarkModeOn
     );
-    if (menuTheme === "blue") {
+    if (state.menuTheme === "blue") {
       document.body.style.backgroundImage = `url('${
-        isDarkModeOn ? blueBgDark : blueBgLight
+        state.isDarkModeOn ? blueBgDark : blueBgLight
       }')`;
     } else {
       document.body.style.backgroundImage = "none";
     }
-  }, [isDarkModeOn, menuTheme]);
+  }, [state.isDarkModeOn, state.menuTheme]);
 
-  // logic to get list of recent games
+  //get recent games
   useEffect(() => {
-    if (
-      recentGamesState.numGamesToRequest === 0 ||
-      recentGamesState.numGamesToRequest > 100
-    )
-      return;
-    updateRecentGamesState((draftState) => {
-      draftState.numGamesToRequest = 0;
-    });
-    socket.emit("getRecentGames", {
-      count: recentGamesState.numGamesToRequest,
-    });
-  }, [socket, recentGamesState, updateRecentGamesState]);
-
+    const count = state.recentGames.numGamesToRequest;
+    if (count > 0 && count < 100) {
+      socket.emit("getRecentGames", {
+        count: count,
+      });
+    }
+  }, [socket, updateState, state.recentGames.numGamesToRequest]);
   useEffect(() => {
     socket.once("requestedRecentGames", ({ games }) => {
-      updateRecentGamesState((draftState) => {
-        draftState.games = games;
-        draftState.numGamesToRequest = games.length * 2;
+      updateState((draftState) => {
+        draftState.recentGames.games = games;
+        draftState.recentGames.numGamesToRequest = games.length * 2;
       });
     });
-  }, [socket, updateRecentGamesState, recentGamesState.numGamesToRequest]);
+  }, [socket, updateState, state.recentGames.games]);
 
-  //preparing props for layout (duplicated with GamePage)
-  const isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
-  const dims = globalSettings.boardDims;
-  let [gSize, wWidth] = isLargeScreen
-    ? [globalSettings.groundSize, globalSettings.wallWidth]
-    : [
-        globalSettings.smallScreenGroundSize,
-        globalSettings.smallScreenWallWidth,
-      ];
-  const boardHeight = (wWidth * (dims.h - 1)) / 2 + (gSize * (dims.h + 1)) / 2;
-  const boardWidth = (wWidth * (dims.w - 1)) / 2 + (gSize * (dims.w + 1)) / 2;
-  const gapSize = isLargeScreen ? 15 : 6;
-  let gridTemplateRows, gridTemplateColumns, gridTemplateAreas;
-  const titleHeight = 40;
   const sideBySideLayout = useMediaQuery({ query: "(min-width: 1300px)" });
+  const isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
+  let [groundSize, wallWidth] = isLargeScreen
+    ? [cellSizes.groundSize, cellSizes.wallWidth]
+    : [cellSizes.smallScreenGroundSize, cellSizes.smallScreenWallWidth];
+  const [bHeight, bWidth] = boardPixelDims(maxBoardDims, groundSize, wallWidth);
+  const gapSize = isLargeScreen ? 15 : 6;
+  const headerHeight = 40;
+  const comboHeight = bHeight + headerHeight;
+  let gridTemplAreas, gridTemplRows, gridTemplCols;
   if (sideBySideLayout) {
-    gridTemplateRows = `${titleHeight}px ${boardHeight}px`;
-    gridTemplateColumns = `${boardWidth}px ${boardWidth}px`;
-    gridTemplateAreas =
-      "'showcaseTitle recentTitle' 'gameShowcase recentGameList'";
+    gridTemplAreas = "'showcaseArea tabsArea'";
+    gridTemplRows = `${comboHeight}px`;
+    gridTemplCols = `${bWidth}px ${bWidth}px`;
   } else {
-    gridTemplateRows = `${titleHeight}px ${boardHeight}px ${titleHeight}px ${boardHeight}px`;
-    gridTemplateColumns = `${boardWidth}px`;
-    gridTemplateAreas =
-      "'showcaseTitle' 'gameShowcase' 'recentTitle' 'recentGameList'";
+    gridTemplAreas = "'showcaseArea' 'tabsArea'";
+    gridTemplRows = `${comboHeight}px ${comboHeight}px`;
+    gridTemplCols = `${bWidth}px`;
   }
+  const gridStyle = {
+    display: "grid",
+    gridTemplateRows: gridTemplRows,
+    gridTemplateColumns: gridTemplCols,
+    gridTemplateAreas: gridTemplAreas,
+    columnGap: `${2 * gapSize}px`,
+    rowGap: `${gapSize}px`,
+    margin: `${gapSize}px`,
+    justifyContent: "center",
+    alignContent: "center",
+  };
+  const gameShowcaseHeader = (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        alignSelf: "center",
+        justifySelf: "center",
+        fontSize: "20px",
+        paddingBottom: gapSize,
+        height: headerHeight,
+      }}
+      title={"Random games already played"}
+    >
+      Game Showcase
+    </div>
+  );
+  const returnToGameButton = (
+    <Button
+      large
+      style={{
+        backgroundColor: getColor(
+          state.menuTheme,
+          "importantButton",
+          state.isDarkModeOn
+        ),
+      }}
+      node="button"
+      waves="light"
+      onClick={() => {
+        handleReturnToGame();
+      }}
+    >
+      Return to game
+    </Button>
+  );
+
   return (
     <div
       style={{
@@ -256,127 +434,83 @@ const LobbyPage = ({ socket }) => {
       }}
     >
       <ToastContainer />
-
-      {isGamePageOpen && (
+      {state.isGamePageOpen && (
         <GamePage
           socket={socket}
-          clientParams={clientParams}
-          returnToLobby={returnToLobby}
+          clientParams={state}
           isLargeScreen={isLargeScreen}
-          menuTheme={menuTheme}
           boardTheme={boardTheme}
-          isDarkModeOn={isDarkModeOn}
+          handleReturnToLobby={handleReturnToLobby}
           handleToggleDarkMode={handleToggleDarkMode}
           handleToggleTheme={handleToggleTheme}
           handleSetCookieId={handleSetCookieId}
         />
       )}
-      {!isGamePageOpen && (
+      {!state.isGamePageOpen && (
         <div>
           <Header
-            context={"Lobby"}
+            context={"lobby"}
+            isLargeScreen={isLargeScreen}
+            menuTheme={state.menuTheme}
+            isDarkModeOn={state.isDarkModeOn}
             helpText={lobbyHelpText}
             aboutText={aboutText}
-            isLargeScreen={isLargeScreen}
-            menuTheme={menuTheme}
-            isDarkModeOn={isDarkModeOn}
             handleToggleDarkMode={handleToggleDarkMode}
             handleToggleTheme={handleToggleTheme}
           />
           <LobbyForm
-            playerName={playerName}
+            clientParams={state}
+            isLargeScreen={isLargeScreen}
             handlePlayerName={handlePlayerName}
-            duration={duration}
             handleDuration={handleDuration}
-            increment={increment}
             handleIncrement={handleIncrement}
-            joinCode={joinCode}
+            handleIsPublic={handleIsPublic}
+            handleNumRows={handleNumRows}
+            handleNumCols={handleNumCols}
+            handleShowMoreOptions={handleShowMoreOptions}
+            handleStartPos={handleStartPos}
+            handleGoalPos={handleGoalPos}
             handleJoinCode={handleJoinCode}
             handleCreateGame={handleCreateGame}
             handleJoinGame={handleJoinGame}
             handleRefreshName={handleRefreshName}
-            token={token}
             handleToken={handleToken}
-            isLargeScreen={isLargeScreen}
-            menuTheme={menuTheme}
-            isDarkModeOn={isDarkModeOn}
           />
-          {hasOngoingGame &&
+          {state.hasOngoingGame &&
             cookies.cookieId &&
             cookies.cookieId !== "undefined" && (
               <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
                 <Col className="center" s={12}>
-                  <Button
-                    large
-                    style={{
-                      backgroundColor: getColor(
-                        menuTheme,
-                        "importantButton",
-                        isDarkModeOn
-                      ),
-                    }}
-                    node="button"
-                    waves="light"
-                    onClick={() => {
-                      handleReturnToGame();
-                    }}
-                  >
-                    Return to game
-                  </Button>
+                  {returnToGameButton}
                 </Col>
               </Row>
             )}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateRows: gridTemplateRows,
-              gridTemplateColumns: gridTemplateColumns,
-              gridTemplateAreas: gridTemplateAreas,
-              columnGap: `${2 * gapSize}px`,
-              rowGap: `${gapSize}px`,
-              margin: `${gapSize}px`,
-              justifyContent: "center",
-              alignContent: "center",
-            }}
-          >
-            <div
-              style={{
-                gridArea: "showcaseTitle",
-                alignSelf: "center",
-                justifySelf: "center",
-                fontSize: "20px",
-              }}
-              title={"Random games already played"}
-            >
-              Game Showcase
-            </div>
-            <div style={{ gridArea: "gameShowcase" }}>
+          <div style={gridStyle}>
+            <div style={{ gridArea: "showcaseArea" }}>
+              {gameShowcaseHeader}
               <GameShowcase
                 socket={socket}
                 isLargeScreen={isLargeScreen}
-                menuTheme={menuTheme}
+                menuTheme={state.menuTheme}
                 boardTheme={boardTheme}
-                isDarkModeOn={isDarkModeOn}
+                isDarkModeOn={state.isDarkModeOn}
                 handleViewGame={handleViewGame}
               />
             </div>
             <div
               style={{
-                gridArea: "recentTitle",
-                alignSelf: "center",
-                justifySelf: "center",
-                fontSize: "20px",
+                gridArea: "tabsArea",
+                height: "100%",
               }}
             >
-              Recent Games
-            </div>
-            <div style={{ gridArea: "recentGameList" }}>
-              <RecentGameList
-                recentGames={recentGamesState.games}
+              <GameListsTabs
+                socket={socket}
                 isLargeScreen={isLargeScreen}
-                menuTheme={menuTheme}
-                isDarkModeOn={isDarkModeOn}
+                menuTheme={state.menuTheme}
+                isDarkModeOn={state.isDarkModeOn}
+                recentGames={state.recentGames.games}
                 handleViewGame={handleViewGame}
+                handleAcceptChallenge={handleAcceptChallenge}
               />
             </div>
           </div>

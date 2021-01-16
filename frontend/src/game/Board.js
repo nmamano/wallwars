@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useMediaQuery } from "react-responsive";
 
 import {
+  cellEnum,
   cellTypeByPos,
   posEq,
   rowNotation,
@@ -37,26 +38,29 @@ const Board = ({
   };
 
   //short-hand for getColor
-  const getCol = (elem) => getColor(menuTheme, elem, isDarkModeOn);
-  const getBoardCol = (elem) => getColor(boardTheme, elem, isDarkModeOn);
+  const getCol = (elem) => getColor(boardTheme, elem, isDarkModeOn);
 
-  const borderStyle = `1px solid ${getCol("container")}`;
-  const [color1, color2] = [getBoardCol("player1"), getBoardCol("player2")];
+  const borderStyle = `1px solid ${getColor(
+    menuTheme,
+    "container",
+    isDarkModeOn
+  )}`;
+  const [color1, color2] = [getCol("player1"), getCol("player2")];
 
   const defaultTokens = ["face", "outlet"];
   let [token1, token2] = tokens;
   if (token1 === "default") token1 = defaultTokens[0];
   if (token2 === "default") token2 = defaultTokens[1];
 
-  const dims = { h: grid.length, w: grid[0].length };
+  const dims = [grid.length, grid[0].length];
   const allPos = [];
-  for (let r = 0; r < dims.h; r++)
-    for (let c = 0; c < dims.w; c++) allPos[r * dims.w + c] = { r: r, c: c };
+  for (let r = 0; r < dims[0]; r++)
+    for (let c = 0; c < dims[1]; c++) allPos[r * dims[1] + c] = [r, c];
 
-  const [repRows, repCols] = [(dims.h - 1) / 2, (dims.w - 1) / 2];
+  const [repRows, repCols] = [(dims[0] - 1) / 2, (dims[1] - 1) / 2];
 
   const tokenSize = 0.8 * groundSize;
-  const coordColor = getBoardCol("coord");
+  const coordColor = getCol("coord");
 
   const isOneOf = (pos, actions) => {
     // if (!actions) return false;
@@ -77,6 +81,7 @@ const Board = ({
         WebkitUserSelect: "none",
         msUserSelect: "none",
         userSelect: "none",
+        alignSelf: "center",
       }}
     >
       {allPos.map((pos) => {
@@ -104,9 +109,9 @@ const Board = ({
 
         const coordFits = groundSize > 27 && !anyIconHere;
         const letterCoordHere =
-          coordFits && pos.r === dims.h - 1 && pos.c % 2 === 0;
+          coordFits && pos[0] === dims[0] - 1 && pos[1] % 2 === 0;
         const numberCoordHere =
-          coordFits && pos.c === dims.w - 1 && pos.r % 2 === 0;
+          coordFits && pos[1] === dims[1] - 1 && pos[0] % 2 === 0;
         const coordHere = letterCoordHere || numberCoordHere;
 
         const hoveredHere = canHover && hoveredCell && posEq(pos, hoveredCell);
@@ -114,34 +119,36 @@ const Board = ({
         //add waves cosmetic effect when clicking a cell
         const cellType = cellTypeByPos(pos);
         let className = "";
-        if (cellType === "Ground") className += "waves-effect waves-light";
-        if (cellType === "Wall") className += "waves-effect waves-dark";
+        if (cellType === cellEnum.ground) className += "waves-effect waves-light";
+        if (cellType === cellEnum.wall) className += "waves-effect waves-dark";
 
         let color;
-        if (cellType === "Ground") {
+        if (cellType === cellEnum.ground) {
           if (hoveredHere) {
-            color = getBoardCol("hoveredGround");
+            color = getCol("hoveredGround");
           } else if (traceHere) {
-            color = getBoardCol("traceGround");
+            color = getCol("traceGround");
           } else if (goalHere) {
-            color = getBoardCol(`goalBackground${goal1Here ? "1" : "2"}`);
+            if (goal1Here && goal2Here)
+              color = getCol("combinedGoalBackground");
+            else color = getCol(`goalBackground${goal1Here ? "1" : "2"}`);
           } else {
-            color = getBoardCol("ground");
+            color = getCol("ground");
           }
-        } else if (cellType === "Wall") {
-          const solidWallHere = grid[pos.r][pos.c] !== 0;
+        } else if (cellType === cellEnum.wall) {
+          const solidWallHere = grid[pos[0]][pos[1]] !== 0;
           if (solidWallHere) {
-            color = getBoardCol(`wall${grid[pos.r][pos.c]}`);
+            color = getCol(`wall${grid[pos[0]][pos[1]]}`);
           } else if (ghostHere) {
-            color = getBoardCol(`ghostWall${creatorToMove ? "1" : "2"}`);
+            color = getCol(`ghostWall${creatorToMove ? "1" : "2"}`);
           } else if (premoveHere) {
-            color = getBoardCol(`ghostWall${creatorToMove ? "2" : "1"}`);
+            color = getCol(`ghostWall${creatorToMove ? "2" : "1"}`);
           } else if (hoveredHere) {
-            color = getBoardCol("hoveredWall");
+            color = getCol("hoveredWall");
           } else {
-            color = getBoardCol("emptyWall");
+            color = getCol("emptyWall");
           }
-        } else color = getBoardCol("pillar");
+        } else color = getCol("pillar");
 
         let [justifyContent, alignItems] = ["center", "center"];
         if (coordHere) {
@@ -155,21 +162,19 @@ const Board = ({
           alignItems: alignItems,
           position: "relative",
         };
-        if (cellType !== "Pillar") style.cursor = "pointer";
-        if (cellType === "Wall" && lastMoveHere) {
-          style.border = `${isDarkModeOn ? "1" : "2"}px solid ${getBoardCol(
+        if (cellType !== cellEnum.pillar) style.cursor = "pointer";
+        if (cellType === cellEnum.wall && lastMoveHere) {
+          style.border = `${isDarkModeOn ? "1" : "2"}px solid ${getCol(
             "lastMoveWallBorder"
           )}`;
         } else {
-          if (pos.r === 0) style.borderTop = borderStyle;
-          if (pos.r === dims.h - 1) style.borderBottom = borderStyle;
-          if (pos.c === 0) style.borderLeft = borderStyle;
-          if (pos.c === dims.w - 1) style.borderRight = borderStyle;
+          if (pos[0] === 0) style.borderTop = borderStyle;
+          if (pos[0] === dims[0] - 1) style.borderBottom = borderStyle;
+          if (pos[1] === 0) style.borderLeft = borderStyle;
+          if (pos[1] === dims[1] - 1) style.borderRight = borderStyle;
         }
 
-        const lastMoveTextShadow = `0 0 4px ${getBoardCol(
-          "lastMoveTokenBorder"
-        )}`;
+        const lastMoveTextShadow = `0 0 4px ${getCol("lastMoveTokenBorder")}`;
 
         //To mitigate misclicks, we make it so that if you click a ground
         //cell very close to a wall (within the closest 5%), nothing happens.
@@ -183,33 +188,33 @@ const Board = ({
           left: "5%",
           cursor: "pointer",
         };
-        if (pos.r === 0 || pos.r === dims.h - 1) {
+        if (pos[0] === 0 || pos[0] === dims[0] - 1) {
           clickableGroundStyle.height = "95%";
-          if (pos.r === 0) clickableGroundStyle.top = "0";
+          if (pos[0] === 0) clickableGroundStyle.top = "0";
           else clickableGroundStyle.top = "5%";
         }
-        if (pos.c === 0 || pos.c === dims.w - 1) {
+        if (pos[1] === 0 || pos[1] === dims[1] - 1) {
           clickableGroundStyle.width = "95%";
-          if (pos.c === 0) clickableGroundStyle.left = "0";
+          if (pos[1] === 0) clickableGroundStyle.left = "0";
           else clickableGroundStyle.left = "5%";
         }
 
         return (
           <div
             className={className}
-            key={`${pos.r}_${pos.c}`}
+            key={`${pos[0]}_${pos[1]}`}
             onMouseEnter={() => handleMouseEnter(pos)}
             onMouseLeave={handleMouseLeave}
             style={style}
             onClick={
-              cellType === "Wall" && handleClick !== null
+              cellType === cellEnum.wall && handleClick !== null
                 ? () => {
                     handleClick(pos);
                   }
                 : undefined
             }
           >
-            {cellType === "Ground" && (
+            {cellType === cellEnum.ground && (
               <div
                 style={clickableGroundStyle}
                 onClick={
@@ -245,12 +250,12 @@ const Board = ({
                 {token2}
               </i>
             )}
-            {cellType === "Ground" && (shadow1Here || shadow2Here) && (
+            {cellType === cellEnum.ground && (shadow1Here || shadow2Here) && (
               <i
                 className={`material-icons ${color1}-text text-lighten-4`}
                 style={{
                   fontSize: `${tokenSize}px`,
-                  color: getBoardCol(`ghost${shadow1Here ? "1" : "2"}`),
+                  color: getCol(`ghost${shadow1Here ? "1" : "2"}`),
                 }}
               >
                 {shadow1Here ? token1 : token2}
@@ -261,10 +266,11 @@ const Board = ({
                 className={`material-icons`}
                 style={{
                   fontSize: `${tokenSize}px`,
-                  color: getBoardCol("goalToken"),
+                  color: getCol("goalToken"),
                 }}
               >
-                {goal1Here ? token1 : token2}
+                {goal1Here && token1}
+                {goal2Here && token2}
               </i>
             )}
             {letterCoordHere && (
@@ -274,7 +280,7 @@ const Board = ({
                 {columnNotation(pos)}
               </div>
             )}
-            {numberCoordHere && (
+            {numberCoordHere && !letterCoordHere && (
               <div
                 style={{ color: coordColor, padding: "0", marginRight: "4px" }}
               >

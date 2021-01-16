@@ -1,9 +1,20 @@
 import React, { useEffect } from "react";
-import { Row, Col, TextInput, Button, Icon, Dropdown } from "react-materialize";
-
+import {
+  Row,
+  Col,
+  TextInput,
+  Button,
+  Icon,
+  Dropdown,
+  Checkbox,
+  Switch,
+} from "react-materialize";
 import { getColor } from "../shared/colorThemes";
 import showToastNotification from "../shared/showToastNotification";
 import TextButton from "../shared/TextButton";
+import { maxBoardDims } from "../shared/globalSettings";
+import CoordinateSlider from "../shared/CoordinateSlider";
+import BoardSizeSlider from "../shared/BoardSizeSlider";
 
 //random icons until I find a nicer set to use
 const tokens = [
@@ -37,34 +48,37 @@ const tokens = [
 ];
 
 const LobbyForm = ({
-  playerName,
+  clientParams,
+  isLargeScreen,
   handlePlayerName,
-  duration,
   handleDuration,
-  increment,
   handleIncrement,
-  joinCode,
+  handleIsPublic,
+  handleNumRows,
+  handleNumCols,
+  handleShowMoreOptions,
+  handleStartPos,
+  handleGoalPos,
   handleJoinCode,
   handleCreateGame,
   handleJoinGame,
   handleRefreshName,
-  token,
   handleToken,
-  isLargeScreen,
-  menuTheme,
-  isDarkModeOn,
 }) => {
+  const menuTheme = clientParams.menuTheme;
+  const isDarkModeOn = clientParams.isDarkModeOn;
+  const showMoreOptions = clientParams.showMoreOptions;
+  const BS = clientParams.boardSettings;
+
   useEffect(() => {
     window.addEventListener("keydown", downHandler);
-
     return () => {
       window.removeEventListener("keydown", downHandler);
     };
   });
-
   const downHandler = ({ key }) => {
     if (key !== "Enter") return;
-    if (joinCode.length > 0) handleJoinGame();
+    if (clientParams.joinCode.length > 0) handleJoinGame();
     else {
       showToastNotification("Created new game", 5000);
       handleCreateGame();
@@ -82,6 +96,7 @@ const LobbyForm = ({
       </i>
     </div>
   );
+
   return (
     <div
       className="container"
@@ -99,8 +114,10 @@ const LobbyForm = ({
         <Col s={6} m={3}>
           <TextInput
             id="nameInput"
-            value={playerName}
-            onChange={handlePlayerName}
+            value={clientParams.playerName}
+            onChange={(props) => {
+              handlePlayerName(props.target.value);
+            }}
           />
         </Col>
         <Col s={1} m={1}>
@@ -127,7 +144,7 @@ const LobbyForm = ({
           </span>
         </Col>
         <Col s={3} m={2} className="center">
-          {token === "default" ? (
+          {clientParams.token === "default" ? (
             defaultToken
           ) : (
             <div className={"white-text"} style={{ fontSize: "30px" }}>
@@ -135,7 +152,7 @@ const LobbyForm = ({
                 className={`material-icons white-text`}
                 style={{ height: `100%` }}
               >
-                {token}
+                {clientParams.token}
               </i>
             </div>
           )}
@@ -231,8 +248,10 @@ const LobbyForm = ({
           <TextInput
             id="durationInput"
             label="Duration"
-            value={`${duration}`}
-            onChange={handleDuration}
+            value={`${clientParams.timeControl.duration}`}
+            onChange={(props) => {
+              handleDuration(props.target.value);
+            }}
           />
         </Col>
         <Col s={1} m={1} style={{ paddingLeft: "0" }}>
@@ -242,8 +261,10 @@ const LobbyForm = ({
           <TextInput
             id="incrementInput"
             label="Increment"
-            value={`${increment}`}
-            onChange={handleIncrement}
+            value={`${clientParams.timeControl.increment}`}
+            onChange={(props) => {
+              handleIncrement(props.target.value);
+            }}
           />
         </Col>
         <Col s={1} m={1} style={{ paddingLeft: "0" }}>
@@ -251,6 +272,212 @@ const LobbyForm = ({
         </Col>
         <Col s={1} m={2}></Col>
       </Row>
+      <Row className="valign-wrapper">
+        <Col className="center" s={5} m={4}>
+          {" "}
+          <Checkbox
+            id="isPublicCheckbox"
+            filledIn
+            label="PUBLIC"
+            value="PUBLIC"
+            checked={clientParams.isPublic}
+            onChange={() => {
+              handleIsPublic(!clientParams.isPublic);
+            }}
+          />
+        </Col>
+        <Col s={2} m={2} style={{ paddingRight: "0" }}>
+          <BoardSizeSlider
+            label="Rows:"
+            min={3}
+            max={maxBoardDims[0]}
+            value={BS.dims[0]}
+            onChange={handleNumRows}
+          />
+        </Col>
+        <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
+        <Col s={2} m={2} style={{ paddingRight: "0" }}>
+          <BoardSizeSlider
+            label="Columns:"
+            min={3}
+            max={maxBoardDims[1]}
+            value={BS.dims[1]}
+            onChange={handleNumCols}
+          />
+        </Col>
+        <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
+        <Col s={1} m={2}></Col>
+      </Row>
+      <Row className="valign-wrapper">
+        <Col className="center" s={5} m={4}>
+          <span style={{ fontSize: "15px" }}>{"More options:"}</span>
+          <Switch
+            id="MoreSwitch"
+            offLabel="Off"
+            onChange={handleShowMoreOptions}
+            onLabel="On"
+          />
+        </Col>
+        <Col
+          s={2}
+          m={2}
+          style={{ paddingRight: "0" }}
+          title="The row where Player 1 starts"
+        >
+          {showMoreOptions && (
+            <CoordinateSlider
+              label="P1 row:"
+              min={0}
+              max={BS.dims[0] - 1}
+              value={BS.startPos[0][0]}
+              onChange={(val) => {
+                handleStartPos(0, 0, val);
+              }}
+            />
+          )}
+        </Col>
+        <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
+        <Col
+          s={2}
+          m={2}
+          style={{ paddingRight: "0" }}
+          title="The column where Player 1 starts"
+        >
+          {showMoreOptions && (
+            <CoordinateSlider
+              label="P1 col:"
+              min={0}
+              max={BS.dims[1] - 1}
+              value={BS.startPos[0][1]}
+              onChange={(val) => {
+                handleStartPos(0, 1, val);
+              }}
+            />
+          )}
+        </Col>
+        <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
+        <Col s={1} m={2}></Col>
+      </Row>
+      {showMoreOptions && (
+        <Row className="valign-wrapper">
+          <Col className="center" s={5} m={4}></Col>
+          <Col
+            s={2}
+            m={2}
+            style={{ paddingRight: "0" }}
+            title="The row where Player 2 starts"
+          >
+            <CoordinateSlider
+              label="P2 row:"
+              min={0}
+              max={BS.dims[0] - 1}
+              value={BS.startPos[1][0]}
+              onChange={(val) => {
+                handleStartPos(1, 0, val);
+              }}
+            />
+          </Col>
+          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
+          <Col
+            s={2}
+            m={2}
+            style={{ paddingRight: "0" }}
+            title="The column where Player 2 starts"
+          >
+            <CoordinateSlider
+              label="P2 col:"
+              min={0}
+              max={BS.dims[1] - 1}
+              value={BS.startPos[1][1]}
+              onChange={(val) => {
+                handleStartPos(1, 1, val);
+              }}
+            />
+          </Col>
+          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
+          <Col s={1} m={2}></Col>
+        </Row>
+      )}
+      {showMoreOptions && (
+        <Row className="valign-wrapper">
+          <Col className="center" s={5} m={4}></Col>
+          <Col
+            s={2}
+            m={2}
+            style={{ paddingRight: "0" }}
+            title="The row of the goal of Player 1"
+          >
+            <CoordinateSlider
+              label="G1 row:"
+              min={0}
+              max={BS.dims[0] - 1}
+              value={BS.goalPos[0][0]}
+              onChange={(val) => {
+                handleGoalPos(0, 0, val);
+              }}
+            />
+          </Col>
+          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
+          <Col
+            s={2}
+            m={2}
+            style={{ paddingRight: "0" }}
+            title="The column of the goal of Player 1"
+          >
+            <CoordinateSlider
+              label="G1 col:"
+              min={0}
+              max={BS.dims[1] - 1}
+              value={BS.goalPos[0][1]}
+              onChange={(val) => {
+                handleGoalPos(0, 1, val);
+              }}
+            />
+          </Col>
+          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
+          <Col s={1} m={2}></Col>
+        </Row>
+      )}
+      {showMoreOptions && (
+        <Row className="valign-wrapper">
+          <Col className="center" s={5} m={4}></Col>
+          <Col
+            s={2}
+            m={2}
+            style={{ paddingRight: "0" }}
+            title="The row of the goal of Player 2"
+          >
+            <CoordinateSlider
+              label="G2 row:"
+              min={0}
+              max={BS.dims[0] - 1}
+              value={BS.goalPos[1][0]}
+              onChange={(val) => {
+                handleGoalPos(1, 0, val);
+              }}
+            />
+          </Col>
+          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
+          <Col
+            s={2}
+            m={2}
+            style={{ paddingRight: "0" }}
+            title="The column of the goal of Player 2"
+          >
+            <CoordinateSlider
+              label="G2 Col:"
+              min={0}
+              max={BS.dims[1] - 1}
+              value={BS.goalPos[1][1]}
+              onChange={(val) => {
+                handleGoalPos(1, 1, val);
+              }}
+            />
+          </Col>
+          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
+          <Col s={1} m={2}></Col>
+        </Row>
+      )}
       <Row className="valign-wrapper">
         <Col className="center" s={5} m={4}>
           <TextButton
@@ -264,8 +491,11 @@ const LobbyForm = ({
           <TextInput
             id="joinInput"
             placeholder="Write game code here..."
-            value={`${joinCode}`}
-            onChange={handleJoinCode}
+            value={`${clientParams.joinCode}`}
+            onChange={(props) => {
+              console.log(props);
+              handleJoinCode(props.target.value);
+            }}
           />
         </Col>
         <Col s={1} m={3}></Col>

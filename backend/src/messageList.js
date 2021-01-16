@@ -49,6 +49,8 @@ module.exports = {
   returnedToOngoingGameMsg: "returnedToOngoingGame",
   ongoingGameNotFoundMsg: "ongoingGameNotFound",
   opponentReturnedMsg: "opponentReturned",
+  newChallengeMsg: "newChallenge",
+  deadChallengeMsg: "deadChallenge",
 
   //HTTP-like GET messages
   getGameMsg: "getGame",
@@ -59,4 +61,6 @@ module.exports = {
   getRecentGamesMsg: "getRecentGames",
   requestedRecentGamesMsg: "requestedRecentGames",
   recentGamesNotFoundMsg: "recentGamesNotFound",
+  requestCurrentChallengesMsg: "requestCurrentChallenges",
+  requestedCurrentChallengesMsg: "requestedCurrentChallenges",
 };

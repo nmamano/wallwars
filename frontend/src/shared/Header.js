@@ -7,8 +7,14 @@ import IconButton from "./IconButton";
 import showToastNotification from "./showToastNotification";
 import { getColor } from "./colorThemes";
 
+const contextEnum = {
+  player: "player",
+  spectator: "spectator",
+  lobby: "lobby"
+};
+
 function Header({
-  context, //Player, Spectator, or Lobby
+  context,
   helpText,
   aboutText,
   joinCode,
@@ -20,9 +26,9 @@ function Header({
   handleToggleTheme,
 }) {
   let mainText;
-  if (context === "Lobby") {
+  if (context === contextEnum.lobby) {
     mainText = <span>WallWars</span>;
-  } else if (context === "Spectator") {
+  } else if (context === contextEnum.spectator) {
     mainText = (
       <span style={{ cursor: "pointer" }} onClick={handleLeaveGame}>
         WallWars
@@ -114,7 +120,7 @@ function Header({
             menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn}
           />
-          {context === "Lobby" && (
+          {context === contextEnum.lobby && (
             <IconButton
               icon="info"
               tooltip="About"
@@ -126,7 +132,7 @@ function Header({
               isDarkModeOn={isDarkModeOn}
             />
           )}
-          {context !== "Lobby" && (
+          {context !== contextEnum.lobby && (
             <IconButton
               icon="home"
               tooltip="Leave game"

@@ -42,10 +42,8 @@ const gameHelp = (
       During the opponent's turn, you can <em>premove</em>, meaning choose a
       move that will be applied instantaneously when it is your turn.
     </h6>
-    <h6>Special rules:</h6>
-    <h6>(1) no walls can be placed during the first move of each player.</h6>
     <h6>
-      (2) if the player who moved first reaches the goal first but the other
+      Starter handicap rule: If the player who moved first reaches the goal first but the other
       player is at distance 1 or 2 from their goal, the game ends in a draw.
     </h6>
     <h6>

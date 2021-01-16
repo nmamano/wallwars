@@ -27,7 +27,7 @@ const GameControlPanel = ({
   handleIncreaseBoardSize,
   handleDecreaseBoardSize,
   zoomLevel,
-  boardHeight,
+  controlPanelHeight,
   isOpponentPresent,
   menuTheme,
   boardTheme,
@@ -37,14 +37,14 @@ const GameControlPanel = ({
   const gapHeight = 5;
   const buttonHeight = 36;
   const moveHistoryHeight =
-    boardHeight - buttonHeight * 3 - gapHeight * 3 - padding * 2;
+    controlPanelHeight - buttonHeight * 3 - gapHeight * 3 - padding * 2;
 
   const takebackEnabled =
     lifeCycleStage === 3 ||
-    (lifeCycleStage === 2 && creatorStarts === (clientRole === "Creator"));
+    (lifeCycleStage === 2 && creatorStarts === (clientRole === "creator"));
 
   //all game functions are disabled for spectator
-  const isSpectator = clientRole === "Spectator";
+  const isSpectator = clientRole === "spectator";
 
   return (
     <div

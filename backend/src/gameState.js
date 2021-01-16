@@ -12,30 +12,37 @@ exports.newGame = function () {
     joinCode: randomJoinCode(), //code used by the joiner to join
     //number of wins of creator & joiner played using this join code,
     //excluding the current one.
-    gameWins: [0, 0],
+    matchScore: [0, 0],
     socketIds: [null, null], //socked ids of creator & joiner
     //a cookie is stored at each client which can be used to rejoin a game
     cookieIds: [null, null],
     playerNames: [null, null],
     playerTokens: ["default", "default"],
-    //object with 2 attributes: duration (in minutes) and increment (in seconds)
     timeControl: null,
+    boardSettings: null,
 
     arePlayersPresent: [false, false],
     creatorStarts: Math.random() < 0.5, //coin flip
     //array with the sequence of moves played on the board (if a takeback
     //happens, the move is removed from this history as well). Each entry in
-    //moveHistory is an object with 3 attributes:
+    //moveHistory is an object with attributes:
     //actions (an array with the 1 or 2 actions for that move)
     //remainingTime (the time left of the player who made this move)
     //time stamp of when the move was received
+    //distances: the distance of each player
     moveHistory: [],
     //'' if game is ongoing, else 'creator', 'joiner', or 'draw' (same as client)
     winner: "",
     //'' if game is ongoing, 'goal' or agreement' if drawn,
     //'time', 'goal', 'resign', or 'disconnect' if someone won
     finishReason: "",
+    creationDate: null,
     startDate: null,
+    isPublic: false,
+    numSpectators: 0,
+    version: "1.0",
+    finalDists: [-1, -1], //-1,-1 until a move is registered
+    numMoves: 0,
   };
 };
 
@@ -91,14 +98,19 @@ exports.addCreator = function (
   name,
   token,
   timeControl,
-  cookieId
+  boardSettings,
+  cookieId,
+  isPublic
 ) {
   game.socketIds[0] = socketId;
   game.playerNames[0] = name;
   game.playerTokens[0] = token;
   game.timeControl = timeControl;
+  game.boardSettings = boardSettings;
   game.cookieIds[0] = cookieId;
   game.arePlayersPresent[0] = true;
+  game.isPublic = isPublic;
+  game.creationDate = Date.now();
 };
 
 exports.addJoiner = function (game, socketId, name, token, cookieId) {
@@ -111,26 +123,31 @@ exports.addJoiner = function (game, socketId, name, token, cookieId) {
 
 exports.setupRematch = function (game) {
   if (game.winner === "draw") {
-    game.gameWins[0] += 0.5;
-    game.gameWins[1] += 0.5;
+    game.matchScore[0] += 0.5;
+    game.matchScore[1] += 0.5;
   } else if (game.winner === "creator") {
-    game.gameWins[0] += 1;
+    game.matchScore[0] += 1;
   } else if (game.winner === "joiner") {
-    game.gameWins[1] += 1;
+    game.matchScore[1] += 1;
   }
   game.creatorStarts = !game.creatorStarts; //alternate who starts
   game.moveHistory = [];
+  game.finalDists = [-1, -1];
+  game.numMoves = 0;
   game.winner = "";
   game.finishReason = "";
 };
 
-exports.addMove = function (game, actions, remainingTime) {
+exports.addMove = function (game, actions, remainingTime, distances) {
   if (game.moveHistory.length === 0) game.startDate = Date.now();
   game.moveHistory.push({
     actions: actions,
     remainingTime: remainingTime,
     timestamp: new Date().toJSON(),
+    distances: distances,
   });
+  game.numMoves = game.moveHistory.length;
+  game.finalDists = distances;
 };
 
 exports.applyTakeback = function (game, requesterCookieId) {
@@ -138,6 +155,9 @@ exports.applyTakeback = function (game, requesterCookieId) {
     requesterCookieId === game.cookieIds[creatorToMove(game) ? 0 : 1];
   const numMovesToUndo = requesterToMove ? 2 : 1;
   for (let k = 0; k < numMovesToUndo; k++) game.moveHistory.pop();
+  game.numMoves = game.moveHistory.length;
+  if (game.numMoves === 0) game.finalDists = [-1, -1];
+  else game.finalDists = game.moveHistory[game.numMoves - 1].distances;
 };
 
 exports.applyGiveExtraTime = function (game, receiverCookieId) {

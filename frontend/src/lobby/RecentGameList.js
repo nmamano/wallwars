@@ -2,17 +2,16 @@ import React from "react";
 import { Table } from "react-materialize";
 import cloneDeep from "lodash.clonedeep";
 
-import globalSettings from "../shared/globalSettings";
-import { cellTypeByPos, emptyGrid, distance } from "../shared/gameLogicUtils";
+import {
+  cellTypeByPos,
+  emptyGrid,
+  distance,
+  timeControlToString,
+  cellEnum,
+} from "../shared/gameLogicUtils";
+import { prettyDate } from "../shared/utils";
 import { getColor } from "../shared/colorThemes";
 import hoverHighlight from "../shared/hoverHighlight.module.css";
-
-//duplicated from StatusHeader
-const roundNum = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
-
-const timeControlToString = (timeControl) => {
-  return roundNum(timeControl.duration) + "+" + roundNum(timeControl.increment);
-};
 
 const winnerToString = (serverGame) => {
   if (serverGame.winner === "creator") return "<";
@@ -27,22 +26,22 @@ const finalDists = (serverGame) => {
   if (cachedFinalDists.has(serverGame._id))
     return cachedFinalDists.get(serverGame._id);
 
-  const grid = emptyGrid(globalSettings.boardDims);
-  const playerPos = cloneDeep(globalSettings.initialPlayerPos);
+  const grid = emptyGrid(serverGame.boardSettings.dims);
+  const playerPos = cloneDeep(serverGame.boardSettings.startPos);
   let idxToMove = serverGame.creatorStarts ? 0 : 1;
   for (let k = 0; k < serverGame.moveHistory.length; k++) {
     const actions = serverGame.moveHistory[k].actions;
     for (let k2 = 0; k2 < actions.length; k2++) {
       const pos = actions[k2];
-      if (cellTypeByPos(pos) === "Ground") {
+      if (cellTypeByPos(pos) === cellEnum.ground) {
         playerPos[idxToMove] = pos;
       } else {
-        grid[pos.r][pos.c] = idxToMove + 1;
+        grid[pos[0]][pos[1]] = idxToMove + 1;
       }
     }
     idxToMove = (idxToMove + 1) % 2;
   }
-  const [g1, g2] = globalSettings.goals;
+  const [g1, g2] = serverGame.boardSettings.goalPos;
   const [d1, d2] = [
     distance(grid, playerPos[0], g1),
     distance(grid, playerPos[1], g2),
@@ -50,28 +49,6 @@ const finalDists = (serverGame) => {
   cachedFinalDists.set(serverGame._id, [d1, d2]);
   return [d1, d2];
 };
-
-function prettyDate(date, longFormat) {
-  if (!date) return "-";
-  const curTime = new Date().getTime();
-  const dateTime = new Date(date).getTime();
-  const seconds = Math.floor((curTime - dateTime) / 1000);
-  const secondsIn30Days = 30 * 24 * 60 * 60;
-  const months = Math.floor(seconds / secondsIn30Days);
-  if (months > 1) return months + (longFormat ? " months" : "mth") + " ago";
-  if (months === 1) return "1" + (longFormat ? " month" : "mth") + " ago";
-  const secondsInADay = 24 * 60 * 60;
-  const days = Math.floor(seconds / secondsInADay);
-  if (days > 1) return days + (longFormat ? " days" : "d") + " ago";
-  if (days === 1) return "1" + (longFormat ? " day" : "d") + " ago";
-  const hours = Math.floor(seconds / 3600);
-  if (hours > 1) return hours + (longFormat ? " hours" : "h") + " ago";
-  if (hours === 1) return "1" + (longFormat ? " hour" : "h") + " ago";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes > 1) return minutes + (longFormat ? " minutes" : "m") + " ago";
-  if (minutes === 1) return "1" + (longFormat ? " minute" : "m") + " ago";
-  return "Just now";
-}
 
 const RecentGameList = ({
   recentGames,
@@ -98,12 +75,6 @@ const RecentGameList = ({
     paddingBottom: "0.15rem",
     borderRadius: "0",
   };
-  const borderStyle = `1px solid ${getColor(
-    menuTheme,
-    "container",
-    isDarkModeOn
-  )}`;
-
   if (isLargeScreen) {
     return (
       <div
@@ -112,7 +83,6 @@ const RecentGameList = ({
           overflowY: "scroll",
           display: "block",
           height: "100%",
-          border: borderStyle,
           backgroundColor: getColor(
             menuTheme,
             "recentGamesBackground",
@@ -172,7 +142,6 @@ const RecentGameList = ({
           overflowY: "scroll",
           display: "block",
           height: "100%",
-          border: borderStyle,
         }}
       >
         <Table centered style={{ width: "100%" }}>

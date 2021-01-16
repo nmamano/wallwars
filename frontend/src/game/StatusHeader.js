@@ -1,5 +1,6 @@
 import React from "react";
 
+import { roundNum } from "../shared/utils";
 import { getColor } from "../shared/colorThemes";
 
 const StatusHeader = ({
@@ -54,8 +55,6 @@ const StatusHeader = ({
     default:
       console.error("stage should be in range [-2..4]");
   }
-
-  const roundNum = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
 
   let firstMoveName = "";
   if (lifeCycleStage === 0 && creatorStarts) firstMoveName = names[0];

@@ -64,8 +64,8 @@ class GameManager {
         return;
       }
     }
-    console.log(
-      `error: couldn't move game with join code ${joinCode} from unjoined to ongoing`
+    console.error(
+      `couldn't move game with join code ${joinCode} from unjoined to ongoing`
     );
   }
 
@@ -88,6 +88,28 @@ class GameManager {
     }
   }
 
+  getUnjoinedGameBySocketId(socketId) {
+    if (!socketId) return;
+    let game;
+    for (let i = 0; i < this.unjoinedGames.length; i += 1) {
+      if (this.unjoinedGames[i].socketIds[0] === socketId) {
+        game = this.unjoinedGames[i];
+      }
+    }
+    return game;
+  }
+
+  getOpenChallenges() {
+    const res = [];
+    for (let i = 0; i < this.unjoinedGames.length; i += 1) {
+      const game = this.unjoinedGames[i];
+      if (game.isPublic) {
+        res.push(game);
+      }
+    }
+    return res;
+  }
+
   //in theory, clients can only have one ongoing game at a time,
   //but we check all to be sure
   removeOngoingGamesByCookieId(cookieId) {
@@ -103,8 +125,8 @@ class GameManager {
   }
 
   printAllGames() {
-    console.log("Unjoined games:", this.unjoinedGames);
-    console.log("Ongoing games:", this.ongoingGames);
+    console.log("Unjoined games:\n", this.unjoinedGames);
+    console.log("Ongoing games:\n", this.ongoingGames);
   }
 }
 

@@ -1,14 +1,8 @@
+/*Game controller encapsulates the interaction with mongodb
+Currently, 'games' is the only collection, so all the db logic is here
+users can play even if the DB is down: the games are simply not stored in that case */
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
-
-/*Game controller interacts with mongodb
-Currently, 'games' is the only collection, so all the db logic is here
-
-users can play even if the DB is down.
-the games are simply not stored in that case */
-
-var connectedToDB = false;
-
 //shut deprecation warnings
 mongoose.set("useNewUrlParser", true);
 mongoose.set("useFindAndModify", false);
@@ -16,6 +10,8 @@ mongoose.set("useCreateIndex", true);
 mongoose.set("useUnifiedTopology", true);
 
 const url = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.vt6ui.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
+var connectedToDB = false;
+
 mongoose
   .connect(url)
   .then(() => {
@@ -28,6 +24,22 @@ mongoose
     console.log(err);
   });
 
+const moveSchema = new Schema(
+  {
+    actions: {
+      type: [[Number]],
+      required: true,
+      validate: [
+        (acts) => acts.length === 1 || acts.length === 2,
+        "actions should contain 1 or 2 actions",
+      ],
+    },
+    remainingTime: { type: Number, required: true },
+    timestamp: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const gameSchema = new Schema(
   {
     socketIds: {
@@ -39,6 +51,32 @@ const gameSchema = new Schema(
     timeControl: {
       duration: { type: Number, required: true },
       increment: { type: Number, required: true },
+    },
+    boardSettings: {
+      dims: {
+        type: [Number],
+        required: true,
+        validate: [
+          (dimensions) => dimensions.length === 2,
+          "dims should have 2 entries",
+        ],
+      },
+      startPos: {
+        type: [[Number]],
+        required: true,
+        validate: [
+          (sp) => sp.length === 2 && sp[0].length === 2 && sp[1].length === 2,
+          "there should be 2 startPos of size 2",
+        ],
+      },
+      goalPos: {
+        type: [[Number]],
+        required: true,
+        validate: [
+          (gp) => gp.length === 2 && gp[0].length === 2 && gp[1].length === 2,
+          "there should be 2 goalPos of size 2",
+        ],
+      },
     },
     playerNames: {
       type: [String],
@@ -61,10 +99,13 @@ const gameSchema = new Schema(
         "playerTokens should have 2 entries",
       ],
     },
-    gameWins: {
+    matchScore: {
       type: [Number],
       required: true,
-      validate: [(wins) => wins.length === 2, "gameWins should have 2 entries"],
+      validate: [
+        (wins) => wins.length === 2,
+        "matchScore should have 2 entries",
+      ],
     },
     winner: {
       type: String,
@@ -83,36 +124,29 @@ const gameSchema = new Schema(
           reason === "agreement" ||
           reason === "time" ||
           reason === "resign" ||
-          reason === "disconnect" ||
           reason === "abandon",
         (reason) =>
           `finishReason ${reason} should be 'goal', 'agreement', 'time', 'resign', or 'abandon'`,
       ],
     },
     creatorStarts: { type: Boolean, required: true },
-    moveHistory: [
-      {
-        actions: {
-          type: [
-            {
-              r: { type: Number, required: true },
-              c: { type: Number, required: true },
-            },
-          ],
-          required: true,
-          validate: [
-            (acts) => acts.length === 1 || acts.length === 2,
-            "actions should contain 1 or 2 actions",
-          ],
-        },
-        remainingTime: { type: Number, required: true },
-        timestamp: { type: String, required: true },
-      },
-    ],
+    moveHistory: [moveSchema],
     startDate: {
       type: Date,
       required: true,
     },
+    isPublic: { type: Boolean, required: true },
+    numSpectators: { type: Number, required: true },
+    numMoves: { type: Number, required: true },
+    finalDists: {
+      type: [Number],
+      required: true,
+      validate: [
+        (dists) => dists.length === 2 && dists[0] >= 0 && dists[1] >= 0,
+        "there should be 2 non-negative distances",
+      ],
+    },
+    version: { type: String, required: true },
   },
   { versionKey: false }
 );
@@ -128,7 +162,7 @@ const storeGame = async (game) => {
       `Stored game in DB ${process.env.DB_NAME} _id: ${gameToStore.id} time: ${gameToStore.startDate}`
     );
   } catch (err) {
-    console.log(`Store game to DB ${process.env.DB_NAME} failed`);
+    console.error(`Store game to DB ${process.env.DB_NAME} failed`);
     console.log(err);
   }
 };
@@ -160,6 +194,7 @@ const getRecentGames = async (count) => {
   const games = await Game.find(conditions)
     .sort({ startDate: -1 })
     .limit(count);
+  console.log(`found ${games.length}/${count} recent games`);
   return games;
 };
 

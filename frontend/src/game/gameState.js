@@ -1,6 +1,4 @@
 import cloneDeep from "lodash.clonedeep";
-import UIfx from "uifx";
-import moveSoundAudio from "./../static/moveSound.mp3";
 
 import {
   cellTypeByPos,
@@ -9,18 +7,22 @@ import {
   distance,
   isDistanceAtMost,
   canBuildWall,
+  emptyBoardDistances,
+  cellEnum,
 } from "../shared/gameLogicUtils";
-import globalSettings from "../shared/globalSettings";
+import { defaultBoardSettings } from "../shared/globalSettings";
 
 /* this file contains functions that modify a copy of the state of GamePage
 the state itself is immutable, as per the react philosophy, but we can
 make changes to a copy of it (called 'draftState' below)
 the 'Immer' state manager takes care of updating the actual state */
 
-//settings that never change
-const goals = globalSettings.goals;
-const boardDims = globalSettings.boardDims;
-const initialPlayerPos = globalSettings.initialPlayerPos;
+export const roleEnum = {
+  creator: "creator",
+  joiner: "joiner",
+  spectator: "spectator",
+  returner: "returner",
+};
 
 //pure utility functions
 export const turnCount = (state) => state.moveHistory.length - 1;
@@ -37,10 +39,10 @@ export const indexToMove = (state) => (creatorToMove(state) ? 0 : 1);
 export const ghostType = (pos) => (pos === null ? "None" : cellTypeByPos(pos));
 
 export const isOpponentPresent = (state) => {
-  return state.arePlayersPresent[state.clientRole === "Creator" ? 1 : 0];
+  return state.arePlayersPresent[state.clientRole === roleEnum.creator ? 1 : 0];
 };
 
-//the latest position of the player, if they moved in the last turn
+//the previous position of the player, if they moved in the last turn
 //(based on the current move index, not the last move played)
 export const getTracePos = (state) => {
   const creatorStarts = state.creatorStarts;
@@ -48,16 +50,14 @@ export const getTracePos = (state) => {
   let tracePos;
   if (state.viewIndex === 0) tracePos = null;
   else if (state.viewIndex === 1)
-    tracePos = globalSettings.initialPlayerPos[creatorStarts ? 0 : 1];
+    tracePos = state.boardSettings.startPos[creatorStarts ? 0 : 1];
   else if (state.viewIndex === 2)
-    tracePos = globalSettings.initialPlayerPos[creatorStarts ? 1 : 0];
+    tracePos = state.boardSettings.startPos[creatorStarts ? 1 : 0];
   else {
     const prevPos = state.moveHistory[state.viewIndex - 2].playerPos;
-    if (creatorToMoveAtIndex(state)) {
-      if (!posEq(prevPos[1], playerPos[1])) tracePos = prevPos[1];
-    } else {
-      if (!posEq(prevPos[0], playerPos[0])) tracePos = prevPos[0];
-    }
+    const playerIndex = creatorToMoveAtIndex(state) ? 1 : 0;
+    if (!posEq(prevPos[playerIndex], playerPos[playerIndex]))
+      tracePos = prevPos[playerIndex];
   }
   return tracePos;
 };
@@ -77,9 +77,9 @@ const countActions = (
   const gridCopy = cloneDeep(grid);
   for (let k = 0; k < extraWalls.length; k++) {
     const W = extraWalls[k];
-    gridCopy[W.r][W.c] = 1;
+    gridCopy[W[0]][W[1]] = 1;
   }
-  if (cellTypeByPos(selectedPos) === "Ground") {
+  if (cellTypeByPos(selectedPos) === cellEnum.ground) {
     return distance(gridCopy, posActor, selectedPos);
   }
   return canBuildWall(
@@ -108,7 +108,7 @@ export const createInitialState = (cookies) => {
     tokens: ["default", "default"],
 
     //how many games each player has won in this session
-    gameWins: [0, 0],
+    matchScore: [0, 0],
 
     //players can return to a game even if they close the browser
     //(as long as it is the same browser, since it is cookie-based)
@@ -128,7 +128,7 @@ export const createInitialState = (cookies) => {
     creatorStarts: null, //who starts is decided by the server
     winner: "", //'' if game is ongoing, else 'creator', 'joiner', or 'draw'
     //'' if game is ongoing, 'goal' or agreement' if drawn,
-    //'time', 'goal', 'resign', or 'disconnect' if someone won
+    //'time', 'goal', 'resign', or 'abandon' if someone won
     finishReason: "",
 
     //life cycle of the game
@@ -147,13 +147,10 @@ export const createInitialState = (cookies) => {
         actions: [],
         //grid contains the locations of all the built walls, labeled by who built them
         //0: empty wall, 1: player built by creator, 2: player built by joiner
-        grid: emptyGrid(boardDims),
-        playerPos: initialPlayerPos,
+        grid: emptyGrid(defaultBoardSettings.dims),
+        playerPos: defaultBoardSettings.startPos,
         timeLeft: [null, null],
-        distances: [
-          distance(emptyGrid(boardDims), initialPlayerPos[0], goals[0]),
-          distance(emptyGrid(boardDims), initialPlayerPos[1], goals[1]),
-        ],
+        distances: emptyBoardDistances(defaultBoardSettings),
         wallCounts: [0, 0],
       },
     ],
@@ -161,7 +158,7 @@ export const createInitialState = (cookies) => {
     //===================================================
     //state unique to this client
     //===================================================
-    clientRole: null, //Creator, Joiner, or Spectator
+    clientRole: null, //creator, joiner, or spectator
     moveToSend: null, //moves to be sent to the other client are stored here temporarily
 
     //the ghost action is a single action done and shown only to this client
@@ -175,6 +172,8 @@ export const createInitialState = (cookies) => {
     premoveActions: [],
 
     isVolumeOn: false,
+    shouldPlaySound: false, //actions that trigger a sound set this to true
+
     isKeyPressed: false,
     //index of the move that the client is looking at, which may not be the last one
     viewIndex: 0,
@@ -192,6 +191,8 @@ export const createInitialState = (cookies) => {
     showDrawDialog: false,
     showTakebackDialog: false,
     showRematchDialog: false,
+
+    boardSettings: defaultBoardSettings, //by default, startPos and goalPos are at the corners
   };
   applyCookieSettings(draftState, cookies);
   return draftState;
@@ -207,18 +208,28 @@ const applyCookieSettings = (draftState, cookies) => {
   }
 };
 
-export const applyAddCreator = (draftState, timeControl, name, token) => {
-  draftState.clientRole = "Creator";
+export const applyAddCreator = (
+  draftState,
+  timeControl,
+  boardSettings,
+  name,
+  token
+) => {
+  draftState.clientRole = roleEnum.creator;
   draftState.lifeCycleStage = -1;
   draftState.timeControl = timeControl;
+  draftState.boardSettings = boardSettings;
   draftState.names[0] = name;
   draftState.tokens[0] = token;
   const totalTimeInSeconds = timeControl.duration * 60;
   draftState.moveHistory[0].timeLeft = [totalTimeInSeconds, totalTimeInSeconds];
+  draftState.moveHistory[0].grid = emptyGrid(boardSettings.dims);
+  draftState.moveHistory[0].playerPos = boardSettings.startPos;
+  draftState.moveHistory[0].distances = emptyBoardDistances(boardSettings);
 };
 
 export const applyAddJoiner = (draftState, joinCode, name, token) => {
-  draftState.clientRole = "Joiner";
+  draftState.clientRole = roleEnum.joiner;
   draftState.lifeCycleStage = -1;
   draftState.joinCode = joinCode;
   draftState.names[1] = name;
@@ -240,6 +251,7 @@ export const applyJoinedOnServer = (
   creatorName,
   creatorToken,
   timeControl,
+  boardSettings,
   creatorStarts,
   creatorPresent
 ) => {
@@ -249,9 +261,13 @@ export const applyJoinedOnServer = (
   draftState.names[0] = creatorName;
   draftState.tokens[0] = creatorToken;
   draftState.timeControl = timeControl;
+  draftState.boardSettings = boardSettings;
   draftState.arePlayersPresent[0] = creatorPresent;
   const startSeconds = timeControl.duration * 60;
   draftState.moveHistory[0].timeLeft = [startSeconds, startSeconds];
+  draftState.moveHistory[0].grid = emptyGrid(boardSettings.dims);
+  draftState.moveHistory[0].playerPos = boardSettings.startPos;
+  draftState.moveHistory[0].distances = emptyBoardDistances(boardSettings);
   draftState.lifeCycleStage = 1;
 };
 
@@ -272,11 +288,12 @@ export const applyReturnToGame = (
   //if game is already initialized, don't return to game again
   if (draftState.timeControl) return;
   const clientRole =
-    cookieId === serverGame.cookieIds[0] ? "Creator" : "Joiner";
-  if (clientRole === "Creator") {
+    cookieId === serverGame.cookieIds[0] ? roleEnum.creator : roleEnum.joiner;
+  if (clientRole === roleEnum.creator) {
     applyAddCreator(
       draftState,
       serverGame.timeControl,
+      serverGame.boardSettings,
       serverGame.playerNames[0],
       serverGame.playerTokens[0]
     );
@@ -302,6 +319,7 @@ export const applyReturnToGame = (
       serverGame.playerNames[0],
       serverGame.playerTokens[0],
       serverGame.timeControl,
+      serverGame.boardSettings,
       serverGame.creatorStarts,
       true
     );
@@ -312,7 +330,7 @@ export const applyReturnToGame = (
     const tLeft = serverGame.moveHistory[k].remainingTime;
     applyMove(draftState, actions, tLeft, k + 1);
   }
-  draftState.gameWins = serverGame.gameWins;
+  draftState.matchScore = serverGame.matchScore;
   draftState.winner = serverGame.winner;
   draftState.finishReason = serverGame.finishReason;
   const tc = turnCount(draftState);
@@ -329,6 +347,7 @@ export const applyReceivedGame = (draftState, serverGame) => {
   applyAddCreator(
     draftState,
     serverGame.timeControl,
+    serverGame.boardSettings,
     serverGame.playerNames[0],
     serverGame.playerTokens[0]
   );
@@ -347,8 +366,8 @@ export const applyReceivedGame = (draftState, serverGame) => {
     const tLeft = serverGame.moveHistory[k].remainingTime;
     applyMove(draftState, actions, tLeft, k + 1);
   }
-  draftState.clientRole = "Spectator";
-  draftState.gameWins = serverGame.gameWins;
+  draftState.clientRole = roleEnum.spectator;
+  draftState.matchScore = serverGame.matchScore;
   draftState.winner = serverGame.winner;
   draftState.finishReason = serverGame.finishReason;
   draftState.lifeCycleStage = 4;
@@ -378,29 +397,30 @@ export const applyMove = (
   for (let k = 0; k < actions.length; k++) {
     const aPos = actions[k];
     const aType = cellTypeByPos(aPos);
-    if (aType === "Ground") {
+    if (aType === cellEnum.ground) {
       newPlayerPos[idxToMove] = aPos;
-      if (posEq(aPos, goals[idxToMove])) {
+      if (posEq(aPos, draftState.boardSettings.goalPos[idxToMove])) {
         const pToMoveStarted = tc % 2 === 0;
         const otherIsWithinOneMove = isDistanceAtMost(
           newGrid,
           newPlayerPos[otherIdx],
-          goals[otherIdx],
+          draftState.boardSettings.goalPos[otherIdx],
           2
         );
         if (pToMoveStarted && otherIsWithinOneMove) {
           draftState.winner = "draw";
-          draftState.gameWins[0] += 0.5;
-          draftState.gameWins[1] += 0.5;
+          draftState.matchScore[0] += 0.5;
+          draftState.matchScore[1] += 0.5;
         } else {
-          draftState.winner = idxToMove === 0 ? "creator" : "joiner";
-          draftState.gameWins[idxToMove] += 1;
+          draftState.winner =
+            idxToMove === 0 ? roleEnum.creator : roleEnum.joiner;
+          draftState.matchScore[idxToMove] += 1;
         }
         draftState.finishReason = "goal";
         draftState.lifeCycleStage = 4;
       }
-    } else if (aType === "Wall") {
-      newGrid[aPos.r][aPos.c] = idxToMove + 1;
+    } else if (aType === cellEnum.wall) {
+      newGrid[aPos[0]][aPos[1]] = idxToMove + 1;
       wallCounts[idxToMove] += 1;
     } else console.error("unexpected action type", aType);
   }
@@ -411,8 +431,8 @@ export const applyMove = (
     playerPos: newPlayerPos,
     timeLeft: newTimeLeft,
     distances: [
-      distance(newGrid, newPlayerPos[0], goals[0]),
-      distance(newGrid, newPlayerPos[1], goals[1]),
+      distance(newGrid, newPlayerPos[0], draftState.boardSettings.goalPos[0]),
+      distance(newGrid, newPlayerPos[1], draftState.boardSettings.goalPos[1]),
     ],
     wallCounts: wallCounts,
   });
@@ -434,26 +454,14 @@ export const applyMove = (
     const acts = draftState.premoveActions;
     draftState.premoveActions = [];
     for (let k = 0; k < acts.length; k++)
-      applySelectedCell(draftState, acts[k], true, false);
+      applySelectedCell(draftState, acts[k], true);
   }
-};
-
-const moveSound = new UIfx(moveSoundAudio);
-const playMoveSound = () => {
-  moveSound.play();
 };
 
 //manage the state change on click or keyboard press. this may
 //change the ghost action (which is only shown to this client), or
 //make a full move, in which case it is also sent to the other client
-//**todo**: the call to 'playMoveSound' should be moved to GamePage
-//functions in this file should not have side-effects (besides modifying draftState)
-export const applySelectedCell = (
-  draftState,
-  pos,
-  clientToMove,
-  shouldPlaySound
-) => {
+export const applySelectedCell = (draftState, pos, clientToMove) => {
   if (!clientToMove) {
     applySelectedCellPremove(draftState, pos);
     return;
@@ -463,28 +471,26 @@ export const applySelectedCell = (
   //can only move if looking at current position
   if (draftState.viewIndex !== turnCount(draftState)) return;
   //out of bounds position, can happen when using the keyboard keys
-  if (pos.r < 0 || pos.r >= boardDims.h || pos.c < 0 || pos.c >= boardDims.w)
+  const dims = draftState.boardSettings.dims;
+  if (pos[0] < 0 || pos[0] >= dims[0] || pos[1] < 0 || pos[1] >= dims[1])
     return;
 
   const selectedType = cellTypeByPos(pos);
-  //there's a rule that the first move by each player must be a move
-  if (draftState.lifeCycleStage < 3 && selectedType === "Wall") return;
-
   const idx = indexToMove(draftState);
   const otherIdx = idx === 0 ? 1 : 0;
   const gType = ghostType(draftState.ghostAction);
-  const extraWalls = gType === "Wall" ? [draftState.ghostAction] : [];
+  const extraWalls = gType === cellEnum.wall ? [draftState.ghostAction] : [];
   const tc = turnCount(draftState);
   let curPos = draftState.moveHistory[tc].playerPos[idx];
-  if (selectedType === "Wall" && gType === "Ground")
+  if (selectedType === cellEnum.wall && gType === cellEnum.ground)
     curPos = draftState.ghostAction;
   const actCount = countActions(
     draftState.moveHistory[tc].grid,
     pos,
     curPos,
     draftState.moveHistory[tc].playerPos[otherIdx],
-    goals[idx],
-    goals[otherIdx],
+    draftState.boardSettings.goalPos[idx],
+    draftState.boardSettings.goalPos[otherIdx],
     extraWalls
   );
   if (actCount > 2) return; //clicked a ground cell at distance >2
@@ -495,29 +501,29 @@ export const applySelectedCell = (
   //see docs/moveLogic.md for the description of the case analysis
   let [fullMoveActions, newGhostAction] = [null, null];
   if (gType === "None") {
-    if (selectedType === "Wall") {
+    if (selectedType === cellEnum.wall) {
       if (actCount === 1) newGhostAction = pos;
       else return;
-    } else if (selectedType === "Ground") {
+    } else if (selectedType === cellEnum.ground) {
       if (actCount === 1) newGhostAction = pos;
       else if (actCount === 2) fullMoveActions = [pos];
       else return;
     }
-  } else if (gType === "Wall") {
-    if (selectedType === "Wall") {
+  } else if (gType === cellEnum.wall) {
+    if (selectedType === cellEnum.wall) {
       if (posEq(draftState.ghostAction, pos)) newGhostAction = null;
       else if (actCount === 1) fullMoveActions = [pos, draftState.ghostAction];
       else return;
-    } else if (selectedType === "Ground") {
+    } else if (selectedType === cellEnum.ground) {
       if (actCount === 0) newGhostAction = null;
       else if (actCount === 1) fullMoveActions = [pos, draftState.ghostAction];
       else return;
     }
-  } else if (gType === "Ground") {
-    if (selectedType === "Wall") {
+  } else if (gType === cellEnum.ground) {
+    if (selectedType === cellEnum.wall) {
       if (actCount === 1) fullMoveActions = [pos, draftState.ghostAction];
       else return;
-    } else if (selectedType === "Ground") {
+    } else if (selectedType === cellEnum.ground) {
       if (actCount === 0) newGhostAction = null;
       else if (actCount === 1) {
         if (posEq(pos, draftState.ghostAction)) newGhostAction = null;
@@ -536,9 +542,14 @@ export const applySelectedCell = (
     //we don't add the increment until the clocks start running (stage 3)
     if (draftState.lifeCycleStage === 3)
       tLeft += draftState.timeControl.increment;
-    draftState.moveToSend = { actions: fullMoveActions, remainingTime: tLeft };
-    if (shouldPlaySound && draftState.isVolumeOn) playMoveSound();
+    draftState.shouldPlaySound = true;
     applyMove(draftState, fullMoveActions, tLeft, turnCount(draftState) + 1);
+    draftState.moveToSend = {
+      actions: fullMoveActions,
+      remainingTime: tLeft,
+      distances:
+        draftState.moveHistory[draftState.moveHistory.length - 1].distances,
+    };
   } else {
     draftState.ghostAction = newGhostAction;
   }
@@ -551,12 +562,12 @@ const applySelectedCellPremove = (draftState, pos) => {
   //can only premove if looking at current position
   if (draftState.viewIndex !== turnCount(draftState)) return;
   //out of bounds position, can happen when using the keyboard keys
-  if (pos.r < 0 || pos.r >= boardDims.h || pos.c < 0 || pos.c >= boardDims.w)
-    return;
-  const selectedType = cellTypeByPos(pos);
-  //there's a rule that the first move by each player must be a move
-  if (draftState.lifeCycleStage < 2 && selectedType === "Wall") return;
 
+  const dims = draftState.boardSettings.dims;
+  if (pos[0] < 0 || pos[0] >= dims[0] || pos[1] < 0 || pos[1] >= dims[1])
+    return;
+
+  const selectedType = cellTypeByPos(pos);
   const idx = indexToMove(draftState) === 0 ? 1 : 0;
   const otherIdx = idx === 0 ? 1 : 0;
   const tc = turnCount(draftState);
@@ -564,18 +575,18 @@ const applySelectedCellPremove = (draftState, pos) => {
   let premoveGround = null;
   for (let k = 0; k < draftState.premoveActions.length; k++) {
     const act = draftState.premoveActions[k];
-    if (cellTypeByPos(act) === "Wall") premoveWalls.push(act);
+    if (cellTypeByPos(act) === cellEnum.wall) premoveWalls.push(act);
     else premoveGround = act;
   }
   let curPos = draftState.moveHistory[tc].playerPos[idx];
-  if (selectedType === "Wall" && premoveGround) curPos = premoveGround;
+  if (selectedType === cellEnum.wall && premoveGround) curPos = premoveGround;
   const actCount = countActions(
     draftState.moveHistory[tc].grid,
     pos,
     curPos,
     draftState.moveHistory[tc].playerPos[otherIdx],
-    goals[idx],
-    goals[otherIdx],
+    draftState.boardSettings.goalPos[idx],
+    draftState.boardSettings.goalPos[otherIdx],
     premoveWalls
   );
   let premoveGroundDist = null;
@@ -585,25 +596,34 @@ const applySelectedCellPremove = (draftState, pos) => {
       premoveGround,
       draftState.moveHistory[tc].playerPos[idx],
       draftState.moveHistory[tc].playerPos[otherIdx],
-      goals[idx],
-      goals[otherIdx],
+      draftState.boardSettings.goalPos[idx],
+      draftState.boardSettings.goalPos[otherIdx],
       premoveWalls
     );
 
   if (actCount > 2) return;
 
   //see docs/moveLogic.md for the description of the case analysis below
+  const premoveEnum = {
+    empty: "empty",
+    wall: "wall",
+    wallWall: "wallWall",
+    groundWall: "groundWall",
+    groundDist1: "groundDist1",
+    groundDist2: "groundDist2",
+  };
   let premoveState;
-  if (draftState.premoveActions.length === 0) premoveState = "Empty";
-  else if (!premoveGround && premoveWalls.length === 1) premoveState = "Wall";
+  if (draftState.premoveActions.length === 0) premoveState = premoveEnum.empty;
+  else if (!premoveGround && premoveWalls.length === 1)
+    premoveState = premoveEnum.wall;
   else if (!premoveGround && premoveWalls.length === 2)
-    premoveState = "WallWall";
+    premoveState = premoveEnum.wallWall;
   else if (premoveGround && premoveWalls.length === 1)
-    premoveState = "GroundWall";
+    premoveState = premoveEnum.groundWall;
   else if (premoveGround && premoveGroundDist === 1)
-    premoveState = "GroundDist1";
+    premoveState = premoveEnum.groundDist1;
   else if (premoveGround && premoveGroundDist === 2)
-    premoveState = "GroundDist2";
+    premoveState = premoveEnum.groundDist2;
   else {
     console.error(
       "Unknown premove state",
@@ -629,50 +649,50 @@ const applySelectedCellPremove = (draftState, pos) => {
   if (premoveWalls.length === 1) [W, W2] = [premoveWalls[0], null];
   else if (premoveWalls.length === 2)
     [W, W2] = [premoveWalls[0], premoveWalls[1]];
-  if (premoveState === "Empty") {
-    if (selectedType === "Wall") {
+  if (premoveState === premoveEnum.empty) {
+    if (selectedType === cellEnum.wall) {
       if (actCount === 1) newPremoveActions = [pos];
       else return;
-    } else if (selectedType === "Ground") {
+    } else if (selectedType === cellEnum.ground) {
       if (actCount === 1 || actCount === 2) newPremoveActions = [pos];
       else console.error("unreachable case");
     }
-  } else if (premoveState === "Wall") {
-    if (selectedType === "Wall") {
+  } else if (premoveState === premoveEnum.wall) {
+    if (selectedType === cellEnum.wall) {
       if (posEq(W, pos)) newPremoveActions = [];
       else if (actCount === 1) newPremoveActions = [W, pos];
       else return;
-    } else if (selectedType === "Ground") {
+    } else if (selectedType === cellEnum.ground) {
       if (actCount === 1) newPremoveActions = [W, pos];
       else return;
     }
-  } else if (premoveState === "WallWall") {
-    if (selectedType === "Wall") {
+  } else if (premoveState === premoveEnum.wallWall) {
+    if (selectedType === cellEnum.wall) {
       if (posEq(W, pos)) newPremoveActions = [W2];
       else if (posEq(W2, pos)) newPremoveActions = [W];
       else return;
-    } else if (selectedType === "Ground") {
+    } else if (selectedType === cellEnum.ground) {
       return;
     }
-  } else if (premoveState === "GroundDist1") {
-    if (selectedType === "Wall") {
+  } else if (premoveState === premoveEnum.groundDist1) {
+    if (selectedType === cellEnum.wall) {
       if (actCount === 1) newPremoveActions = [premoveGround, pos];
       else return;
-    } else if (selectedType === "Ground") {
+    } else if (selectedType === cellEnum.ground) {
       if (posEq(pos, premoveGround)) newPremoveActions = [];
       else newPremoveActions = [pos];
     }
-  } else if (premoveState === "GroundDist2") {
-    if (selectedType === "Wall") return;
-    else if (selectedType === "Ground") {
+  } else if (premoveState === premoveEnum.groundDist2) {
+    if (selectedType === cellEnum.wall) return;
+    else if (selectedType === cellEnum.ground) {
       if (posEq(pos, premoveGround)) newPremoveActions = [];
       else newPremoveActions = [pos];
     }
-  } else if (premoveState === "GroundWall") {
-    if (selectedType === "Wall") {
+  } else if (premoveState === premoveEnum.groundWall) {
+    if (selectedType === cellEnum.wall) {
       if (posEq(pos, W)) newPremoveActions = [premoveGround];
       else return;
-    } else if (selectedType === "Ground") {
+    } else if (selectedType === cellEnum.ground) {
       if (posEq(pos, premoveGround)) newPremoveActions = [W];
       else if (actCount === 1) newPremoveActions = [W, pos];
       else return;
@@ -693,11 +713,11 @@ const closeDialogs = (draftState) => {
 
 export const applyDrawGame = (draftState, finishReason) => {
   if (draftState.lifeCycleStage !== 3) return;
-  if (draftState.isVolumeOn) playMoveSound();
+  draftState.shouldPlaySound = true;
   draftState.lifeCycleStage = 4;
   draftState.winner = "draw";
-  draftState.gameWins[0] += 0.5;
-  draftState.gameWins[1] += 0.5;
+  draftState.matchScore[0] += 0.5;
+  draftState.matchScore[1] += 0.5;
   draftState.finishReason = finishReason;
   closeDialogs(draftState);
 };
@@ -705,8 +725,8 @@ export const applyDrawGame = (draftState, finishReason) => {
 export const applyResignGame = (draftState, resignerIsCreator) => {
   if (draftState.lifeCycleStage !== 3) return;
   draftState.lifeCycleStage = 4;
-  draftState.winner = resignerIsCreator ? "joiner" : "creator";
-  draftState.gameWins[resignerIsCreator ? 1 : 0] += 1;
+  draftState.winner = resignerIsCreator ? roleEnum.joiner : roleEnum.creator;
+  draftState.matchScore[resignerIsCreator ? 1 : 0] += 1;
   draftState.finishReason = "resign";
   closeDialogs(draftState);
 };
@@ -714,8 +734,8 @@ export const applyResignGame = (draftState, resignerIsCreator) => {
 export const applyAbandonGame = (draftState, abandonerIsCreator) => {
   if (draftState.lifeCycleStage === 4) return;
   draftState.lifeCycleStage = 4;
-  draftState.winner = abandonerIsCreator ? "joiner" : "creator";
-  draftState.gameWins[abandonerIsCreator ? 1 : 0] += 1;
+  draftState.winner = abandonerIsCreator ? roleEnum.joiner : roleEnum.creator;
+  draftState.matchScore[abandonerIsCreator ? 1 : 0] += 1;
   draftState.finishReason = "abandon";
   closeDialogs(draftState);
 };
@@ -736,20 +756,29 @@ export const applyTakeback = (draftState, requesterIsCreator) => {
 export const applySetupRematch = (draftState) => {
   if (draftState.lifeCycleStage !== 4) return;
   draftState.creatorStarts = !draftState.creatorStarts;
-  const newGrid = emptyGrid(boardDims);
+
+  const newGrid = emptyGrid(draftState.boardSettings.dims);
   draftState.moveHistory = [
     {
       index: 0,
       actions: [],
       grid: newGrid,
-      playerPos: initialPlayerPos,
+      playerPos: draftState.boardSettings.startPos,
       timeLeft: [
         draftState.timeControl.duration * 60,
         draftState.timeControl.duration * 60,
       ],
       distances: [
-        distance(newGrid, initialPlayerPos[0], goals[0]),
-        distance(newGrid, initialPlayerPos[1], goals[1]),
+        distance(
+          newGrid,
+          draftState.boardSettings.startPos[0],
+          draftState.boardSettings.goalPos[0]
+        ),
+        distance(
+          newGrid,
+          draftState.boardSettings.startPos[1],
+          draftState.boardSettings.goalPos[1]
+        ),
       ],
       wallCounts: [0, 0],
     },
@@ -768,8 +797,8 @@ export const applyAddExtraTime = (draftState, playerIndex) => {
 };
 
 const applyWonOnTime = (draftState, winnerIndex) => {
-  draftState.winner = winnerIndex === 0 ? "creator" : "joiner";
-  draftState.gameWins[winnerIndex] += 1;
+  draftState.winner = winnerIndex === 0 ? roleEnum.creator : roleEnum.joiner;
+  draftState.matchScore[winnerIndex] += 1;
   draftState.finishReason = "time";
   draftState.lifeCycleStage = 4;
   closeDialogs(draftState);
@@ -783,6 +812,7 @@ export const applyClockTick = (draftState) => {
   const tc = turnCount(draftState);
   draftState.moveHistory[tc].timeLeft[idx] -= 1;
   if (draftState.moveHistory[tc].timeLeft[idx] === 0) {
+    draftState.shouldPlaySound = true;
     applyWonOnTime(draftState, idx === 0 ? 1 : 0);
   }
 };

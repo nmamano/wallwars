@@ -19,30 +19,29 @@ place a wall in the same turn).
 
 ## Features
 
+- Create public games that anyone can see and join from the lobby, or private games that can only be joined with a join code.
 - No registration needed to play (start playing with 1 click).
-- Watch recent past games played by anyone.
-- Past games are chosen randomly to be showcased (auto-played) in the lobby.
-- Customizable time controls (duration + increment)
+- Navigate through recent past games played by anyone and watch any of them.
+- Random past games are showcased (auto-played) in the lobby.
+- Customizable game settings, like time controls (duration + increment) and board dimensions.
 - Make premoves during your opponent's turn.
-- Move with keyboard arrows.
-- Out-of-game interactions: resign, offer draw, request takeback, and increase the opponent's time.
+- Move with mouse or keyboard arrows.
+- Out-of-board interactions: resign, offer draw, request takeback, and increase the opponent's remaining time.
 - Navigate to any previous position during/after the game.
-- Ability to request a rematch and play multi-game sessions.
+- Ability to request a rematch and play multi-game matches.
 - Multi-game scores (a win is 1 point and a draw is 0.5).
-- Real time indicator of when the opponent disconnects.
 - Ability to return to a game even after leaving the page.
-- Clients ping the server periodically to detect connection issues early.
-- Responsive design for mobile (except that there are 437 cells, so it is hard to tap the right one in a small screen).
+- Real-time indicator of when the opponent disconnects/returns to the game.
+- Responsive design for mobile (smaller board dimensions recommended, as it can be hard to tap the right cell in a small screen).
 - Optional sound effect for moves.
-- Two color themes, each with a night mode.
+- Two color themes (red/green and blue only), each with a night mode.
 - Adjustable board scaling to fit different screen sizes.
-- Customizable tokens (the look of your piece)
-- Settings are stored in cookies for convenience (username, time control, token image, color theme, night mode, ...).
+- Customizable tokens (the look of your piece).
+- Settings are stored in cookies for convenience (username, time control, board dimensions, token, color theme, night mode, ...).
 - Visual highlight of the last move played on the board.
 
 ## Coming features
 
-- Create public games that anyone can see and join from the lobby without a join code.
 - List ongoing public games in the lobby and allow to spectate them in real time.
 - Offline/local game mode to be able to play with someone else on the same computer without connecting to the server.
 - Study session: mode where you can explore a game with more flexibility (e.g., you can branch off and return to the main move sequence). This mode will be online so you can invite other people to a study session with a join code.

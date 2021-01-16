@@ -4,6 +4,7 @@ const socketIo = require("socket.io");
 
 const gameController = require("./src/gameController");
 const GameManager = require("./src/GameManager");
+const { logMessage } = require("./src/logUtils");
 const {
   newGame,
   turnCount,
@@ -25,6 +26,7 @@ const port = process.env.PORT || 4001;
 const app = express();
 //the server doesn't serve any HTML, but it needs a route to listen for incoming connections
 const index = require("./routes/index");
+const ChallengeBroadcast = require("./src/challengeBroadcast");
 app.use(index);
 const server = http.createServer(app);
 const io = socketIo(server);
@@ -36,50 +38,8 @@ const genRandomCookieId = () => {
 //global object containing all the games
 const GM = new GameManager();
 
-//middleware for logging incoming and outgoing messages
-//format: hh:mm:ss ss|ccc|J -> SERVER: m [gg] {p}
-//ss: first 2 chars of the socket id,
-//ccc: first 3 chars of the cookie id, or '___' if unknown
-//J: client role. 'C' for creator, 'J' for joiner, or '_' if not in a game
-//X -> Y: X is the sender and Y the receiver. One of them is SERVER
-//m: message title
-//gg: first 2 chars of the join code ([gg] is missing if the client is not in a game)
-//p: key-value pairs of the message parameters. May be cut short if too long
-const logMessage = (cookieId, socketId, sent, messageTitle, messageParams) => {
-  const maxLogMsgLength = 141;
-  const shortCookieId = cookieId ? cookieId.substring(0, 3) : "___";
-  const shortSocketId = socketId.substring(0, 2);
-  let client = shortSocketId + "|" + shortCookieId;
-  const game = GM.ongoingGameOfClient(cookieId);
-  const date = new Date();
-  let logText = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()} `;
-  if (game) {
-    const isCreator = cookieId === game.cookieIds[0];
-    client += `|${isCreator ? "C" : "J"}`;
-  } else {
-    client += "|_";
-  }
-  logText += sent ? "SERVER -> " + client : client + " -> SERVER";
-  logText += `: ${messageTitle}`;
-  if (game) {
-    const shortJoinCode = game.joinCode.substring(0, 2);
-    logText += ` [${shortJoinCode}]`;
-  }
-  if (messageParams) {
-    logText += " ";
-    const paramsText = JSON.stringify(messageParams);
-    if (logText.length + paramsText.length <= maxLogMsgLength) {
-      logText += paramsText;
-    } else {
-      const shortParams = paramsText.substring(
-        0,
-        maxLogMsgLength - logText.length - 3
-      );
-      logText += shortParams + "...";
-    }
-  }
-  console.log(logText);
-};
+//for informing clients about new challenges
+const ChallengeBC = new ChallengeBroadcast();
 
 io.on(M.connectionMsg, (socket) => {
   let clientCookieId = null;
@@ -87,34 +47,36 @@ io.on(M.connectionMsg, (socket) => {
   ////////////////////////////////////
   //utility functions
   ////////////////////////////////////
-  const logReceivedMessage = (messageTitle, messageParams) =>
-    logMessage(clientCookieId, socket.id, false, messageTitle, messageParams);
-
-  logReceivedMessage(M.connectionMsg);
-
-  const emitMessage = (messageTitle, params) => {
-    if (params) socket.emit(messageTitle, params);
-    else socket.emit(messageTitle);
-    logMessage(clientCookieId, socket.id, true, messageTitle, params);
+  const logReceivedMessage = (msgTitle, msgParams) => {
+    const game = GM.ongoingGameOfClient(clientCookieId);
+    logMessage(clientCookieId, socket.id, game, false, msgTitle, msgParams);
   };
 
-  const emitMessageOpponent = (messageTitle, params) => {
+  const emitMessage = (msgTitle, msgParams) => {
+    if (msgParams) socket.emit(msgTitle, msgParams);
+    else socket.emit(msgTitle);
+    const game = GM.ongoingGameOfClient(clientCookieId);
+    logMessage(clientCookieId, socket.id, game, true, msgTitle, msgParams);
+  };
+
+  const emitMessageOpponent = (msgTitle, msgParams) => {
     const oppSocketId = GM.getOpponentSocketId(clientCookieId);
     const oppCookieId = GM.getOpponentCookieId(clientCookieId);
     if (!oppSocketId) {
-      console.log(`error: couldn't send message ${messageTitle} to opponent`);
+      console.log(`error: couldn't send message ${msgTitle} to opponent`);
       return;
     }
-    if (params) io.to(oppSocketId).emit(messageTitle, params);
-    else io.to(oppSocketId).emit(messageTitle);
-    logMessage(oppCookieId, oppSocketId, true, messageTitle, params);
+    if (msgParams) io.to(oppSocketId).emit(msgTitle, msgParams);
+    else io.to(oppSocketId).emit(msgTitle);
+    const game = GM.ongoingGameOfClient(clientCookieId);
+    logMessage(oppCookieId, oppSocketId, game, true, msgTitle, msgParams);
   };
 
   const emitGameNotFoundError = () => emitMessage(M.gameNotFoundErrorMsg);
 
   //communicate the the opponent that the client is not coming back
   //and store the game to the DB if it had started
-  const dealWithLingeringGame = (game) => {
+  const dealWithLingeringGame = async (game) => {
     const idx = clientIndex(game, clientCookieId);
     if (game.winner === "" && game.arePlayersPresent[idx === 0 ? 1 : 0])
       emitMessageOpponent(M.abandonedGameMsg);
@@ -128,39 +90,64 @@ io.on(M.connectionMsg, (socket) => {
         const winner = creatorToMove(game) ? "joiner" : "creator";
         setResult(game, winner, "time");
       }
-      gameController.storeGame(game);
+      await gameController.storeGame(game);
     }
   };
 
   ////////////////////////////////////
+  //new connection start-up
+  ////////////////////////////////////
+  logReceivedMessage(M.connectionMsg);
+  ChallengeBC.addSubscriber(socket);
+
+  ////////////////////////////////////
   //process incoming messages
   ////////////////////////////////////
-
-  socket.on(M.createGameMsg, ({ name, token, timeControl, cookieId }) => {
-    logReceivedMessage(M.createGameMsg, { name, token, timeControl, cookieId });
-    if (cookieId && cookieId !== "undefined") {
-      clientCookieId = cookieId;
-      const ongoingGame = GM.getOngoingGameByCookieId(clientCookieId);
-      if (ongoingGame) dealWithLingeringGame(ongoingGame);
-      GM.removeGamesByCookieId(clientCookieId); //ensure there's no other game for this client
-    } else {
-      clientCookieId = genRandomCookieId();
+  socket.on(
+    M.createGameMsg,
+    async ({ name, token, timeControl, boardSettings, cookieId, isPublic }) => {
+      logReceivedMessage(M.createGameMsg, {
+        name,
+        token,
+        timeControl,
+        boardSettings,
+        cookieId,
+        isPublic,
+      });
+      if (cookieId && cookieId !== "undefined") {
+        clientCookieId = cookieId;
+        const ongoingGame = GM.getOngoingGameByCookieId(clientCookieId);
+        if (ongoingGame) await dealWithLingeringGame(ongoingGame);
+        GM.removeGamesByCookieId(clientCookieId); //ensure there's no other game for this client
+      } else {
+        clientCookieId = genRandomCookieId();
+      }
+      const game = newGame();
+      addCreator(
+        game,
+        socket.id,
+        name,
+        token,
+        timeControl,
+        boardSettings,
+        clientCookieId,
+        isPublic
+      );
+      GM.addUnjoinedGame(game);
+      emitMessage(M.gameCreatedMsg, {
+        joinCode: game.joinCode,
+        creatorStarts: game.creatorStarts,
+        cookieId: clientCookieId,
+      });
+      if (isPublic) ChallengeBC.notifyNewChallenge(game);
     }
-    const game = newGame();
-    addCreator(game, socket.id, name, token, timeControl, clientCookieId);
-    GM.addUnjoinedGame(game);
-    emitMessage(M.gameCreatedMsg, {
-      joinCode: game.joinCode,
-      creatorStarts: game.creatorStarts,
-      cookieId: clientCookieId,
-    });
-  });
+  );
 
-  socket.on(M.joinGameMsg, ({ joinCode, name, token, cookieId }) => {
+  socket.on(M.joinGameMsg, async ({ joinCode, name, token, cookieId }) => {
     logReceivedMessage(M.joinGameMsg, { joinCode, name, token, cookieId });
     if (cookieId) {
       const ongoingGame = GM.getOngoingGameByCookieId(cookieId);
-      if (ongoingGame) dealWithLingeringGame(ongoingGame, cookieId);
+      if (ongoingGame) await dealWithLingeringGame(ongoingGame, cookieId);
     }
     const game = GM.unjoinedGame(joinCode);
     if (!game) {
@@ -180,6 +167,7 @@ io.on(M.connectionMsg, (socket) => {
       creatorName: game.playerNames[0],
       creatorToken: game.playerTokens[0],
       timeControl: game.timeControl,
+      boardSettings: game.boardSettings,
       creatorStarts: game.creatorStarts,
       cookieId: cookieId,
       creatorPresent: game.arePlayersPresent[0],
@@ -188,10 +176,12 @@ io.on(M.connectionMsg, (socket) => {
       joinerName: name,
       joinerToken: token,
     });
-    // GM.printAllGames();
+    if (game.isPublic) {
+      ChallengeBC.notifyDeadChallenge(game.joinCode);
+    }
   });
 
-  socket.on(M.moveMsg, ({ actions, remainingTime }) => {
+  socket.on(M.moveMsg, ({ actions, remainingTime, distances }) => {
     logReceivedMessage(M.moveMsg, { actions, remainingTime });
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) {
@@ -202,7 +192,7 @@ io.on(M.connectionMsg, (socket) => {
       console.log("error: received move for finished game");
       return;
     }
-    addMove(game, actions, remainingTime);
+    addMove(game, actions, remainingTime, distances);
     emitMessageOpponent(M.movedMsg, {
       actions: actions,
       moveIndex: turnCount(game),
@@ -239,7 +229,7 @@ io.on(M.connectionMsg, (socket) => {
     emitMessageOpponent(M.rematchAcceptedMsg);
   });
 
-  socket.on(M.resignMsg, () => {
+  socket.on(M.resignMsg, async () => {
     logReceivedMessage(M.resignMsg);
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) {
@@ -250,7 +240,7 @@ io.on(M.connectionMsg, (socket) => {
     const winner = clientCookieId === game.cookieIds[0] ? "joiner" : "creator";
     setResult(game, winner, "resign");
     emitMessageOpponent(M.resignedMsg);
-    gameController.storeGame(game);
+    await gameController.storeGame(game);
   });
 
   socket.on(M.offerDrawMsg, () => {
@@ -262,7 +252,7 @@ io.on(M.connectionMsg, (socket) => {
     emitMessageOpponent(M.drawOfferedMsg);
   });
 
-  socket.on(M.acceptDrawMsg, () => {
+  socket.on(M.acceptDrawMsg, async () => {
     logReceivedMessage(M.acceptDrawMsg);
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) {
@@ -272,7 +262,7 @@ io.on(M.connectionMsg, (socket) => {
     if (game.winner !== "") return;
     setResult(game, "draw", "agreement");
     emitMessageOpponent(M.drawAcceptedMsg);
-    gameController.storeGame(game);
+    await gameController.storeGame(game);
   });
 
   socket.on(M.rejectDrawMsg, () => {
@@ -324,7 +314,7 @@ io.on(M.connectionMsg, (socket) => {
     emitMessageOpponent(M.extraTimeReceivedMsg);
   });
 
-  socket.on(M.playerWonOnTimeMsg, ({ winner }) => {
+  socket.on(M.playerWonOnTimeMsg, async ({ winner }) => {
     logReceivedMessage(M.playerWonOnTimeMsg, { winner });
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) {
@@ -333,10 +323,10 @@ io.on(M.connectionMsg, (socket) => {
     }
     if (game.winner !== "") return;
     setResult(game, winner, "time");
-    gameController.storeGame(game);
+    await gameController.storeGame(game);
   });
 
-  socket.on(M.playerReachedGoalMsg, ({ winner }) => {
+  socket.on(M.playerReachedGoalMsg, async ({ winner }) => {
     logReceivedMessage(M.playerReachedGoalMsg, { winner });
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) {
@@ -345,11 +335,13 @@ io.on(M.connectionMsg, (socket) => {
     }
     if (game.winner !== "") return;
     setResult(game, winner, "goal");
-    gameController.storeGame(game);
+    await gameController.storeGame(game);
   });
 
   const handleClientLeaving = () => {
     if (!clientCookieId) return;
+    const unjoinedGame = GM.getUnjoinedGameBySocketId(socket.id);
+    if (unjoinedGame) ChallengeBC.notifyDeadChallenge(unjoinedGame.joinCode);
     GM.removeUnjoinedGamesByCookieId(clientCookieId);
     const game = GM.ongoingGameOfClient(clientCookieId);
     if (!game) return;
@@ -367,6 +359,7 @@ io.on(M.connectionMsg, (socket) => {
 
   socket.on(M.disconnectMsg, () => {
     logReceivedMessage(M.disconnectMsg);
+    ChallengeBC.removeSubscriber(socket.id);
     handleClientLeaving();
   });
 
@@ -391,6 +384,13 @@ io.on(M.connectionMsg, (socket) => {
         game: game,
       });
     else emitMessage(M.randomGameNotFoundMsg);
+  });
+  socket.on(M.requestCurrentChallengesMsg, () => {
+    logReceivedMessage(M.requestCurrentChallengesMsg);
+    const challenges = GM.getOpenChallenges();
+    emitMessage(M.requestedCurrentChallengesMsg, {
+      challenges: challenges,
+    });
   });
 
   socket.on(M.getRecentGamesMsg, async ({ count }) => {
