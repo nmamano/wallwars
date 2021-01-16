@@ -4,6 +4,7 @@ const socketIo = require("socket.io");
 
 const gameController = require("./src/gameController");
 const GameManager = require("./src/GameManager");
+const ChallengeBroadcast = require("./src/ChallengeBroadcast");
 const { logMessage } = require("./src/logUtils");
 const {
   newGame,
@@ -26,7 +27,6 @@ const port = process.env.PORT || 4001;
 const app = express();
 //the server doesn't serve any HTML, but it needs a route to listen for incoming connections
 const index = require("./routes/index");
-const ChallengeBroadcast = require("./src/challengeBroadcast");
 app.use(index);
 const server = http.createServer(app);
 const io = socketIo(server);
