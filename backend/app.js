@@ -29,7 +29,9 @@ const app = express();
 const index = require("./routes/index");
 app.use(index);
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+  origins: [process.env.CLIENT_URL+":*"],
+});
 
 const genRandomCookieId = () => {
   return Math.random().toString(36).substring(2);
