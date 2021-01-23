@@ -30,7 +30,7 @@ const index = require("./routes/index");
 app.use(index);
 const server = http.createServer(app);
 const io = socketIo(server, {
-  origins: [process.env.CLIENT_URL+":*"],
+  origins: [process.env.CLIENT_URL, process.env.CLIENT_URL + ":*"],
 });
 
 const genRandomCookieId = () => {
