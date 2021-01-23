@@ -102,16 +102,16 @@ const GameShowcase = ({
     };
   }, [socket, updateState, state.needToRequestGame]);
 
-  let lastActions = [];
-  if (state.nextMove > 0)
-    lastActions = state.game.moveHistory[state.nextMove - 1].actions;
-
   const groundSize = isLargeScreen
     ? cellSizes.groundSize
     : cellSizes.smallScreenGroundSize;
   const wallWidth = isLargeScreen
     ? cellSizes.wallWidth
     : cellSizes.smallScreenWallWidth;
+
+  let lastActions = [];
+  if (state.nextMove > 0)
+    lastActions = state.game.moveHistory[state.nextMove - 1].actions;
 
   const cToMove = state.game && creatorToMove(state);
   let tracePos = null;

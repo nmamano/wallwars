@@ -29,11 +29,11 @@ export const classicToInternalBoardSize = (classicDim) => {
 };
 
 //maps 0->1, 2->2, 4->3, ...
-export const internalToClassicCoord = (internalDim) => {
-  return internalDim / 2 + 1;
+export const internalToClassicCoord = (internalCoord) => {
+  return internalCoord / 2 + 1;
 };
-export const classicToInternalCoord = (classicDim) => {
-  return 2 * (classicDim - 1);
+export const classicToInternalCoord = (classicCoord) => {
+  return 2 * (classicCoord - 1);
 };
 
 const boardPixelHeight = (dims, groundSize, wallWidth) =>

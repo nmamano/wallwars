@@ -45,21 +45,16 @@ export const isOpponentPresent = (state) => {
 //the previous position of the player, if they moved in the last turn
 //(based on the current move index, not the last move played)
 export const getTracePos = (state) => {
-  const creatorStarts = state.creatorStarts;
-  const playerPos = state.moveHistory[state.viewIndex].playerPos;
-  let tracePos;
-  if (state.viewIndex === 0) tracePos = null;
-  else if (state.viewIndex === 1)
-    tracePos = state.boardSettings.startPos[creatorStarts ? 0 : 1];
-  else if (state.viewIndex === 2)
-    tracePos = state.boardSettings.startPos[creatorStarts ? 1 : 0];
-  else {
-    const prevPos = state.moveHistory[state.viewIndex - 2].playerPos;
-    const playerIndex = creatorToMoveAtIndex(state) ? 1 : 0;
-    if (!posEq(prevPos[playerIndex], playerPos[playerIndex]))
-      tracePos = prevPos[playerIndex];
+  if (state.viewIndex === 0) return null;
+  const playerIndex = creatorToMoveAtIndex(state) ? 1 : 0;
+  const curPos = state.moveHistory[state.viewIndex].playerPos[playerIndex];
+  let prevPos;
+  if (state.viewIndex <= 2) {
+    prevPos = state.boardSettings.startPos[playerIndex];
+  } else {
+    prevPos = state.moveHistory[state.viewIndex - 2].playerPos[playerIndex];
   }
-  return tracePos;
+  return posEq(prevPos, curPos) ? null : prevPos;
 };
 
 //when the player selects a cell, it can trigger a different
