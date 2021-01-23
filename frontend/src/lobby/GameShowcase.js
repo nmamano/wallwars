@@ -74,7 +74,7 @@ const GameShowcase = ({
           draftState.game.moveHistory[draftState.nextMove].actions;
         for (let k = 0; k < actions.length; k++) {
           const pos = actions[k];
-          if (cellTypeByPos(pos) === cellEnum.groud) {
+          if (cellTypeByPos(pos) === cellEnum.ground) {
             draftState.prevPos[idxToMove] = draftState.playerPos[idxToMove];
             draftState.playerPos[idxToMove] = pos;
           } else {
@@ -83,7 +83,7 @@ const GameShowcase = ({
         }
         draftState.nextMove++;
       });
-    }, 2000);
+    }, 200);
     return () => clearInterval(interval);
   });
 
