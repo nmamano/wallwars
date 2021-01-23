@@ -51,11 +51,6 @@ const GameShowcase = ({
           else {
             draftState.needToRequestGame = true;
             draftState.finishedGameWait = 3;
-            draftState.game = null;
-            draftState.nextMove = 0;
-            draftState.grid = emptyGrid(defaultBoardSettings.dims);
-            draftState.playerPos = defaultBoardSettings.startPos;
-            draftState.prevPos = [null, null];
           }
         });
         return;
@@ -94,6 +89,8 @@ const GameShowcase = ({
         draftState.game = game;
         draftState.grid = emptyGrid(game.boardSettings.dims);
         draftState.playerPos = game.boardSettings.startPos;
+        draftState.prevPos = [null, null];
+        draftState.nextMove = 0;
       });
     });
 
