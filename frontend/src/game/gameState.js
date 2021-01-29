@@ -409,14 +409,14 @@ export const applyMove = (
         } else {
           draftState.winner =
             idxToMove === 0 ? roleEnum.creator : roleEnum.joiner;
-          draftState.matchScore[idxToMove] += 1;
+          draftState.matchScore[idxToMove]++;
         }
         draftState.finishReason = "goal";
         draftState.lifeCycleStage = 4;
       }
     } else if (aType === cellEnum.wall) {
       newGrid[aPos[0]][aPos[1]] = idxToMove + 1;
-      wallCounts[idxToMove] += 1;
+      wallCounts[idxToMove]++;
     } else console.error("unexpected action type", aType);
   }
   draftState.moveHistory.push({
@@ -721,7 +721,7 @@ export const applyResignGame = (draftState, resignerIsCreator) => {
   if (draftState.lifeCycleStage !== 3) return;
   draftState.lifeCycleStage = 4;
   draftState.winner = resignerIsCreator ? roleEnum.joiner : roleEnum.creator;
-  draftState.matchScore[resignerIsCreator ? 1 : 0] += 1;
+  draftState.matchScore[resignerIsCreator ? 1 : 0]++;
   draftState.finishReason = "resign";
   closeDialogs(draftState);
 };
@@ -730,7 +730,7 @@ export const applyAbandonGame = (draftState, abandonerIsCreator) => {
   if (draftState.lifeCycleStage === 4) return;
   draftState.lifeCycleStage = 4;
   draftState.winner = abandonerIsCreator ? roleEnum.joiner : roleEnum.creator;
-  draftState.matchScore[abandonerIsCreator ? 1 : 0] += 1;
+  draftState.matchScore[abandonerIsCreator ? 1 : 0]++;
   draftState.finishReason = "abandon";
   closeDialogs(draftState);
 };
@@ -793,7 +793,7 @@ export const applyAddExtraTime = (draftState, playerIndex) => {
 
 const applyWonOnTime = (draftState, winnerIndex) => {
   draftState.winner = winnerIndex === 0 ? roleEnum.creator : roleEnum.joiner;
-  draftState.matchScore[winnerIndex] += 1;
+  draftState.matchScore[winnerIndex]++;
   draftState.finishReason = "time";
   draftState.lifeCycleStage = 4;
   closeDialogs(draftState);
@@ -805,7 +805,7 @@ export const applyClockTick = (draftState) => {
   if (draftState.lifeCycleStage !== 3) return;
   const idx = indexToMove(draftState);
   const tc = turnCount(draftState);
-  draftState.moveHistory[tc].timeLeft[idx] -= 1;
+  draftState.moveHistory[tc].timeLeft[idx]--;
   if (draftState.moveHistory[tc].timeLeft[idx] === 0) {
     draftState.shouldPlaySound = true;
     applyWonOnTime(draftState, idx === 0 ? 1 : 0);

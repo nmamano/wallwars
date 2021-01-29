@@ -24,7 +24,7 @@ class ChallengeBroadcast {
   }
 
   removeSubscriber(socketId) {
-    for (let i = 0; i < this.subscribedSockets.length; i += 1) {
+    for (let i = 0; i < this.subscribedSockets.length; i++) {
       const cur = this.subscribedSockets[i];
       if (cur.id === socketId) {
         this.subscribedSockets.splice(i, 1);
@@ -35,7 +35,7 @@ class ChallengeBroadcast {
   }
 
   notifyNewChallenge(game) {
-    for (let i = 0; i < this.subscribedSockets.length; i += 1) {
+    for (let i = 0; i < this.subscribedSockets.length; i++) {
       emitMessageSubscriber(this.subscribedSockets[i], M.newChallengeMsg, {
         challenge: game,
       });
@@ -43,7 +43,7 @@ class ChallengeBroadcast {
   }
 
   notifyDeadChallenge(joinCode) {
-    for (let i = 0; i < this.subscribedSockets.length; i += 1) {
+    for (let i = 0; i < this.subscribedSockets.length; i++) {
       emitMessageSubscriber(this.subscribedSockets[i], M.deadChallengeMsg, {
         joinCode: joinCode,
       });

@@ -126,9 +126,9 @@ exports.setupRematch = function (game) {
     game.matchScore[0] += 0.5;
     game.matchScore[1] += 0.5;
   } else if (game.winner === "creator") {
-    game.matchScore[0] += 1;
+    game.matchScore[0]++;
   } else if (game.winner === "joiner") {
-    game.matchScore[1] += 1;
+    game.matchScore[1]++;
   }
   game.creatorStarts = !game.creatorStarts; //alternate who starts
   game.moveHistory = [];

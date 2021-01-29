@@ -522,13 +522,13 @@ const GamePage = ({
       if (key === "ArrowDown" || key === "ArrowRight") {
         if (state.viewIndex < turnCount(state)) {
           updateState((draftState) => {
-            draftState.viewIndex += 1;
+            draftState.viewIndex++;
           });
         }
       } else if (key === "ArrowUp" || key === "ArrowLeft") {
         if (state.viewIndex > 0) {
           updateState((draftState) => {
-            draftState.viewIndex -= 1;
+            draftState.viewIndex--;
           });
         }
       }
@@ -605,14 +605,14 @@ const GamePage = ({
     if (state.zoomLevel < 10)
       setCookie("zoomLevel", state.zoomLevel + 1, { path: "/" });
     updateState((draftState) => {
-      if (draftState.zoomLevel < 10) draftState.zoomLevel += 1;
+      if (draftState.zoomLevel < 10) draftState.zoomLevel++;
     });
   };
   const handleDecreaseBoardSize = () => {
     if (state.zoomLevel > 0)
       setCookie("zoomLevel", state.zoomLevel - 1, { path: "/" });
     updateState((draftState) => {
-      if (draftState.zoomLevel > 0) draftState.zoomLevel -= 1;
+      if (draftState.zoomLevel > 0) draftState.zoomLevel--;
     });
   };
 

@@ -131,7 +131,7 @@ export function distance(grid, start, target) {
   dist.set(posToKey(start), 0);
   while (i < queue.length) {
     const pos = queue[i];
-    i += 1;
+    i++;
     const nbrs = accessibleNeighbors(grid, pos);
     for (let k = 0; k < nbrs.length; k++) {
       let nbr = nbrs[k];
@@ -159,7 +159,7 @@ export function isDistanceAtMost(grid, start, target, maxDistance) {
   dist.set(posToKey(start), 0);
   while (i < queue.length) {
     const pos = queue[i];
-    i += 1;
+    i++;
     const dis = dist.get(posToKey(pos));
     if (dis > maxDistance) return false;
     const nbrs = accessibleNeighbors(grid, pos);

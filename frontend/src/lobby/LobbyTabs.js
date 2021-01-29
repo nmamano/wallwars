@@ -50,7 +50,7 @@ const LobbyTabs = ({
     });
     socket.on("deadChallenge", ({ joinCode }) => {
       updateState((draftState) => {
-        for (let i = 0; i < draftState.challenges.length; i += 1) {
+        for (let i = 0; i < draftState.challenges.length; i++) {
           const game = draftState.challenges[i];
           if (game.joinCode === joinCode) {
             draftState.challenges.splice(i, 1);

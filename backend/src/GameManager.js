@@ -9,7 +9,7 @@ class GameManager {
   }
 
   unjoinedGame(joinCode) {
-    for (let i = 0; i < this.unjoinedGames.length; i += 1) {
+    for (let i = 0; i < this.unjoinedGames.length; i++) {
       const game = this.unjoinedGames[i];
       if (game.joinCode === joinCode) return game;
     }
@@ -17,7 +17,7 @@ class GameManager {
   }
 
   ongoingGameOfClient(cookieId) {
-    for (let i = 0; i < this.ongoingGames.length; i += 1) {
+    for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
       const [id1, id2] = game.cookieIds;
       if (cookieId === id1 || cookieId === id2) return game;
@@ -26,7 +26,7 @@ class GameManager {
   }
 
   getOngoingGameByCookieId(cookieId) {
-    for (let i = 0; i < this.ongoingGames.length; i += 1) {
+    for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
       const [id1, id2] = game.cookieIds;
       if (cookieId === id1 || cookieId === id2) return game;
@@ -56,7 +56,7 @@ class GameManager {
   }
 
   moveGameFromUnjoinedToOngoing(joinCode) {
-    for (let i = 0; i < this.unjoinedGames.length; i += 1) {
+    for (let i = 0; i < this.unjoinedGames.length; i++) {
       const game = this.unjoinedGames[i];
       if (game.joinCode === joinCode) {
         this.unjoinedGames.splice(i, 1);
@@ -78,12 +78,12 @@ class GameManager {
   //but we check all to be sure
   removeUnjoinedGamesByCookieId(cookieId) {
     if (!cookieId) return;
-    for (let i = 0; i < this.unjoinedGames.length; i += 1) {
+    for (let i = 0; i < this.unjoinedGames.length; i++) {
       const game = this.unjoinedGames[i];
       if (game.cookieIds[0] === cookieId) {
         console.log("remove unjoined game: ", JSON.stringify(game));
         this.unjoinedGames.splice(i, 1);
-        i -= 1;
+        i--;
       }
     }
   }
@@ -91,7 +91,7 @@ class GameManager {
   getUnjoinedGameBySocketId(socketId) {
     if (!socketId) return;
     let game;
-    for (let i = 0; i < this.unjoinedGames.length; i += 1) {
+    for (let i = 0; i < this.unjoinedGames.length; i++) {
       if (this.unjoinedGames[i].socketIds[0] === socketId) {
         game = this.unjoinedGames[i];
       }
@@ -101,7 +101,7 @@ class GameManager {
 
   getOpenChallenges() {
     const res = [];
-    for (let i = 0; i < this.unjoinedGames.length; i += 1) {
+    for (let i = 0; i < this.unjoinedGames.length; i++) {
       const game = this.unjoinedGames[i];
       if (game.isPublic) {
         res.push(game);
@@ -114,12 +114,12 @@ class GameManager {
   //but we check all to be sure
   removeOngoingGamesByCookieId(cookieId) {
     if (!cookieId) return;
-    for (let i = 0; i < this.ongoingGames.length; i += 1) {
+    for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
       if (game.cookieIds[0] === cookieId || game.cookieIds[1] === cookieId) {
         this.ongoingGames.splice(i, 1);
         console.log("removed ongoing game: ", JSON.stringify(game));
-        i -= 1;
+        i--;
       }
     }
   }
