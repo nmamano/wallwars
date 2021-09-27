@@ -1,8 +1,9 @@
 /*Game controller encapsulates the interaction with mongodb
-Currently, 'games' is the only collection, so all the db logic is here
 users can play even if the DB is down: the games are simply not stored in that case */
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
+const { updateRating, initialRating } = require("./rating/rating");
+
 //shut deprecation warnings
 mongoose.set("useNewUrlParser", true);
 mongoose.set("useFindAndModify", false);
@@ -23,6 +24,134 @@ mongoose
     console.log("mongoose connection failed");
     console.log(err);
   });
+
+const pseudoPlayerSchema = new Schema({
+  cookieId: { type: String, required: true },
+  name: { type: String, required: true },
+  rating: { type: Number, required: true },
+  peakRating: { type: Number, required: true },
+  ratingDeviation: { type: Number, required: true },
+  ratingVolatility: { type: Number, required: true },
+  gameCount: { type: Number, required: true },
+  winCount: { type: Number, required: true },
+  drawCount: { type: Number, required: true },
+  firstGameDate: { type: Date, required: true },
+  lastGameDate: { type: Date, required: true },
+});
+
+const PseudoPlayer = mongoose.model("PseudoPlayer", pseudoPlayerSchema);
+
+const getRanking = async (count) => {
+  if (!connectedToDB) return null;
+  if (count < 1) return null;
+  //up to count pseudoplayers
+  const pseudoPlayers = await PseudoPlayer.find()
+    .sort({ rating: -1 })
+    .limit(count);
+  console.log(`found ${pseudoPlayers.length}/${count} pseudo players`);
+  return pseudoPlayers;
+};
+
+// Should be followed by a call to updatePseudoPlayer, which sets the fields that are
+// still null
+const createNewPseudoPlayer = (cookieId) => {
+  r = initialRating();
+  return {
+    cookieId: cookieId,
+    name: "",
+    rating: r.rating,
+    peakRating: r.rating,
+    ratingDeviation: r.deviation,
+    ratingVolatility: r.volatility,
+    gameCount: 0,
+    winCount: 0,
+    drawCount: 0,
+    firstGameDate: null,
+    lastGameDate: null,
+  };
+};
+
+// updates the metadata of the pseudoplayer based on the result of a game
+const updatePseudoPlayer = (pseudoPlayer, game, score, newRating) => {
+  cookieId = pseudoPlayer.cookieId;
+  if (cookieId !== game.cookieIds[0] && cookieId !== game.cookieIds[1])
+    console.error("player is not in this game");
+  pIndex = pseudoPlayer.cookieId === game.cookieIds[0] ? 0 : 1;
+  pseudoPlayer.name = game.playerNames[pIndex];
+  pseudoPlayer.rating = newRating.rating;
+  pseudoPlayer.peakRating = Math.max(
+    pseudoPlayer.rating,
+    pseudoPlayer.peakRating
+  );
+  pseudoPlayer.ratingDeviation = newRating.deviation;
+  pseudoPlayer.ratingVolatility = newRating.volatility;
+  pseudoPlayer.gameCount++;
+  if (score === 1) pseudoPlayer.winCount++;
+  if (score === 0.5) pseudoPlayer.drawCount++;
+  if (!pseudoPlayer.firstGameDate) pseudoPlayer.firstGameDate = game.startDate;
+  pseudoPlayer.lastGameDate = game.startDate;
+};
+
+// newResult contains cookieId, opponent rating, and
+const updatePseudoPlayers = async (game) => {
+  if (!connectedToDB) return;
+  // console.log(game.cookieIds);
+  if (
+    game.cookieIds[0] === "undefined" ||
+    game.cookieIds[0] === "" ||
+    game.cookieIds[1] === "undefined" ||
+    game.cookieIds[1] === ""
+  )
+    return;
+
+  // Read the two players from db, or create new ones if not found
+  await PseudoPlayer.findOne({ cookieId: game.cookieIds[0] }, (err, res) => {
+    if (err) {
+      console.log("Error getting pseudoplayer 1: ", err);
+      return;
+    }
+    if (!res) console.log("creating new player for p1");
+    p1 = res ? res : new PseudoPlayer(createNewPseudoPlayer(game.cookieIds[0]));
+  });
+  await PseudoPlayer.findOne({ cookieId: game.cookieIds[1] }, (err, res) => {
+    if (err) {
+      console.log("Error getting pseudoplayer 2: ", err);
+      return;
+    }
+    if (!res) console.log("creating new player for p2");
+    p2 = res ? res : new PseudoPlayer(createNewPseudoPlayer(game.cookieIds[1]));
+  });
+  // Update the fields based on the result of the game
+  if (game.winner === "draw") scores = [0.5, 0.5];
+  else if (game.winner === "creator")
+    scores = game.creatorStarts ? [1, 0] : [0, 1];
+  else scores = scores = game.creatorStarts ? [0, 1] : [1, 0];
+  // console.log("players", p1, p2);
+  p1NewRating = updateRating(p1, p2, scores[0]);
+  p2NewRating = updateRating(p2, p1, scores[1]);
+  // console.log("new ratings", p1NewRating, p2NewRating);
+  updatePseudoPlayer(p1, game, scores[0], p1NewRating);
+  updatePseudoPlayer(p2, game, scores[1], p2NewRating);
+  // Store the players with the updated fields
+  try {
+    await p1.save();
+    console.log(
+      `Stored pseudoplayer in DB ${process.env.DB_NAME}: ${p1.name} ${p1.cookieId} freshness: ${p1.lastGameDate}`
+    );
+  } catch (err) {
+    console.error(`Store pseudoplayer to DB ${process.env.DB_NAME} failed`);
+    console.log(err);
+  }
+  try {
+    await p2.save();
+    console.log(
+      `Stored pseudoplayer in DB ${process.env.DB_NAME}: ${p2.name} ${p2.cookieId} freshness: ${p2.lastGameDate}`
+    );
+  } catch (err) {
+    console.error(`Store pseudoplayer to DB ${process.env.DB_NAME} failed`);
+    console.log(err);
+  }
+};
 
 const moveSchema = new Schema(
   {
@@ -161,6 +290,13 @@ const storeGame = async (game) => {
     console.log(
       `Stored game in DB ${process.env.DB_NAME} _id: ${gameToStore.id} time: ${gameToStore.startDate}`
     );
+    try {
+      await updatePseudoPlayers(game);
+      console.log(`Updated pseudo players`);
+    } catch (err) {
+      console.error("Updating pseudo players failed");
+      console.log(err);
+    }
   } catch (err) {
     console.error(`Store game to DB ${process.env.DB_NAME} failed`);
     console.log(err);
@@ -200,5 +336,6 @@ const getRecentGames = async (count) => {
 
 exports.storeGame = storeGame;
 exports.getGame = getGame;
+exports.getRanking = getRanking;
 exports.getRandomGame = getRandomGame;
 exports.getRecentGames = getRecentGames;

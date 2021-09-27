@@ -17,7 +17,8 @@ import {
   cellSizes,
 } from "../shared/globalSettings";
 import LobbyForm from "./LobbyForm";
-import GameListsTabs from "./LobbyTabs";
+import LobbyTabs from "./LobbyTabs";
+import RankingList from "./RankingList";
 import GamePage from "../game/GamePage";
 import GameShowcase from "./GameShowcase";
 import Header from "../shared/Header";
@@ -27,7 +28,9 @@ import { emptyBoardDistances, boardPixelDims } from "../shared/gameLogicUtils";
 
 const boardTheme = "monochromeBoard";
 const maxPlayerNameLen = 9;
+const maxCookieIdLen = 16;
 const numStartingRecentGames = 16;
+const maxRankingLength = 100;
 
 const initalLobbyState = (cookies) => {
   let nr = parseFloat(cookies.numRows);
@@ -62,6 +65,10 @@ const initalLobbyState = (cookies) => {
       numGamesToRequest: numStartingRecentGames,
     },
     showMoreOptions: false,
+    ranking: {
+      playerList: [],
+      needToRequestRanking: true,
+    },
   };
 };
 
@@ -200,7 +207,10 @@ const LobbyPage = ({ socket }) => {
       draftState.timeControl.increment = inc;
       draftState.boardSettings = bs;
       draftState.playerName = name;
-      draftState.cookieId = cookies.cookieId ? cookies.cookieId : "undefined";
+      draftState.cookieId =
+        cookies.cookieId || cookies.cookieId === ""
+          ? cookies.cookieId
+          : "undefined";
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = true;
     });
@@ -247,6 +257,7 @@ const LobbyPage = ({ socket }) => {
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = false;
       draftState.recentGames.numGamesToRequest = numStartingRecentGames;
+      draftState.ranking.needToRequestRanking = true;
       draftState.clientRole = "";
       draftState.joinCode = "";
     });
@@ -342,6 +353,23 @@ const LobbyPage = ({ socket }) => {
     }
   }, [state.isDarkModeOn, state.menuTheme]);
 
+  //get rankings
+  useEffect(() => {
+    if (state.ranking.needToRequestRanking) {
+      socket.emit("getRanking", {
+        count: maxRankingLength,
+      });
+    }
+  }, [socket, updateState, state.ranking.needToRequestRanking]);
+  useEffect(() => {
+    socket.once("requestedRanking", ({ ranking }) => {
+      updateState((draftState) => {
+        draftState.ranking.playerList = ranking;
+        draftState.ranking.needToRequestRanking = false;
+      });
+    });
+  }, [socket, updateState, state.ranking.playerList]);
+
   //get recent games
   useEffect(() => {
     const count = state.recentGames.numGamesToRequest;
@@ -390,6 +418,26 @@ const LobbyPage = ({ socket }) => {
     justifyContent: "center",
     alignContent: "center",
   };
+  const rankingHeight = `${comboHeight}px`;
+  const rankingWidth = `${1.5 * bWidth}px`;
+  const rankingHeader = (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        alignSelf: "center",
+        justifySelf: "center",
+        fontSize: "20px",
+        paddingBottom: gapSize,
+        height: headerHeight,
+      }}
+      title={"Ranking based on ELO points."}
+    >
+      ELO Ranking
+    </div>
+  );
+
   const gameShowcaseHeader = (
     <div
       style={{
@@ -475,6 +523,7 @@ const LobbyPage = ({ socket }) => {
             handleJoinGame={handleJoinGame}
             handleRefreshName={handleRefreshName}
             handleToken={handleToken}
+            handleCookieId={handleSetCookieId}
           />
           {state.hasOngoingGame &&
             cookies.cookieId &&
@@ -503,7 +552,7 @@ const LobbyPage = ({ socket }) => {
                 height: "100%",
               }}
             >
-              <GameListsTabs
+              <LobbyTabs
                 socket={socket}
                 isLargeScreen={isLargeScreen}
                 menuTheme={state.menuTheme}
@@ -513,6 +562,27 @@ const LobbyPage = ({ socket }) => {
                 handleAcceptChallenge={handleAcceptChallenge}
               />
             </div>
+          </div>
+          {rankingHeader}
+          <div
+            style={{
+              height: rankingHeight,
+              width: rankingWidth,
+              marginLeft: "auto",
+              marginRight: "auto",
+              border: `1px solid ${getColor(
+                state.menuTheme,
+                "container",
+                state.isDarkModeOn
+              )}`,
+            }}
+          >
+            <RankingList
+              isLargeScreen={isLargeScreen}
+              menuTheme={state.menuTheme}
+              isDarkModeOn={state.isDarkModeOn}
+              ranking={state.ranking.playerList}
+            />
           </div>
         </div>
       )}

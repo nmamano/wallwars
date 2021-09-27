@@ -61,6 +61,9 @@ module.exports = {
   getRecentGamesMsg: "getRecentGames",
   requestedRecentGamesMsg: "requestedRecentGames",
   recentGamesNotFoundMsg: "recentGamesNotFound",
+  getRankingMsg: "getRanking",
+  requestedRankingMsg: "requestedRanking",
+  rankingNotFoundMsg: "rankingNotFound",
   requestCurrentChallengesMsg: "requestCurrentChallenges",
   requestedCurrentChallengesMsg: "requestedCurrentChallenges",
 };

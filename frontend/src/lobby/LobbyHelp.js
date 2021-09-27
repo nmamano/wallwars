@@ -46,3 +46,20 @@ export const aboutText = (
     <h6>The source code is available at https://github.com/nmamano/WallWars</h6>
   </div>
 );
+
+export const eloIdAboutText = (
+  <div>
+    <h6>
+      All games played with the same ELO id get an ELO rating. The rating
+      appears in the ranking under the name last used with this ELO id. If you
+      want to be ranked fairly, always use the same ELO id when playing.
+      Conversely, if you don't want a game to influence your ranking, change the
+      ELO id to something different.
+    </h6>
+    <h6>
+      <b>WARNING:</b> do NOT use a password that you use in another website as
+      the ELO id. Your ELO id is not shown to other players, but it is not
+      treated securely like a password.
+    </h6>
+  </div>
+);

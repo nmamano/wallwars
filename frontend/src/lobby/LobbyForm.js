@@ -8,6 +8,7 @@ import {
   Dropdown,
   Checkbox,
   Switch,
+  Modal,
 } from "react-materialize";
 import { getColor } from "../shared/colorThemes";
 import showToastNotification from "../shared/showToastNotification";
@@ -15,6 +16,7 @@ import TextButton from "../shared/TextButton";
 import { maxBoardDims } from "../shared/globalSettings";
 import CoordinateSlider from "../shared/CoordinateSlider";
 import BoardSizeSlider from "../shared/BoardSizeSlider";
+import { eloIdAboutText } from "./lobbyHelp";
 
 //random icons until I find a nicer set to use
 const tokens = [
@@ -64,6 +66,7 @@ const LobbyForm = ({
   handleJoinGame,
   handleRefreshName,
   handleToken,
+  handleCookieId,
 }) => {
   const menuTheme = clientParams.menuTheme;
   const isDarkModeOn = clientParams.isDarkModeOn;
@@ -134,6 +137,56 @@ const LobbyForm = ({
             onClick={handleRefreshName}
             tooltip={"Get a new name"}
           />
+        </Col>
+        <Col s={1} m={4}></Col>
+      </Row>
+      <Row className="valign-wrapper">
+        <Col className="center" s={4} m={4}>
+          <span style={{ fontSize: "23px" }}>ELO id:</span>
+        </Col>
+        <Col s={6} m={3}>
+          <TextInput
+            id="cookieIdInput"
+            value={clientParams.cookieId}
+            onChange={(props) => {
+              handleCookieId(props.target.value);
+            }}
+          />
+        </Col>
+        <Col s={1} m={1}>
+          <Modal
+            style={{ color: "black", backgroundColor: "white" }}
+            bottomSheet={false}
+            fixedFooter={false}
+            header={"About ELO ids"}
+            open={false}
+            options={{
+              dismissible: true,
+              endingTop: "10%",
+              inDuration: 250,
+              opacity: 0.4,
+              outDuration: 250,
+              preventScrolling: true,
+              startingTop: "4%",
+            }}
+            trigger={
+              <Button
+                node="button"
+                waves="light"
+                small
+                floating
+                style={{
+                  color: "white",
+                  backgroundColor: getColor(menuTheme, "button", isDarkModeOn),
+                }}
+                icon={<Icon>info</Icon>}
+                onClick={handleRefreshName}
+                tooltip={"About ELO ids"}
+              />
+            }
+          >
+            {<div>{eloIdAboutText}</div>}
+          </Modal>
         </Col>
         <Col s={1} m={4}></Col>
       </Row>

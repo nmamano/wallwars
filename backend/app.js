@@ -34,7 +34,7 @@ const io = socketIo(server, {
 });
 
 const genRandomCookieId = () => {
-  return Math.random().toString(36).substring(2);
+  return "ELO_" + Math.random().toString(36).substring(2);
 };
 
 //global object containing all the games
@@ -393,6 +393,16 @@ io.on(M.connectionMsg, (socket) => {
     emitMessage(M.requestedCurrentChallengesMsg, {
       challenges: challenges,
     });
+  });
+
+  socket.on(M.getRankingMsg, async ({ count }) => {
+    logReceivedMessage(M.getRankingMsg, { count });
+    const ranking = await gameController.getRanking(count);
+    if (ranking)
+      emitMessage(M.requestedRankingMsg, {
+        ranking: ranking,
+      });
+    else emitMessage(M.rankingNotFoundMsg);
   });
 
   socket.on(M.getRecentGamesMsg, async ({ count }) => {
