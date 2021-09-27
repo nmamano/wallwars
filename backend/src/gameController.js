@@ -92,7 +92,6 @@ const updatePseudoPlayer = (pseudoPlayer, game, score, newRating) => {
   pseudoPlayer.lastGameDate = game.startDate;
 };
 
-// newResult contains cookieId, opponent rating, and
 const updatePseudoPlayers = async (game) => {
   if (!connectedToDB) return;
   // console.log(game.cookieIds);
@@ -123,9 +122,8 @@ const updatePseudoPlayers = async (game) => {
   });
   // Update the fields based on the result of the game
   if (game.winner === "draw") scores = [0.5, 0.5];
-  else if (game.winner === "creator")
-    scores = game.creatorStarts ? [1, 0] : [0, 1];
-  else scores = scores = game.creatorStarts ? [0, 1] : [1, 0];
+  else if (game.winner === "creator") scores = [1, 0];
+  else scores = [0, 1];
   // console.log("players", p1, p2);
   p1NewRating = updateRating(p1, p2, scores[0]);
   p2NewRating = updateRating(p2, p1, scores[1]);
