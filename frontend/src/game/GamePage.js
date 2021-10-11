@@ -31,6 +31,7 @@ import {
   applySetupRematch,
   applyAddExtraTime,
   applyClockTick,
+  applyNewRatingsNotification,
   getTracePos,
   creatorToMoveAtIndex,
 } from "./gameState";
@@ -60,7 +61,6 @@ const GamePage = ({
   handleReturnToLobby,
   handleToggleDarkMode,
   handleToggleTheme,
-  handleSetCookieId,
 }) => {
   const menuTheme = clientParams.menuTheme;
   const isDarkModeOn = clientParams.isDarkModeOn;
@@ -75,10 +75,9 @@ const GamePage = ({
   //communication FROM the server
   //===================================================
   useEffect(() => {
-    socket.once("gameCreated", ({ joinCode, creatorStarts, cookieId }) => {
-      handleSetCookieId(cookieId);
+    socket.once("gameCreated", ({ joinCode, creatorStarts, rating }) => {
       updateState((draftState) => {
-        applyCreatedOnServer(draftState, joinCode, creatorStarts);
+        applyCreatedOnServer(draftState, joinCode, creatorStarts, rating);
       });
     });
     socket.once(
@@ -89,10 +88,10 @@ const GamePage = ({
         timeControl,
         boardSettings,
         creatorStarts,
-        cookieId,
         creatorPresent,
+        creatorRating,
+        joinerRating,
       }) => {
-        handleSetCookieId(cookieId);
         updateState((draftState) => {
           applyJoinedOnServer(
             draftState,
@@ -101,7 +100,9 @@ const GamePage = ({
             timeControl,
             boardSettings,
             creatorStarts,
-            creatorPresent
+            creatorPresent,
+            creatorRating,
+            joinerRating
           );
         });
       }
@@ -111,17 +112,15 @@ const GamePage = ({
         applyReceivedGame(draftState, game);
       });
     });
-    socket.on("returnedToOngoingGame", ({ ongoingGame, timeLeft }) => {
-      updateState((draftState) => {
-        applyReturnToGame(
-          draftState,
-          clientParams.cookieId,
-          ongoingGame,
-          timeLeft
-        );
-        draftState.waitingForPing = 0;
-      });
-    });
+    socket.on(
+      "returnedToOngoingGame",
+      ({ ongoingGame, isCreator, timeLeft }) => {
+        updateState((draftState) => {
+          applyReturnToGame(draftState, ongoingGame, isCreator, timeLeft);
+          draftState.waitingForPing = 0;
+        });
+      }
+    );
     socket.on("opponentReturned", () => {
       updateState((draftState) => {
         draftState.arePlayersPresent[
@@ -141,6 +140,10 @@ const GamePage = ({
       );
       handleReturnToLobby();
     });
+    socket.on("invalidEloIdError", () => {
+      showToastNotification("This ELO id is not valid.", 5000);
+      handleReturnToLobby();
+    });
     socket.on("joinSelfGameFailed", () => {
       showToastNotification(
         "You cannot play against yourself. To play as both sides from the same browser, play one of the sides from an Incognito window.",
@@ -157,11 +160,11 @@ const GamePage = ({
         draftState.waitingForPing = 0;
       });
     });
-    socket.once("joinerJoined", ({ joinerName, joinerToken }) => {
+    socket.once("joinerJoined", ({ joinerName, joinerToken, joinerRating }) => {
       updateState((draftState) => {
         if (draftState.lifeCycleStage === 1) return;
         draftState.shouldPlaySound = true;
-        applyJoinerJoined(draftState, joinerName, joinerToken);
+        applyJoinerJoined(draftState, joinerName, joinerToken, joinerRating);
         draftState.arePlayersPresent[1] = true;
         draftState.waitingForPing = 0;
       });
@@ -270,6 +273,22 @@ const GamePage = ({
         draftState.waitingForPing = 0;
       });
     });
+    socket.on(
+      "newRatingsNotification",
+      ({ clientIdx, oldRatings, newRatings }) => {
+        const oldRating = Math.round(oldRatings[clientIdx]);
+        const newRating = Math.round(newRatings[clientIdx]);
+        const ratingDelta = newRating - oldRating;
+        const ratingDeltaStr =
+          ratingDelta >= 0 ? `+ ${ratingDelta}` : `- ${-ratingDelta}`;
+        const notificationStr = `New rating: ${oldRating} ${ratingDeltaStr} = ${newRating}`;
+        showToastNotification(notificationStr, 10000);
+        updateState((draftState) => {
+          applyNewRatingsNotification(draftState, newRatings);
+          draftState.waitingForPing = 0;
+        });
+      }
+    );
     socket.on("pongFromServer", () => {
       updateState((draftState) => {
         draftState.waitingForPing = 0;
@@ -278,13 +297,7 @@ const GamePage = ({
     return () => {
       socket.removeAllListeners();
     };
-  }, [
-    socket,
-    updateState,
-    handleReturnToLobby,
-    handleSetCookieId,
-    clientParams.cookieId,
-  ]);
+  }, [socket, updateState, handleReturnToLobby]);
 
   //===================================================
   //communication TO the server
@@ -309,7 +322,7 @@ const GamePage = ({
         token: clientParams.token,
         timeControl: clientParams.timeControl,
         boardSettings: clientParams.boardSettings,
-        cookieId: clientParams.cookieId,
+        eloId: clientParams.eloId,
         isPublic: clientParams.isPublic,
       });
     } else if (clientParams.clientRole === roleEnum.joiner) {
@@ -326,12 +339,12 @@ const GamePage = ({
         joinCode: clientParams.joinCode,
         name: clientParams.playerName,
         token: clientParams.token,
-        cookieId: clientParams.cookieId,
+        eloId: clientParams.eloId,
       });
     } else if (clientParams.clientRole === roleEnum.spectator) {
       socket.emit("getGame", { gameId: clientParams.watchGameId });
     } else if (clientParams.clientRole === roleEnum.returner) {
-      socket.emit("returnToOngoingGame", { cookieId: clientParams.cookieId });
+      socket.emit("returnToOngoingGame", { eloId: clientParams.eloId });
     } else {
       console.error("unknown client role", clientParams.clientRole);
     }
@@ -734,6 +747,7 @@ const GamePage = ({
         <TimerHeader
           lifeCycleStage={state.lifeCycleStage}
           names={state.names}
+          ratings={state.ratings}
           indexToMove={indexToMove(state)}
           timeLeft={[displayTime1, displayTime2]}
           isLargeScreen={isLargeScreen}

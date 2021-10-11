@@ -4,7 +4,7 @@ const util = require("util");
 //middleware for logging incoming and outgoing messages
 //format: hh:mm:ss ss|ccc|J -> #SERVER#: m [gg] {p}
 //ss: first 2 chars of the socket id,
-//ccc: first 3 chars of the cookie id, or '___' if unknown
+//ccc: first 3 chars of the eloId, with added '_'s if necessary.
 //J: client role. 'C' for creator, 'J' for joiner, or '_' if not in a game
 //X -> Y: X is the sender and Y the receiver. One of them is SERVER
 //m: message title
@@ -33,23 +33,24 @@ const cropAndLogMessage = (txt) => {
 };
 
 exports.logMessage = function (
-  cookieId,
+  eloId,
   socketId,
   game,
   sent,
   messageTitle,
   messageParams
 ) {
-  const shortCookieId = cookieId ? cookieId.substring(0, 3) : "___";
+  let shortEloId = eloId ? eloId.substring(0, 3) : "";
+  while (shortEloId.length < 3) shortEloId = shortEloId + "_";
   const shortSocketId = socketId.substring(0, 2);
-  let client = shortSocketId + "," + shortCookieId;
+  let client = shortSocketId + "," + shortEloId;
   const date = new Date();
   let [hs, ms, ss] = [date.getHours(), date.getMinutes(), date.getSeconds()];
   if (ms < 10) ms = "0" + ms;
   if (ss < 10) ss = "0" + ss;
   let logText = `${hs}:${ms}:${ss} `;
   if (game) {
-    const isCreator = cookieId === game.cookieIds[0];
+    const isCreator = eloId === game.eloIds[0];
     client += `,${isCreator ? "C" : "J"}`;
   } else {
     client += ",_";

@@ -22,6 +22,7 @@ const isPresentDot = (isPresent, name) => {
 const TimerHeader = ({
   lifeCycleStage,
   names,
+  ratings,
   timeLeft,
   indexToMove,
   isLargeScreen,
@@ -31,6 +32,7 @@ const TimerHeader = ({
   boardTheme,
   isDarkModeOn,
 }) => {
+  const formattedRatings = [Math.round(ratings[0]), Math.round(ratings[1])];
   const [min1, min2] = [
     Math.floor(timeLeft[0] / 60),
     Math.floor(timeLeft[1] / 60),
@@ -64,6 +66,7 @@ const TimerHeader = ({
   else if (!isLargeScreen && !showScores) sep = "8px";
   else sep = "6px";
   const fontSize = isLargeScreen ? "18px" : "14px";
+  const nameFontSize = isLargeScreen ? "14px" : "10px";
   const childStyle = {
     padding: sep,
     fontSize: fontSize,
@@ -98,13 +101,15 @@ const TimerHeader = ({
       )}
       <div
         style={{
-          padding: sep,
-          fontSize: fontSize,
+          padding: isLargeScreen ? sep : "3px",
+          fontSize: nameFontSize,
           backgroundColor: pToMove[0] ? timer1 : timerBg,
         }}
         className={"center truncate" + (pToMove[0] ? " z-depth-2" : "")}
       >
         {names[0]}
+        <br></br>
+        {"(" + formattedRatings[0] + ")"}
       </div>
       <div style={childStyle} className={"center"}>
         {isPresentDot(arePlayersPresent[0], names[0])}
@@ -134,13 +139,15 @@ const TimerHeader = ({
       </div>
       <div
         style={{
-          padding: sep,
-          fontSize: fontSize,
+          padding: isLargeScreen ? sep : "3px",
+          fontSize: nameFontSize,
           backgroundColor: pToMove[1] ? timer2 : timerBg,
         }}
         className={"center truncate" + (pToMove[1] ? " z-depth-2" : "")}
       >
-        {names[1] === null ? "______" : names[1]}
+        {names[1] === null ? "waiting..." : names[1]}
+        <br></br>
+        {names[1] === null ? "" : "(" + formattedRatings[1] + ")"}
       </div>
       {showScores && (
         <div style={childStyle} className={"center"}>

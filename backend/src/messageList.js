@@ -6,6 +6,8 @@ module.exports = {
   gameCreatedMsg: "gameCreated",
   pingServerMsg: "pingServer",
   pongFromServerMsg: "pongFromServer",
+  newRatingsNotificationMsg: "newRatingsNotification",
+  invalidEloIdErrorMsg: "invalidEloIdError",
 
   //client-server-client messages
   joinGameMsg: "joinGame",

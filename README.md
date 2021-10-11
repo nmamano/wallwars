@@ -27,20 +27,21 @@ place a wall in the same turn).
 - Make premoves during your opponent's turn.
 - Move with mouse or keyboard arrows.
 - Out-of-board interactions: resign, offer draw, request takeback, and increase the opponent's remaining time.
-- Navigate to any previous position during/after the game.
+- Navigate to any previous position during or after the game.
 - Ability to request a rematch and play multi-game matches.
+- Gicko-2 rating system and ranking (ELO-like system).
 - Multi-game scores (a win is 1 point and a draw is 0.5).
 - Ability to return to a game even after leaving the page.
 - Real-time indicator of when the opponent disconnects/returns to the game.
 - Responsive design for mobile (smaller board dimensions recommended, as it can be hard to tap the right cell in a small screen).
 - Optional sound effect for moves.
-- Two color themes (red/green and blue only), each with a night mode.
+- Two color themes (red/green and blue only), each with a dark mode.
 - Adjustable board scaling to fit different screen sizes.
 - Customizable tokens (the look of your piece).
-- Settings are stored in cookies for convenience (username, time control, board dimensions, token, color theme, night mode, ...).
+- Settings are stored in cookies for convenience (username, time control, board dimensions, token, color theme, dark mode, ...).
 - Visual highlight of the last move played on the board.
 
-## Coming features
+## Planned features
 
 - List ongoing public games in the lobby and allow to spectate them in real time.
 - Offline/local game mode to be able to play with someone else on the same computer without connecting to the server.

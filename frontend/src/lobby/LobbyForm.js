@@ -66,7 +66,7 @@ const LobbyForm = ({
   handleJoinGame,
   handleRefreshName,
   handleToken,
-  handleCookieId,
+  handleEloId,
 }) => {
   const menuTheme = clientParams.menuTheme;
   const isDarkModeOn = clientParams.isDarkModeOn;
@@ -146,10 +146,10 @@ const LobbyForm = ({
         </Col>
         <Col s={6} m={3}>
           <TextInput
-            id="cookieIdInput"
-            value={clientParams.cookieId}
+            id="eloIdInput"
+            value={clientParams.eloId}
             onChange={(props) => {
-              handleCookieId(props.target.value);
+              handleEloId(props.target.value);
             }}
           />
         </Col>

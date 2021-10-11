@@ -16,39 +16,39 @@ class GameManager {
     return null;
   }
 
-  ongoingGameOfClient(cookieId) {
+  ongoingGameOfClient(eloId) {
     for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
-      const [id1, id2] = game.cookieIds;
-      if (cookieId === id1 || cookieId === id2) return game;
+      const [id1, id2] = game.eloIds;
+      if (eloId === id1 || eloId === id2) return game;
     }
     return null;
   }
 
-  getOngoingGameByCookieId(cookieId) {
+  getOngoingGameByEloId(eloId) {
     for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
-      const [id1, id2] = game.cookieIds;
-      if (cookieId === id1 || cookieId === id2) return game;
+      const [id1, id2] = game.eloIds;
+      if (eloId === id1 || eloId === id2) return game;
     }
     return null;
   }
 
-  getOpponentSocketId(cookieId) {
-    const game = this.ongoingGameOfClient(cookieId);
+  getOpponentSocketId(eloId) {
+    const game = this.ongoingGameOfClient(eloId);
     if (!game) return null;
     const [socketId1, socketId2] = game.socketIds;
-    return cookieId === game.cookieIds[0] ? socketId2 : socketId1;
+    return eloId === game.eloIds[0] ? socketId2 : socketId1;
   }
-  getOpponentCookieId(cookieId) {
-    const game = this.ongoingGameOfClient(cookieId);
+  getOpponentEloId(eloId) {
+    const game = this.ongoingGameOfClient(eloId);
     if (!game) return null;
-    const [cookieId1, cookieId2] = game.cookieIds;
-    return cookieId === cookieId1 ? cookieId2 : cookieId1;
+    const [eloId1, eloId2] = game.eloIds;
+    return eloId === eloId1 ? eloId2 : eloId1;
   }
 
-  hasOngoingGame(cookieId) {
-    return this.ongoingGameOfClient(cookieId) !== null;
+  hasOngoingGame(eloId) {
+    return this.ongoingGameOfClient(eloId) !== null;
   }
 
   addUnjoinedGame(game) {
@@ -69,18 +69,18 @@ class GameManager {
     );
   }
 
-  removeGamesByCookieId(cookieId) {
-    this.removeUnjoinedGamesByCookieId(cookieId);
-    this.removeOngoingGamesByCookieId(cookieId);
+  removeGamesByEloId(eloId) {
+    this.removeUnjoinedGamesByEloId(eloId);
+    this.removeOngoingGamesByEloId(eloId);
   }
 
   //in theory, clients can only have one unjoined game at a time,
   //but we check all to be sure
-  removeUnjoinedGamesByCookieId(cookieId) {
-    if (!cookieId) return;
+  removeUnjoinedGamesByEloId(eloId) {
+    if (!eloId) return;
     for (let i = 0; i < this.unjoinedGames.length; i++) {
       const game = this.unjoinedGames[i];
-      if (game.cookieIds[0] === cookieId) {
+      if (game.eloIds[0] === eloId) {
         console.log("remove unjoined game: ", JSON.stringify(game));
         this.unjoinedGames.splice(i, 1);
         i--;
@@ -112,11 +112,11 @@ class GameManager {
 
   //in theory, clients can only have one ongoing game at a time,
   //but we check all to be sure
-  removeOngoingGamesByCookieId(cookieId) {
-    if (!cookieId) return;
+  removeOngoingGamesByEloId(eloId) {
+    if (!eloId) return;
     for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
-      if (game.cookieIds[0] === cookieId || game.cookieIds[1] === cookieId) {
+      if (game.eloIds[0] === eloId || game.eloIds[1] === eloId) {
         this.ongoingGames.splice(i, 1);
         console.log("removed ongoing game: ", JSON.stringify(game));
         i--;

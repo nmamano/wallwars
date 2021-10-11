@@ -4,8 +4,8 @@ import { roundNum } from "../shared/utils";
 import { getColor } from "../shared/colorThemes";
 
 const StatusHeader = ({
-  names,
   lifeCycleStage,
+  names,
   winner,
   finishReason,
   indexToMove,

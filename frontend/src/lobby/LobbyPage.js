@@ -5,7 +5,7 @@ import { ToastContainer } from "react-toastify";
 import { useCookies } from "react-cookie";
 import { useImmer } from "use-immer";
 
-import { randPlayerName } from "../shared/utils";
+import { randPlayerName, randEloId } from "../shared/utils";
 import { getColor } from "../shared/colorThemes";
 import blueBgDark from "./../static/blueBgDark.jfif";
 import blueBgLight from "./../static/blueBgLight.jfif";
@@ -28,7 +28,8 @@ import { emptyBoardDistances, boardPixelDims } from "../shared/gameLogicUtils";
 
 const boardTheme = "monochromeBoard";
 const maxPlayerNameLen = 9;
-const maxCookieIdLen = 16;
+const minEloIdLen = 4;
+const maxEloIdLen = 16;
 const numStartingRecentGames = 16;
 const maxRankingLength = 100;
 
@@ -52,7 +53,12 @@ const initalLobbyState = (cookies) => {
     joinCode: "",
     clientRole: "", //creator, joiner, returner, spectator
     watchGameId: null,
-    cookieId: cookies.cookieId ? cookies.cookieId : "undefined",
+    eloId:
+      cookies.eloId &&
+      cookies.eloId.length >= minEloIdLen &&
+      cookies.eloId.length <= maxEloIdLen
+        ? cookies.eloId
+        : randEloId(maxEloIdLen),
     isPublic: cookies.isPublic && cookies.isPublic === "true" ? true : false,
     isGamePageOpen: false,
     hasOngoingGame: false,
@@ -82,7 +88,7 @@ const LobbyPage = ({ socket }) => {
     "increment",
     "numRows",
     "numCols",
-    "cookieId",
+    "eloId",
     "isPublic",
   ]);
   const [state, updateState] = useImmer(initalLobbyState(cookies));
@@ -111,6 +117,12 @@ const LobbyPage = ({ socket }) => {
   const handleRefreshName = () => {
     updateState((draftState) => {
       draftState.playerName = randPlayerName(maxPlayerNameLen);
+    });
+  };
+  const handleEloId = (eloId) => {
+    if (eloId.length < minEloIdLen) return;
+    updateState((draftState) => {
+      draftState.eloId = eloId.slice(0, maxEloIdLen);
     });
   };
   const handleToken = (icon) => {
@@ -189,17 +201,12 @@ const LobbyPage = ({ socket }) => {
       draftState.joinCode = code;
     });
   };
-  const handleSetCookieId = (cookieId) => {
-    updateState((draftState) => {
-      draftState.cookieId = cookieId;
-    });
-    setCookie("cookieId", cookieId, { path: "/" });
-  };
   const handleCreateGame = () => {
     const dur = validateDuration();
     const inc = validateIncrement();
     const bs = validateBoardSettings();
     const name = validateName();
+    const eloId = validateEloId();
     updateState((draftState) => {
       draftState.clientRole = "creator";
       //note: duration and increment are converted from string to number here
@@ -207,31 +214,30 @@ const LobbyPage = ({ socket }) => {
       draftState.timeControl.increment = inc;
       draftState.boardSettings = bs;
       draftState.playerName = name;
-      draftState.cookieId =
-        cookies.cookieId || cookies.cookieId === ""
-          ? cookies.cookieId
-          : "undefined";
+      draftState.eloId = eloId;
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = true;
     });
   };
   const handleJoinGame = () => {
     const name = validateName();
+    const eloId = validateEloId();
     updateState((draftState) => {
       draftState.clientRole = "joiner";
       draftState.playerName = name;
-      draftState.cookieId = cookies.cookieId ? cookies.cookieId : "undefined";
+      draftState.eloId = eloId;
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = true;
     });
   };
   const handleAcceptChallenge = (joinCode) => {
     const name = validateName();
+    const eloId = validateEloId();
     updateState((draftState) => {
       draftState.joinCode = joinCode;
       draftState.clientRole = "joiner";
       draftState.playerName = name;
-      draftState.cookieId = cookies.cookieId ? cookies.cookieId : "undefined";
+      draftState.eloId = eloId;
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = true;
     });
@@ -239,7 +245,6 @@ const LobbyPage = ({ socket }) => {
   const handleReturnToGame = () => {
     updateState((draftState) => {
       draftState.clientRole = "returner";
-      draftState.cookieId = cookies.cookieId;
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = true;
     });
@@ -268,6 +273,12 @@ const LobbyPage = ({ socket }) => {
     if (name === "") name = "Anon";
     else setCookie("playerName", name, { path: "/" });
     return name;
+  };
+  const validateEloId = () => {
+    let eloId = state.eloId;
+    if (eloId.length < minEloIdLen) eloId = randEloId(maxEloIdLen);
+    else setCookie("eloId", eloId, { path: "/" });
+    return eloId;
   };
   const validateDuration = () => {
     let dur = parseFloat(state.timeControl.duration);
@@ -320,15 +331,10 @@ const LobbyPage = ({ socket }) => {
 
   //determine if the "Return To Game" button needs to be shown
   useEffect(() => {
-    if (
-      cookies.cookieId &&
-      cookies.cookieId !== "undefined" &&
-      !state.hasOngoingGame &&
-      !state.isGamePageOpen
-    ) {
-      socket.emit("checkHasOngoingGame", { cookieId: cookies.cookieId });
+    if (!state.hasOngoingGame && !state.isGamePageOpen) {
+      socket.emit("checkHasOngoingGame", { eloId: state.eloId });
     }
-  }, [socket, cookies.cookieId, state.hasOngoingGame, state.isGamePageOpen]);
+  }, [socket, state.hasOngoingGame, state.isGamePageOpen, state.eloId]);
   useEffect(() => {
     socket.on("respondHasOngoingGame", ({ res }) => {
       updateState((draftState) => {
@@ -362,7 +368,7 @@ const LobbyPage = ({ socket }) => {
     }
   }, [socket, updateState, state.ranking.needToRequestRanking]);
   useEffect(() => {
-    socket.once("requestedRanking", ({ ranking }) => {
+    socket.on("requestedRanking", ({ ranking }) => {
       updateState((draftState) => {
         draftState.ranking.playerList = ranking;
         draftState.ranking.needToRequestRanking = false;
@@ -491,7 +497,7 @@ const LobbyPage = ({ socket }) => {
           handleReturnToLobby={handleReturnToLobby}
           handleToggleDarkMode={handleToggleDarkMode}
           handleToggleTheme={handleToggleTheme}
-          handleSetCookieId={handleSetCookieId}
+          handleEloId={handleEloId}
         />
       )}
       {!state.isGamePageOpen && (
@@ -523,17 +529,15 @@ const LobbyPage = ({ socket }) => {
             handleJoinGame={handleJoinGame}
             handleRefreshName={handleRefreshName}
             handleToken={handleToken}
-            handleCookieId={handleSetCookieId}
+            handleEloId={handleEloId}
           />
-          {state.hasOngoingGame &&
-            cookies.cookieId &&
-            cookies.cookieId !== "undefined" && (
-              <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
-                <Col className="center" s={12}>
-                  {returnToGameButton}
-                </Col>
-              </Row>
-            )}
+          {state.hasOngoingGame && ( // todo: do we need to check here if the eloId matches?
+            <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
+              <Col className="center" s={12}>
+                {returnToGameButton}
+              </Col>
+            </Row>
+          )}
           <div style={gridStyle}>
             <div style={{ gridArea: "showcaseArea" }}>
               {gameShowcaseHeader}

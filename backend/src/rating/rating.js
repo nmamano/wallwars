@@ -5,7 +5,7 @@ const defaultRating = 1500;
 // each player has rating, deviation, volatility.
 // functinal-style wrapper around the OOP library in rating_internal_formula
 const updateRating = (player, opponent, result) => {
-  tau = 0.06;
+  const tau = 0.06;
   const player_ = new Player({
     defaultRating: defaultRating,
     rating: player.rating,

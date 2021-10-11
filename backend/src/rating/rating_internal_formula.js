@@ -238,19 +238,6 @@ class Player {
       );
     };
   }
-  toObject() {
-    return {
-      opponentRatingDeviations: this.opponentRatingDeviations,
-      opponentRatings: this.opponentRatings,
-      outcomes: this.outcomes,
-      rating: this.rating,
-      ratingDeviation: this.ratingDeviation,
-      volatility: this.volatility,
-    };
-  }
-  toJSON() {
-    return this.toObject();
-  }
 }
 Player.scalingFactor = 173.7178;
 

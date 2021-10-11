@@ -26,7 +26,7 @@ mongoose
   });
 
 const pseudoPlayerSchema = new Schema({
-  cookieId: { type: String, required: true },
+  eloId: { type: String, required: true },
   name: { type: String, required: true },
   rating: { type: Number, required: true },
   peakRating: { type: Number, required: true },
@@ -41,6 +41,11 @@ const pseudoPlayerSchema = new Schema({
 
 const PseudoPlayer = mongoose.model("PseudoPlayer", pseudoPlayerSchema);
 
+const getPseudoPlayer = async (eloId) => {
+  if (!connectedToDB) return null;
+  return await PseudoPlayer.findOne({ eloId: eloId });
+};
+
 const getRanking = async (count) => {
   if (!connectedToDB) return null;
   if (count < 1) return null;
@@ -49,15 +54,18 @@ const getRanking = async (count) => {
     .sort({ rating: -1 })
     .limit(count);
   console.log(`found ${pseudoPlayers.length}/${count} pseudo players`);
+  // We don't need to send the eloIds to the client viewing the ranking
+  pseudoPlayers.forEach((p) => {
+    delete p.eloId;
+  });
   return pseudoPlayers;
 };
 
-// Should be followed by a call to updatePseudoPlayer, which sets the fields that are
-// still null
-const createNewPseudoPlayer = (cookieId) => {
-  r = initialRating();
+// Does not insert the player in the database, it just initializes some of the fields.
+const createNewPseudoPlayer = (eloId) => {
+  const r = initialRating();
   return {
-    cookieId: cookieId,
+    eloId: eloId,
     name: "",
     rating: r.rating,
     peakRating: r.rating,
@@ -71,12 +79,12 @@ const createNewPseudoPlayer = (cookieId) => {
   };
 };
 
-// updates the metadata of the pseudoplayer based on the result of a game
+// updates the `pseudoPlayer` object (locally) based on the result of a game
 const updatePseudoPlayer = (pseudoPlayer, game, score, newRating) => {
-  cookieId = pseudoPlayer.cookieId;
-  if (cookieId !== game.cookieIds[0] && cookieId !== game.cookieIds[1])
+  const eloId = pseudoPlayer.eloId;
+  if (eloId !== game.eloIds[0] && eloId !== game.eloIds[1])
     console.error("player is not in this game");
-  pIndex = pseudoPlayer.cookieId === game.cookieIds[0] ? 0 : 1;
+  const pIndex = pseudoPlayer.eloId === game.eloIds[0] ? 0 : 1;
   pseudoPlayer.name = game.playerNames[pIndex];
   pseudoPlayer.rating = newRating.rating;
   pseudoPlayer.peakRating = Math.max(
@@ -92,49 +100,35 @@ const updatePseudoPlayer = (pseudoPlayer, game, score, newRating) => {
   pseudoPlayer.lastGameDate = game.startDate;
 };
 
+// updates both pseudoplayers of a game in the database. If a pseudoplayer is not yet
+// in the database, a new one is created
 const updatePseudoPlayers = async (game) => {
   if (!connectedToDB) return;
-  // console.log(game.cookieIds);
-  if (
-    game.cookieIds[0] === "undefined" ||
-    game.cookieIds[0] === "" ||
-    game.cookieIds[1] === "undefined" ||
-    game.cookieIds[1] === ""
-  )
-    return;
-
   // Read the two players from db, or create new ones if not found
-  await PseudoPlayer.findOne({ cookieId: game.cookieIds[0] }, (err, res) => {
-    if (err) {
-      console.log("Error getting pseudoplayer 1: ", err);
-      return;
-    }
-    if (!res) console.log("creating new player for p1");
-    p1 = res ? res : new PseudoPlayer(createNewPseudoPlayer(game.cookieIds[0]));
-  });
-  await PseudoPlayer.findOne({ cookieId: game.cookieIds[1] }, (err, res) => {
-    if (err) {
-      console.log("Error getting pseudoplayer 2: ", err);
-      return;
-    }
-    if (!res) console.log("creating new player for p2");
-    p2 = res ? res : new PseudoPlayer(createNewPseudoPlayer(game.cookieIds[1]));
-  });
+  let p1 = await PseudoPlayer.findOne({ eloId: game.eloIds[0] });
+  if (!p1) {
+    console.log("creating new pseudoPlayer for creator");
+    p1 = new PseudoPlayer(createNewPseudoPlayer(game.eloIds[0]));
+  }
+  let p2 = await PseudoPlayer.findOne({ eloId: game.eloIds[1] });
+  if (!p2) {
+    console.log("creating new pseudoPlayer for joiner");
+    p2 = new PseudoPlayer(createNewPseudoPlayer(game.eloIds[1]));
+  }
   // Update the fields based on the result of the game
+  let scores;
   if (game.winner === "draw") scores = [0.5, 0.5];
   else if (game.winner === "creator") scores = [1, 0];
   else scores = [0, 1];
-  // console.log("players", p1, p2);
-  p1NewRating = updateRating(p1, p2, scores[0]);
-  p2NewRating = updateRating(p2, p1, scores[1]);
-  // console.log("new ratings", p1NewRating, p2NewRating);
+  const p1NewRating = updateRating(p1, p2, scores[0]);
+  const p2NewRating = updateRating(p2, p1, scores[1]);
   updatePseudoPlayer(p1, game, scores[0], p1NewRating);
   updatePseudoPlayer(p2, game, scores[1], p2NewRating);
   // Store the players with the updated fields
   try {
     await p1.save();
     console.log(
-      `Stored pseudoplayer in DB ${process.env.DB_NAME}: ${p1.name} ${p1.cookieId} freshness: ${p1.lastGameDate}`
+      `Stored pseudoplayer in DB ${process.env.DB_NAME}: name ${p1.name} eloId ${p1.eloId} freshness: ${p1.lastGameDate}`
     );
   } catch (err) {
     console.error(`Store pseudoplayer to DB ${process.env.DB_NAME} failed`);
@@ -143,7 +137,7 @@ const updatePseudoPlayers = async (game) => {
   try {
     await p2.save();
     console.log(
-      `Stored pseudoplayer in DB ${process.env.DB_NAME}: ${p2.name} ${p2.cookieId} freshness: ${p2.lastGameDate}`
+      `Stored pseudoplayer in DB ${process.env.DB_NAME}: name ${p2.name} eloId ${p2.eloId} freshness: ${p2.lastGameDate}`
     );
   } catch (err) {
     console.error(`Store pseudoplayer to DB ${process.env.DB_NAME} failed`);
@@ -213,10 +207,10 @@ const gameSchema = new Schema(
         "playerNames should have 2 entries",
       ],
     },
-    cookieIds: {
+    eloIds: {
       type: [String],
       required: true,
-      validate: [(ids) => ids.length === 2, "cookieIds should have 2 entries"],
+      validate: [(ids) => ids.length === 2, "eloIds should have 2 entries"],
     },
     playerTokens: {
       type: [String],
@@ -274,11 +268,20 @@ const gameSchema = new Schema(
       ],
     },
     version: { type: String, required: true },
+    ratings: {
+      type: [Number],
+      required: true,
+      validate: [
+        (ratings) => ratings.length === 2,
+        "ratings should have 2 entries",
+      ],
+    },
   },
   { versionKey: false }
 );
 const Game = mongoose.model("Game", gameSchema);
 
+// Stores the game to DB and updates the two pseudoplayers in the DB.
 const storeGame = async (game) => {
   if (!connectedToDB) return;
   if (game.moveHistory.length < 2) return;
@@ -301,10 +304,14 @@ const storeGame = async (game) => {
   }
 };
 
+// Gets game from db and removes ELO ids before returning it.
 const getGame = async (id) => {
   if (!connectedToDB) return null;
-  let res = await Game.findById(id);
-  return res;
+  let game = await Game.findById(id);
+  if (!game) return null;
+  let gameWithoutEloIds = JSON.parse(JSON.stringify(game));
+  delete gameWithoutEloIds.eloIds;
+  return gameWithoutEloIds;
 };
 
 const getRandomGame = async () => {
@@ -334,6 +341,8 @@ const getRecentGames = async (count) => {
 
 exports.storeGame = storeGame;
 exports.getGame = getGame;
+exports.getPseudoPlayer = getPseudoPlayer;
 exports.getRanking = getRanking;
 exports.getRandomGame = getRandomGame;
 exports.getRecentGames = getRecentGames;
+exports.createNewPseudoPlayer = createNewPseudoPlayer;

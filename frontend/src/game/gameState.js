@@ -106,7 +106,7 @@ export const createInitialState = (cookies) => {
     matchScore: [0, 0],
 
     //players can return to a game even if they close the browser
-    //(as long as it is the same browser, since it is cookie-based)
+    //(as long as they use the same elo id)
     //but if they create/join another game, this counts as abandonment
     //and they cannot join anymore
     opponentAbandoned: false,
@@ -149,6 +149,8 @@ export const createInitialState = (cookies) => {
         wallCounts: [0, 0],
       },
     ],
+
+    ratings: [0, 0],
 
     //===================================================
     //state unique to this client
@@ -232,12 +234,18 @@ export const applyAddJoiner = (draftState, joinCode, name, token) => {
 };
 
 //data sent by the server to the creator
-export const applyCreatedOnServer = (draftState, joinCode, creatorStarts) => {
+export const applyCreatedOnServer = (
+  draftState,
+  joinCode,
+  creatorStarts,
+  rating
+) => {
   //if life cycle stage is already 0, it means we already processed the response
   if (draftState.lifeCycleStage === 0) return;
   draftState.joinCode = joinCode;
   draftState.creatorStarts = creatorStarts;
   draftState.lifeCycleStage = 0;
+  draftState.ratings[0] = rating;
 };
 
 //data sent by the server to the joiner
@@ -248,7 +256,9 @@ export const applyJoinedOnServer = (
   timeControl,
   boardSettings,
   creatorStarts,
-  creatorPresent
+  creatorPresent,
+  creatorRating,
+  joinerRating
 ) => {
   //if life cycle stage is already 1, it means we already joined
   if (draftState.lifeCycleStage === 1) return;
@@ -264,26 +274,32 @@ export const applyJoinedOnServer = (
   draftState.moveHistory[0].playerPos = boardSettings.startPos;
   draftState.moveHistory[0].distances = emptyBoardDistances(boardSettings);
   draftState.lifeCycleStage = 1;
+  draftState.ratings = [creatorRating, joinerRating];
 };
 
-export const applyJoinerJoined = (draftState, joinerName, joinerToken) => {
+export const applyJoinerJoined = (
+  draftState,
+  joinerName,
+  joinerToken,
+  joinerRating
+) => {
   //if life cycle stage is already 1, it means the joiner already joined
   if (draftState.lifeCycleStage === 1) return;
   draftState.names[1] = joinerName;
   draftState.tokens[1] = joinerToken;
   draftState.lifeCycleStage = 1;
+  draftState.ratings[1] = joinerRating;
 };
 
 export const applyReturnToGame = (
   draftState,
-  cookieId,
   serverGame,
+  isCreator,
   timeLeft
 ) => {
   //if game is already initialized, don't return to game again
   if (draftState.timeControl) return;
-  const clientRole =
-    cookieId === serverGame.cookieIds[0] ? roleEnum.creator : roleEnum.joiner;
+  const clientRole = isCreator ? roleEnum.creator : roleEnum.joiner;
   if (clientRole === roleEnum.creator) {
     applyAddCreator(
       draftState,
@@ -295,12 +311,14 @@ export const applyReturnToGame = (
     applyCreatedOnServer(
       draftState,
       serverGame.joinCode,
-      serverGame.creatorStarts
+      serverGame.creatorStarts,
+      serverGame.ratings[0]
     );
     applyJoinerJoined(
       draftState,
       serverGame.playerNames[1],
-      serverGame.playerTokens[1]
+      serverGame.playerTokens[1],
+      serverGame.ratings[1]
     );
   } else {
     applyAddJoiner(
@@ -316,7 +334,9 @@ export const applyReturnToGame = (
       serverGame.timeControl,
       serverGame.boardSettings,
       serverGame.creatorStarts,
-      true
+      true,
+      serverGame.ratings[0],
+      serverGame.ratings[1]
     );
   }
   draftState.arePlayersPresent = serverGame.arePlayersPresent;
@@ -349,12 +369,14 @@ export const applyReceivedGame = (draftState, serverGame) => {
   applyCreatedOnServer(
     draftState,
     serverGame.joinCode,
-    serverGame.creatorStarts
+    serverGame.creatorStarts,
+    serverGame.ratings[0]
   );
   applyJoinerJoined(
     draftState,
     serverGame.playerNames[1],
-    serverGame.playerTokens[1]
+    serverGame.playerTokens[1],
+    serverGame.ratings[1]
   );
   for (let k = 0; k < serverGame.moveHistory.length; k++) {
     const actions = serverGame.moveHistory[k].actions;
@@ -746,6 +768,9 @@ export const applyTakeback = (draftState, requesterIsCreator) => {
   if (tc === 0) draftState.lifeCycleStage = 1;
   else if (tc === 1) draftState.lifeCycleStage = 2;
   closeDialogs(draftState);
+};
+export const applyNewRatingsNotification = (draftState, ratings) => {
+  draftState.ratings = ratings;
 };
 
 export const applySetupRematch = (draftState) => {
