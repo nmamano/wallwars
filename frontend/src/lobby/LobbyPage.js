@@ -120,7 +120,6 @@ const LobbyPage = ({ socket }) => {
     });
   };
   const handleEloId = (eloId) => {
-    if (eloId.length < minEloIdLen) return;
     updateState((draftState) => {
       draftState.eloId = eloId.slice(0, maxEloIdLen);
     });
@@ -276,7 +275,8 @@ const LobbyPage = ({ socket }) => {
   };
   const validateEloId = () => {
     let eloId = state.eloId;
-    if (eloId.length < minEloIdLen) eloId = randEloId(maxEloIdLen);
+    if (eloId.length < minEloIdLen || eloId.length > maxEloIdLen)
+      eloId = randEloId(maxEloIdLen);
     else setCookie("eloId", eloId, { path: "/" });
     return eloId;
   };
@@ -497,7 +497,6 @@ const LobbyPage = ({ socket }) => {
           handleReturnToLobby={handleReturnToLobby}
           handleToggleDarkMode={handleToggleDarkMode}
           handleToggleTheme={handleToggleTheme}
-          handleEloId={handleEloId}
         />
       )}
       {!state.isGamePageOpen && (

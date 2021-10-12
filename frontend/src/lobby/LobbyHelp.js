@@ -79,7 +79,8 @@ export const eloIdAboutText = (
       The lobby has an ELO ranking. The ELO rating for each ELO id appears in
       the ranking. However, the ELO id itself is secret. Instead, the last name
       player used with that ELO id is shown. If you want to be ranked fairly,
-      always use the same ELO id when playing.
+      always use the same ELO id when playing (and, conversely, if you do not
+      want a game to count towards your rating, you can leave the ELO id empty).
     </h6>
     <h6>
       WallWars saves your ELO id in a cookie so that next time you play, it will
