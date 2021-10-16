@@ -1,14 +1,6 @@
 import React from "react";
 import { Table } from "react-materialize";
-import cloneDeep from "lodash.clonedeep";
-
-import {
-  cellTypeByPos,
-  emptyGrid,
-  distance,
-  timeControlToString,
-  cellEnum,
-} from "../shared/gameLogicUtils";
+import { timeControlToString } from "../shared/gameLogicUtils";
 import { prettyDate } from "../shared/utils";
 import { getColor } from "../shared/colorThemes";
 import hoverHighlight from "../shared/hoverHighlight.module.css";
@@ -19,39 +11,8 @@ const winnerToString = (serverGame) => {
   else return ">";
 };
 
-const cachedFinalDists = new Map();
-const finalDists = (serverGame) => {
-  //limit the size so old games don't accrue indefinitely
-  if (cachedFinalDists.size > 1000) cachedFinalDists.clear();
-  if (cachedFinalDists.has(serverGame._id))
-    return cachedFinalDists.get(serverGame._id);
-
-  const grid = emptyGrid(serverGame.boardSettings.dims);
-  const playerPos = cloneDeep(serverGame.boardSettings.startPos);
-  let idxToMove = serverGame.creatorStarts ? 0 : 1;
-  for (let k = 0; k < serverGame.moveHistory.length; k++) {
-    const actions = serverGame.moveHistory[k].actions;
-    for (let k2 = 0; k2 < actions.length; k2++) {
-      const pos = actions[k2];
-      if (cellTypeByPos(pos) === cellEnum.ground) {
-        playerPos[idxToMove] = pos;
-      } else {
-        grid[pos[0]][pos[1]] = idxToMove + 1;
-      }
-    }
-    idxToMove = (idxToMove + 1) % 2;
-  }
-  const [g1, g2] = serverGame.boardSettings.goalPos;
-  const [d1, d2] = [
-    distance(grid, playerPos[0], g1),
-    distance(grid, playerPos[1], g2),
-  ];
-  cachedFinalDists.set(serverGame._id, [d1, d2]);
-  return [d1, d2];
-};
-
 const RecentGameList = ({
-  recentGames,
+  recentGameSummaries,
   isLargeScreen,
   menuTheme,
   isDarkModeOn,
@@ -97,18 +58,20 @@ const RecentGameList = ({
               <th style={headEntryStyle}>Player 1</th>
               <th style={headEntryStyle}></th>
               <th style={headEntryStyle}>Player 2</th>
-              <th style={headEntryStyle}>Distance</th>
-              <th style={headEntryStyle}>Turns</th>
+              <th style={headEntryStyle}>N</th>
               <th style={headEntryStyle}>Date</th>
             </tr>
           </thead>
           <tbody>
-            {recentGames &&
-              recentGames.map((game, i) => {
-                const [d1, d2] = finalDists(game);
+            {recentGameSummaries &&
+              recentGameSummaries.map((gameSummary, i) => {
+                const [r1, r2] = [
+                  Math.round(gameSummary.ratings[0]),
+                  Math.round(gameSummary.ratings[1]),
+                ];
                 return (
                   <tr
-                    onClick={() => handleViewGame(game._id)}
+                    onClick={() => handleViewGame(gameSummary._id)}
                     style={{
                       cursor: "pointer",
                       backgroundColor: i % 2 ? col1 : col2,
@@ -117,15 +80,18 @@ const RecentGameList = ({
                     key={i}
                   >
                     <td style={entryStyle}>
-                      {timeControlToString(game.timeControl)}
+                      {timeControlToString(gameSummary.timeControl)}
                     </td>
-                    <td style={entryStyle}>{game.playerNames[0]}</td>
-                    <td style={entryStyle}>{winnerToString(game)}</td>
-                    <td style={entryStyle}>{game.playerNames[1]}</td>
-                    <td style={entryStyle}>{d1 + " - " + d2}</td>
-                    <td style={entryStyle}>{game.moveHistory.length}</td>
+                    <td
+                      style={entryStyle}
+                    >{`${gameSummary.playerNames[0]} (${r1})`}</td>
+                    <td style={entryStyle}>{winnerToString(gameSummary)}</td>
+                    <td
+                      style={entryStyle}
+                    >{`${gameSummary.playerNames[1]} (${r2})`}</td>
+                    <td style={entryStyle}>{gameSummary.numMoves}</td>
                     <td style={entryStyle}>
-                      {prettyDate(game.startDate, true)}
+                      {prettyDate(gameSummary.startDate, true)}
                     </td>
                   </tr>
                 );
@@ -155,11 +121,11 @@ const RecentGameList = ({
             </tr>
           </thead>
           <tbody>
-            {recentGames &&
-              recentGames.map((game, i) => {
+            {recentGameSummaries &&
+              recentGameSummaries.map((gameSummary, i) => {
                 return (
                   <tr
-                    onClick={() => handleViewGame(game._id)}
+                    onClick={() => handleViewGame(gameSummary._id)}
                     style={{
                       cursor: "pointer",
                       backgroundColor: i % 2 ? col1 : col2,
@@ -168,13 +134,13 @@ const RecentGameList = ({
                     key={i}
                   >
                     <td style={entryStyle}>
-                      {timeControlToString(game.timeControl)}
+                      {timeControlToString(gameSummary.timeControl)}
                     </td>
-                    <td style={entryStyle}>{game.playerNames[0]}</td>
-                    <td style={entryStyle}>{winnerToString(game)}</td>
-                    <td style={entryStyle}>{game.playerNames[1]}</td>
+                    <td style={entryStyle}>{gameSummary.playerNames[0]}</td>
+                    <td style={entryStyle}>{winnerToString(gameSummary)}</td>
+                    <td style={entryStyle}>{gameSummary.playerNames[1]}</td>
                     <td style={entryStyle}>
-                      {prettyDate(game.startDate, false)}
+                      {prettyDate(gameSummary.startDate, false)}
                     </td>
                   </tr>
                 );
