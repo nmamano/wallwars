@@ -46,10 +46,6 @@ const LobbyTabs = ({
     socket.once("requestedRecentGameSummaries", ({ recentGameSummaries }) => {
       updateState((draftState) => {
         draftState.recentGameSummaries = recentGameSummaries;
-        console.log(recentGameSummaries);
-        if (draftState.recentGameSummaries.length > 0) {
-          draftState.shownTab = "recent";
-        }
       });
     });
   }, [socket, updateState]);
@@ -76,8 +72,11 @@ const LobbyTabs = ({
           const game = draftState.challenges[i];
           if (game.joinCode === joinCode) {
             draftState.challenges.splice(i, 1);
-            return;
+            break;
           }
+        }
+        if (draftState.challenges.length === 0) {
+          draftState.shownTab = "recent";
         }
       });
     });

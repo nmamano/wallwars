@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useImmer } from "use-immer";
 import { Table } from "react-materialize";
 import { prettyDate } from "../shared/utils";
 import { getColor } from "../shared/colorThemes";
@@ -11,7 +12,29 @@ const GamesToString = (pseudoPlayer) => {
   return w + "/" + d + "/" + l;
 };
 
-const RankingList = ({ isLargeScreen, menuTheme, isDarkModeOn, ranking }) => {
+const RankingList = ({ socket, isLargeScreen, menuTheme, isDarkModeOn }) => {
+  const [state, updateState] = useImmer({
+    needToRequestRanking: true,
+    ranking: [],
+  });
+  useEffect(() => {
+    if (state.needToRequestRanking) {
+      updateState((draftState) => {
+        draftState.needToRequestRanking = false;
+      });
+      socket.emit("getRanking", {
+        count: 200,
+      });
+    }
+  }, [socket, updateState, state.needToRequestRanking]);
+  useEffect(() => {
+    socket.once("requestedRanking", ({ ranking }) => {
+      updateState((draftState) => {
+        draftState.ranking = ranking;
+      });
+    });
+  }, [socket, updateState]);
+
   const [col1, col2, colBg] = [
     getColor(menuTheme, "recentGamesBackground", isDarkModeOn),
     getColor(menuTheme, "recentGamesAlternate", isDarkModeOn),
@@ -58,8 +81,8 @@ const RankingList = ({ isLargeScreen, menuTheme, isDarkModeOn, ranking }) => {
             </tr>
           </thead>
           <tbody>
-            {ranking &&
-              ranking.map((pseudoPlayer, i) => {
+            {state.ranking &&
+              state.ranking.map((pseudoPlayer, i) => {
                 return (
                   <tr
                     style={{
@@ -111,8 +134,8 @@ const RankingList = ({ isLargeScreen, menuTheme, isDarkModeOn, ranking }) => {
             </tr>
           </thead>
           <tbody>
-            {ranking &&
-              ranking.map((pseudoPlayer, i) => {
+            {state.ranking &&
+              state.ranking.map((pseudoPlayer, i) => {
                 return (
                   <tr
                     style={{

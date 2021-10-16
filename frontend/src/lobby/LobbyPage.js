@@ -30,7 +30,6 @@ const boardTheme = "monochromeBoard";
 const maxPlayerNameLen = 9;
 const minEloIdLen = 4;
 const maxEloIdLen = 16;
-const maxRankingLength = 100;
 
 const initalLobbyState = (cookies) => {
   let nr = parseFloat(cookies.numRows);
@@ -66,10 +65,6 @@ const initalLobbyState = (cookies) => {
     menuTheme:
       cookies.menuTheme && cookies.menuTheme === "green" ? "green" : "blue",
     showMoreOptions: false,
-    ranking: {
-      playerList: [],
-      needToRequestRanking: true,
-    },
   };
 };
 
@@ -255,7 +250,6 @@ const LobbyPage = ({ socket }) => {
     updateState((draftState) => {
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = false;
-      draftState.ranking.needToRequestRanking = true;
       draftState.clientRole = "";
       draftState.joinCode = "";
     });
@@ -352,23 +346,6 @@ const LobbyPage = ({ socket }) => {
       document.body.style.backgroundImage = "none";
     }
   }, [state.isDarkModeOn, state.menuTheme]);
-
-  //get rankings
-  useEffect(() => {
-    if (state.ranking.needToRequestRanking) {
-      socket.emit("getRanking", {
-        count: maxRankingLength,
-      });
-    }
-  }, [socket, updateState, state.ranking.needToRequestRanking]);
-  useEffect(() => {
-    socket.on("requestedRanking", ({ ranking }) => {
-      updateState((draftState) => {
-        draftState.ranking.playerList = ranking;
-        draftState.ranking.needToRequestRanking = false;
-      });
-    });
-  }, [socket, updateState, state.ranking.playerList]);
 
   const sideBySideLayout = useMediaQuery({ query: "(min-width: 1300px)" });
   const isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
@@ -556,10 +533,10 @@ const LobbyPage = ({ socket }) => {
             }}
           >
             <RankingList
+              socket={socket}
               isLargeScreen={isLargeScreen}
               menuTheme={state.menuTheme}
               isDarkModeOn={state.isDarkModeOn}
-              ranking={state.ranking.playerList}
             />
           </div>
         </div>
