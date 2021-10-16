@@ -30,7 +30,6 @@ const boardTheme = "monochromeBoard";
 const maxPlayerNameLen = 9;
 const minEloIdLen = 4;
 const maxEloIdLen = 16;
-const numStartingRecentGames = 16;
 const maxRankingLength = 100;
 
 const initalLobbyState = (cookies) => {
@@ -66,10 +65,6 @@ const initalLobbyState = (cookies) => {
       cookies.isDarkModeOn && cookies.isDarkModeOn === "true" ? true : false,
     menuTheme:
       cookies.menuTheme && cookies.menuTheme === "green" ? "green" : "blue",
-    recentGames: {
-      games: [],
-      numGamesToRequest: numStartingRecentGames,
-    },
     showMoreOptions: false,
     ranking: {
       playerList: [],
@@ -260,7 +255,6 @@ const LobbyPage = ({ socket }) => {
     updateState((draftState) => {
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = false;
-      draftState.recentGames.numGamesToRequest = numStartingRecentGames;
       draftState.ranking.needToRequestRanking = true;
       draftState.clientRole = "";
       draftState.joinCode = "";
@@ -375,24 +369,6 @@ const LobbyPage = ({ socket }) => {
       });
     });
   }, [socket, updateState, state.ranking.playerList]);
-
-  //get recent games
-  useEffect(() => {
-    const count = state.recentGames.numGamesToRequest;
-    if (count > 0 && count < 100) {
-      socket.emit("getRecentGames", {
-        count: count,
-      });
-    }
-  }, [socket, updateState, state.recentGames.numGamesToRequest]);
-  useEffect(() => {
-    socket.once("requestedRecentGames", ({ games }) => {
-      updateState((draftState) => {
-        draftState.recentGames.games = games;
-        draftState.recentGames.numGamesToRequest = games.length * 2;
-      });
-    });
-  }, [socket, updateState, state.recentGames.games]);
 
   const sideBySideLayout = useMediaQuery({ query: "(min-width: 1300px)" });
   const isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
@@ -560,7 +536,6 @@ const LobbyPage = ({ socket }) => {
                 isLargeScreen={isLargeScreen}
                 menuTheme={state.menuTheme}
                 isDarkModeOn={state.isDarkModeOn}
-                recentGames={state.recentGames.games}
                 handleViewGame={handleViewGame}
                 handleAcceptChallenge={handleAcceptChallenge}
               />

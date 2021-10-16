@@ -463,14 +463,16 @@ io.on(M.connectionMsg, (socket) => {
     else emitMessage(M.rankingNotFoundMsg);
   });
 
-  socket.on(M.getRecentGamesMsg, async ({ count }) => {
-    logReceivedMessage(M.getRecentGamesMsg, { count });
-    const games = await gameController.getRecentGames(count);
-    if (games)
-      emitMessage(M.requestedRecentGamesMsg, {
-        games: games,
+  socket.on(M.getRecentGameSummariesMsg, async ({ count }) => {
+    logReceivedMessage(M.getRecentGameSummariesMsg, { count });
+    const recentGameSummaries = await gameController.getRecentGameSummaries(
+      count
+    );
+    if (recentGameSummaries)
+      emitMessage(M.requestedRecentGameSummariesMsg, {
+        recentGameSummaries: recentGameSummaries,
       });
-    else emitMessage(M.recentGamesNotFoundMsg);
+    else emitMessage(M.recentGameSummariesNotFoundMsg);
   });
 
   socket.on(M.checkHasOngoingGameMsg, ({ eloId }) => {

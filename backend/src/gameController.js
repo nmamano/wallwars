@@ -53,7 +53,6 @@ const getRanking = async (count) => {
   const pseudoPlayers = await PseudoPlayer.find()
     .sort({ rating: -1 })
     .limit(count);
-  console.log(`found ${pseudoPlayers.length}/${count} pseudo players`);
   // We don't need to send the eloIds to the client viewing the ranking
   pseudoPlayers.forEach((p) => {
     delete p.eloId;
@@ -325,18 +324,20 @@ const getRandomGame = async () => {
   return res;
 };
 
-const getRecentGames = async (count) => {
+// Gets some metadata from each game, without getting the full list of moves.
+const getRecentGameSummaries = async (count) => {
   if (!connectedToDB) return null;
   if (count < 1) return null;
   const conditions = {
     "moveHistory.4": { $exists: true }, //only games with 4+ moves
   };
-  //up to count games
-  const games = await Game.find(conditions)
+  const gameSummaries = await Game.find(
+    conditions,
+    "_id playerNames timeControl winner startDate ratings numMoves"
+  )
     .sort({ startDate: -1 })
-    .limit(count);
-  console.log(`found ${games.length}/${count} recent games`);
-  return games;
+    .limit(count); //up to count games
+  return gameSummaries;
 };
 
 exports.storeGame = storeGame;
@@ -344,5 +345,5 @@ exports.getGame = getGame;
 exports.getPseudoPlayer = getPseudoPlayer;
 exports.getRanking = getRanking;
 exports.getRandomGame = getRandomGame;
-exports.getRecentGames = getRecentGames;
+exports.getRecentGameSummaries = getRecentGameSummaries;
 exports.createNewPseudoPlayer = createNewPseudoPlayer;

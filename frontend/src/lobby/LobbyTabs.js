@@ -12,17 +12,28 @@ const LobbyTabs = ({
   isLargeScreen,
   menuTheme,
   isDarkModeOn,
-  recentGames,
   handleViewGame,
   handleAcceptChallenge,
 }) => {
   //logic for getting challenges. It needs to be here as opposed to in ChallengeList itself
   //because we switch to the challenges tab automatically when there is a new challenge
   const [state, updateState] = useImmer({
+    shownTab: "recent", // one of 'recent', 'challenges', or 'live' (in the future).
     needToRequestChallenges: true,
     challenges: [],
-    showChallenges: false,
+    needToRequestRecentGameSummaries: true,
+    recentGameSummaries: [],
   });
+  useEffect(() => {
+    if (state.needToRequestRecentGameSummaries) {
+      updateState((draftState) => {
+        draftState.needToRequestRecentGameSummaries = false;
+      });
+      socket.emit("getRecentGameSummaries", {
+        count: 200,
+      });
+    }
+  }, [socket, updateState, state.needToRequestRecentGameSummaries]);
   useEffect(() => {
     if (state.needToRequestChallenges) {
       updateState((draftState) => {
@@ -32,11 +43,22 @@ const LobbyTabs = ({
     }
   }, [socket, updateState, state.needToRequestChallenges]);
   useEffect(() => {
+    socket.once("requestedRecentGameSummaries", ({ recentGameSummaries }) => {
+      updateState((draftState) => {
+        draftState.recentGameSummaries = recentGameSummaries;
+        console.log(recentGameSummaries);
+        if (draftState.recentGameSummaries.length > 0) {
+          draftState.shownTab = "recent";
+        }
+      });
+    });
+  }, [socket, updateState]);
+  useEffect(() => {
     socket.once("requestedCurrentChallenges", ({ challenges }) => {
       updateState((draftState) => {
         draftState.challenges = challenges;
         if (draftState.challenges.length > 0) {
-          draftState.showChallenges = true;
+          draftState.shownTab = "challenges";
         }
       });
     });
@@ -44,7 +66,7 @@ const LobbyTabs = ({
       updateState((draftState) => {
         draftState.challenges.push(challenge);
         if (draftState.challenges.length === 1) {
-          draftState.showChallenges = true;
+          draftState.shownTab = "challenges";
         }
       });
     });
@@ -94,10 +116,13 @@ const LobbyTabs = ({
   let challengesStyle = cloneDeep(tabStyle);
   let liveGamesStyle = cloneDeep(tabStyle);
   const selectedTabColor = getColor(menuTheme, "selectedTab", isDarkModeOn);
-  if (!state.showChallenges || (canHover && hoveredTab === "recent")) {
+  if (state.shownTab === "recent" || (canHover && hoveredTab === "recent")) {
     recentGamesStyle.backgroundColor = selectedTabColor;
   }
-  if (state.showChallenges || (canHover && hoveredTab === "open")) {
+  if (
+    state.shownTab === "challenges" ||
+    (canHover && hoveredTab === "challenges")
+  ) {
     challengesStyle.backgroundColor = selectedTabColor;
   }
   liveGamesStyle.backgroundColor = getColor(
@@ -133,10 +158,10 @@ const LobbyTabs = ({
           style={challengesStyle}
           onClick={() => {
             updateState((draftState) => {
-              draftState.showChallenges = true;
+              draftState.shownTab = "challenges";
             });
           }}
-          onMouseEnter={() => handleMouseEnter("open")}
+          onMouseEnter={() => handleMouseEnter("challenges")}
           onMouseLeave={handleMouseLeave}
           title={"Players looking for an opponent"}
         >
@@ -146,7 +171,7 @@ const LobbyTabs = ({
           style={recentGamesStyle}
           onClick={() => {
             updateState((draftState) => {
-              draftState.showChallenges = false;
+              draftState.shownTab = "recent";
             });
           }}
           onMouseEnter={() => handleMouseEnter("recent")}
@@ -162,7 +187,7 @@ const LobbyTabs = ({
           {"Live Games"}
         </div>
       </div>
-      {state.showChallenges && (
+      {state.shownTab === "challenges" && (
         <ChallengeList
           challenges={state.challenges}
           isLargeScreen={isLargeScreen}
@@ -171,9 +196,9 @@ const LobbyTabs = ({
           handleAcceptChallenge={handleAcceptChallenge}
         />
       )}
-      {!state.showChallenges && (
+      {state.shownTab === "recent" && (
         <RecentGameList
-          recentGames={recentGames}
+          recentGameSummaries={state.recentGameSummaries}
           isLargeScreen={isLargeScreen}
           menuTheme={menuTheme}
           isDarkModeOn={isDarkModeOn}

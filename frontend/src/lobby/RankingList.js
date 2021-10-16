@@ -48,13 +48,13 @@ const RankingList = ({ isLargeScreen, menuTheme, isDarkModeOn, ranking }) => {
         <Table centered style={{ width: "100%" }}>
           <thead>
             <tr>
-              <th style={headEntryStyle}>Ranking</th>
+              <th style={headEntryStyle}>Rank</th>
               <th style={headEntryStyle}>Name</th>
               <th style={headEntryStyle}>Rating</th>
-              <th style={headEntryStyle}>Peak Rating</th>
-              <th style={headEntryStyle}>Games</th>
-              <th style={headEntryStyle}>First played</th>
-              <th style={headEntryStyle}>Last played</th>
+              <th style={headEntryStyle}>Peak</th>
+              <th style={headEntryStyle}>W/D/L</th>
+              <th style={headEntryStyle}>First Played</th>
+              <th style={headEntryStyle}>Last Played</th>
             </tr>
           </thead>
           <tbody>
@@ -103,11 +103,11 @@ const RankingList = ({ isLargeScreen, menuTheme, isDarkModeOn, ranking }) => {
         <Table centered style={{ width: "100%" }}>
           <thead>
             <tr>
-              <th style={headEntryStyle}>Ranking</th>
+              <th style={headEntryStyle}>Rank</th>
               <th style={headEntryStyle}>Name</th>
               <th style={headEntryStyle}>Rating</th>
-              <th style={headEntryStyle}>Games</th>
-              <th style={headEntryStyle}>Last played</th>
+              <th style={headEntryStyle}>W/D/L</th>
+              <th style={headEntryStyle}>Last Game</th>
             </tr>
           </thead>
           <tbody>
