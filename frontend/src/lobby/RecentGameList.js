@@ -36,6 +36,12 @@ const RecentGameList = ({
     paddingBottom: "0.15rem",
     borderRadius: "0",
   };
+  const boldEntryStyle = {
+    paddingTop: "0.15rem",
+    paddingBottom: "0.15rem",
+    borderRadius: "0",
+    fontWeight: "bold",
+  };
   if (isLargeScreen) {
     return (
       <div
@@ -83,11 +89,19 @@ const RecentGameList = ({
                       {timeControlToString(gameSummary.timeControl)}
                     </td>
                     <td
-                      style={entryStyle}
+                      style={
+                        gameSummary.winner === "creator"
+                          ? boldEntryStyle
+                          : entryStyle
+                      }
                     >{`${gameSummary.playerNames[0]} (${r1})`}</td>
                     <td style={entryStyle}>{winnerToString(gameSummary)}</td>
                     <td
-                      style={entryStyle}
+                      style={
+                        gameSummary.winner === "joiner"
+                          ? boldEntryStyle
+                          : entryStyle
+                      }
                     >{`${gameSummary.playerNames[1]} (${r2})`}</td>
                     <td style={entryStyle}>{gameSummary.numMoves}</td>
                     <td style={entryStyle}>
