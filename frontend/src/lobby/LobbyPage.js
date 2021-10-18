@@ -57,7 +57,7 @@ const initalLobbyState = (cookies) => {
       cookies.eloId.length <= maxEloIdLen
         ? cookies.eloId
         : randEloId(maxEloIdLen),
-    isPublic: cookies.isPublic && cookies.isPublic === "true" ? true : false,
+    isPublic: cookies.isPublic && cookies.isPublic === "false" ? false : true,
     isGamePageOpen: false,
     hasOngoingGame: false,
     isDarkModeOn:
