@@ -1,119 +1,162 @@
-#ifndef GRAPH_H
-#define GRAPH_H
+#ifndef GRAPH_H_
+#define GRAPH_H_
 
 #include <array>
 #include <bitset>
-#include <iostream>
-#include <vector>
+#include <ostream>
 
-/* A grid graph.
+// A struct to represent grid graph with missing edges and related functions.
 
-The graph has num_rows*(num_cols-1) horizontal edges and
-(num_rows-1)*num_cols vertical edges. However, for simplicity, we assume
-that there are also edges to the right of the last column and below the
-last row. Then, the number of edges is 2*num_rows*num_cols, and every cell
-has one wall below and one wall to the right. The edge to the right of cell
-i has index 2*i, and the edge below cell i has index 2*i+1.
-This means that horizontal edges have even indices and vertical edges have
-odd indices.
+// The dimensions are compile time constants to optimize the space used to
+// represent the graph (since we might want an AI to memorize millions of
+// positions).
+constexpr int kNumRows = 4;
+constexpr int kNumCols = 4;
+constexpr int NumNodes() { return kNumRows * kNumCols; }
 
-Visualization of the indices of a node i, its neighbors (in brackets) and its
-incident edges (in parentheses), where C is the number of columns:
+// We serialize the nodes from coordinates to indices by row first and by column
+// second.
+constexpr int NodeAtCoordinates(int row, int col) {
+  return row * kNumCols + col;
+}
+inline int Row(int v) { return v / kNumCols; }
+inline int Col(int v) { return v % kNumCols; }
 
-                  [i-C]
-                    |
-                (2(i-C)+1)
-                    |
-  [i-1]--(2(i-1))--[i]--(2i)--[i+1]
-                    |
-                  (2i+1)
-                    |
-                  [i+C]
+constexpr int TopLeftNode() { return NodeAtCoordinates(0, 0); }
+constexpr int TopRightNode() { return NodeAtCoordinates(0, kNumCols - 1); }
+constexpr int BottomLeftNode() { return NodeAtCoordinates(kNumRows - 1, 0); }
+constexpr int BottomRightNode() {
+  return NodeAtCoordinates(kNumRows - 1, kNumCols - 1);
+}
 
-Visualization of a horizontal edge e (e is even) and its endpoints:
+inline bool IsNodeInFirstRow(int v) { return v <= TopRightNode(); }
+inline bool IsNodeInLastRow(int v) { return v >= BottomLeftNode(); }
+inline bool IsNodeInFirstCol(int v) { return v % kNumCols == 0; }
+inline bool IsNodeInLastCol(int v) { return v % kNumCols == kNumCols - 1; }
 
-            [e/2]--(e)--[e/2+1]
+// In a grid graph, every node except those in the last row have an edge below,
+// and every node except those in the last column have an edge to the right.
+// However, for simplicity, we assume that every node has one edge to the left
+// and one edge to the right. there are also edges to the right of the last
+// column and below the last row (we call these "fake" edges). Then, the number
+// of edges (real and fake) is 2*kNumRows*kNumCols, and every node has one edge
+// below and one edge to the right.
+constexpr int NumRealAndFakeEdges() { return 2 * NumNodes(); }
+constexpr int NumFakeEdges() { return kNumRows + kNumCols; }
+constexpr int NumRealEdges() { return NumRealAndFakeEdges() - NumFakeEdges(); }
 
-Visualization of a vertical edge e (e is odd) and its endpoints:
+// We give the edge to the right of node v index 2v, and the edge below node v
+// has index 2v+1. This means that horizontal edges have even indices and
+// vertical edges have odd indices.
 
-                [(e-1)/2]
-                    |
-                   (e)
-                    |
-               [(e-1)/2+C]
+inline bool IsHorizontalEdge(int e) { return e % 2 == 0; }
 
-Visualization of node and edge indices (square brackets are cells and
-brackets are "fake" walls) with 3 rows and 4 columns:
+// Example with 3 rows and 4 columns. Nodes are in square brackets and edges in
+// parentheses; fake edges are marked with #.
 
-  [0]  0  [1]  2  [2]  4  [3] {6}
+//   [0]--(0)--[1]--(2)--[2]--(4)--[3]--(#6)--
+//    |         |         |         |
+//   (1)       (3)       (5)       (7)
+//    |         |         |         |
+//   [4]--(8)--[5]-(10)--[6]-(12)--[7]-(#14)--
+//    |         |         |         |
+//   (9)      (11)      (13)      (15)
+//    |         |         |         |
+//   [8]-(16)--[9]-(18)-[10]-(20)-[11]-(#22)--
+//    |         |         |         |
+//  (#17)     (#19)    (#21)     (#23)
+//    |         |         |         |
 
-   1       3       5       7
+// Formula for the indices of a node v, its neighbors (in brackets) and its
+// incident edges (in parentheses), where C is the number of columns:
 
-  [4]  8  [5] 10  [6] 12  [7] {14}
+//                   [v-C]
+//                     |
+//                 (2(v-C)+1)
+//                     |
+//   [v-1]--(2(v-1))--[v]--(2v)--[v+1]
+//                     |
+//                   (2v+1)
+//                     |
+//                   [v+C]
 
-   9      11      13      15
+inline int NodeAbove(int v) { return IsNodeInFirstRow(v) ? -1 : v - kNumCols; }
+inline int NodeRight(int v) { return IsNodeInLastCol(v) ? -1 : v + 1; }
+inline int NodeBelow(int v) { return IsNodeInLastRow(v) ? -1 : v + kNumCols; }
+inline int NodeLeft(int v) { return IsNodeInFirstCol(v) ? -1 : v - 1; }
+inline int EdgeAbove(int v) {
+  return IsNodeInFirstRow(v) ? -1 : 2 * NodeAbove(v) + 1;
+}
+inline int EdgeRight(int v) { return IsNodeInLastCol(v) ? -1 : 2 * v; }
+inline int EdgeBelow(int v) { return IsNodeInLastRow(v) ? -1 : 2 * v + 1; }
+inline int EdgeLeft(int v) {
+  return IsNodeInFirstCol(v) ? -1 : 2 * NodeLeft(v);
+}
 
-  [8] 16  [9] 18 [10] 20 [11] {22}
+inline int AreHorizontalNeighbors(int v1, int v2) {
+  return Row(v1) == Row(v2) && (v1 == v2 - 1 || v1 == v2 + 1);
+}
+inline int AreVerticalNeighbors(int v1, int v2) {
+  return Col(v1) == Col(v2) && (v1 == v2 - kNumCols || v1 == v2 + kNumCols);
+}
+inline int EdgeBetweenHorizontalNeighbors(int v1, int v2) {
+  return EdgeRight(std::min(v1, v2));
+}
+inline int EdgeBetweenVerticalNeighbors(int v1, int v2) {
+  return EdgeBelow(std::min(v1, v2));
+}
+inline int EdgeBetweenNeighbors(int v1, int v2) {
+  return AreHorizontalNeighbors(v1, v2) ? EdgeBetweenHorizontalNeighbors(v1, v2)
+                                        : EdgeBetweenVerticalNeighbors(v1, v2);
+}
 
- {17}    {19}    {21}    {23}
-*/
+// Formula for the indices of the endpoints of a horizontal edge e (e is even):
 
-constexpr int MAX_ROWS = 10;
-constexpr int MAX_COLS = 12;
-constexpr int MaxNumEdges() { return 2 * MAX_ROWS * MAX_COLS; }
+//             [e/2]--(e)--[e/2+1]
 
+// Formula for the indices of the endpoints of a vertical edge e (e is odd):
+
+//                 [(e-1)/2]
+//                     |
+//                    (e)
+//                     |
+//                [(e-1)/2+C]
+
+inline int EndpointLeft(int e) { return e / 2; }
+inline int EndpointRight(int e) { return e / 2 + 1; }
+inline int EndpointAbove(int e) { return (e - 1) / 2; }
+inline int EndpointBelow(int e) { return (e - 1) / 2 + kNumCols; }
+
+inline bool IsFakeHorizontalEdge(int e) {
+  return IsNodeInLastCol(EndpointLeft(e));
+}
+inline bool IsFakeVerticalEdge(int e) {
+  return IsNodeInLastRow(EndpointAbove(e));
+}
+inline bool IsRealEdge(int e) {
+  return e >= 0 && e < NumRealAndFakeEdges() &&
+         (IsHorizontalEdge(e) ? !IsFakeHorizontalEdge(e)
+                              : !IsFakeVerticalEdge(e));
+}
+
+// A `Graph` is a kNumRows by kNumCols grid graph where (real) edges can be
+// *active* or *inactive*.
 struct Graph {
-  // Constructs a grid graph with no missing edges.
-  Graph(int num_rows_, int num_cols_)
-      : num_rows(num_rows_), num_cols(num_cols_) {
-    edges.set();
-  }
-  int num_rows, num_cols;
-  std::bitset<MaxNumEdges()> edges;
+  // Constructs a grid graph where all real edges are active (fake edges are
+  // deactivated).
+  Graph();
 
-  inline int NumNodes() const { return num_rows * num_cols; }
-  inline int NodeAtCoordinates(int row, int col) const {
-    return row * num_cols + col;
-  }
-  inline int TopLeftNode() const { return NodeAtCoordinates(0, 0); }
-  inline int TopRightNode() const { return NodeAtCoordinates(0, num_cols - 1); }
-  inline int BottomLeftNode() const {
-    return NodeAtCoordinates(num_rows - 1, 0);
-  }
-  inline int BottomRightNode() const {
-    return NodeAtCoordinates(num_rows - 1, num_cols - 1);
-  }
-  inline bool IsNodeInFirstRow(int v) const { return v <= TopRightNode(); }
-  inline bool IsNodeInLastRow(int v) const { return v >= BottomLeftNode(); }
-  inline bool IsNodeInFirstCol(int v) const { return v % num_cols == 0; }
-  inline bool IsNodeInLastCol(int v) const {
-    return v % num_cols == num_cols - 1;
-  }
-  inline int NodeAbove(int v) const {
-    return IsNodeInFirstRow(v) ? -1 : v - num_cols;
-  }
-  inline int NodeRight(int v) const { return IsNodeInLastCol(v) ? -1 : v + 1; }
-  inline int NodeBelow(int v) const {
-    return IsNodeInLastRow(v) ? -1 : v + num_cols;
-  }
-  inline int NodeLeft(int v) const { return IsNodeInFirstCol(v) ? -1 : v - 1; }
-  inline int EdgeAbove(int v) const {
-    return IsNodeInFirstRow(v) ? -1 : 2 * NodeAbove(v) + 1;
-  }
-  inline int EdgeRight(int v) const { return IsNodeInLastCol(v) ? -1 : 2 * v; }
-  inline int EdgeBelow(int v) const {
-    return IsNodeInLastRow(v) ? -1 : 2 * v + 1;
-  }
-  inline int EdgeLeft(int v) const {
-    return IsNodeInFirstCol(v) ? -1 : 2 * NodeLeft(v);
-  }
-  inline int EdgeBetween(int v1, int v2) const {
-    if (NodeAbove(v1) == v2) return EdgeAbove(v1);
-    if (NodeRight(v1) == v2) return EdgeRight(v1);
-    if (NodeBelow(v1) == v2) return EdgeBelow(v1);
-    if (NodeLeft(v1) == v2) return EdgeLeft(v1);
-    return -1;
-  }
+  // We need one bit per edge to keep track of active edges, so a `Graph` object
+  // uses 2 * kNumRows * kNumCols bits (plus padding).
+  std::bitset<NumRealAndFakeEdges()> edges;
+
+  bool operator==(const Graph& rhs) const { return (edges == rhs.edges); }
+  bool operator!=(const Graph& rhs) const { return !operator==(rhs); }
+
+  inline int NumActiveEdges() const { return edges.count(); }
+  inline void ActivateEdge(int edge) { edges.set(edge); }
+  inline void DeactivateEdge(int edge) { edges.set(edge, false); }
+
   inline int NeighborAbove(int v) const {
     return (IsNodeInFirstRow(v) || !edges[EdgeAbove(v)]) ? -1 : NodeAbove(v);
   }
@@ -129,55 +172,27 @@ struct Graph {
 
   // Returns the neighbors of `v`, in order: up, right, down, left. If a
   // neighbor cannot be reached in one of the direction (either because the v is
-  // at the border of the grid or because there is no edge), the corresponding
-  // value is -1.
+  // at the border of the grid or because the edge is inactive), the
+  // corresponding value is -1.
   inline std::array<int, 4> GetNeighbors(int v) const {
     return {NeighborAbove(v), NeighborRight(v), NeighborBelow(v),
             NeighborLeft(v)};
   }
-  // `dir` can be 0 for up, 1 for right, 2 for down, or 3 for left.
-  inline int NeighborInDirection(int v, int dir) const {
-    switch (dir) {
-      case 0:
-        return NeighborAbove(v);
-      case 1:
-        return NeighborRight(v);
-      case 2:
-        return NeighborBelow(v);
-      case 3:
-        return NeighborLeft(v);
-      default:
-        return -1;
-    }
-  }
 
-  inline bool isHorizontalEdge(int e) const { return e % 2 == 0; }
-  inline int EndpointLeft(int e) const { return e / 2; }
-  inline int EndpointRight(int e) const { return e / 2 + 1; }
-  inline int EndpointAbove(int e) const { return (e - 1) / 2; }
-  inline int EndpointBelow(int e) const { return (e - 1) / 2 + num_cols; }
-  inline bool isFakeHorizontalEdge(int e) const {
-    return IsNodeInLastCol(EndpointLeft(e));
-  }
-  inline bool isFakeVerticalEdge(int e) const {
-    return IsNodeInLastRow(EndpointAbove(e));
-  }
-  inline int NumRealAndFakeEdges() const { return 2 * NumNodes(); }
-  inline bool IsRealEdge(int e) const {
-    return e >= 0 && e < NumRealAndFakeEdges() &&
-           (isHorizontalEdge(e) ? !isFakeHorizontalEdge(e)
-                                : !isFakeVerticalEdge(e));
-  }
-  inline void RemoveEdge(int edge) { edges.set(edge, false); }
-  inline void AddEdge(int edge) { edges.set(edge); }
+  // `dir` can be 0 for up, 1 for right, 2 for down, or 3 for left.
+  int NeighborInDirection(int v, int dir) const;
 
   // Returns the distance between `s` and `t`, or -1 if they are in separate
-  // connected components. Based on BFS.
+  // connected components.
   int Distance(int s, int t) const;
 
   // Returns the distance between `s` and every node, or -1 if they are in
-  // separate connected components. Based on BFS.
-  std::vector<int> Distances(int s) const;
+  // separate connected components.
+  std::array<int, NumNodes()> Distances(int s) const;
 };
 
-#endif  // GRAPH_H
+inline std::ostream& operator<<(std::ostream& os, const Graph& G) {
+  return os << G.edges;
+}
+
+#endif  // GRAPH_H_
