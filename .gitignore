@@ -1,4 +1,5 @@
 ignore/*
 .vscode/
 frontend/.env.production
-AI/out.exe
+AI/a.out
+*.o

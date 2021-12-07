@@ -50,9 +50,6 @@ bool Situation::CanDeactivateEdge(int edge) /*const*/ {
 }
 
 std::vector<Move> Situation::AllLegalMoves() /*const*/ {
-  Situation original_sit = *this;
-  // Not thread-safe. The size is an upper bound on the number of possible
-  // moves.
   std::vector<Move> moves;
   int curr_node = tokens[turn];
   auto dist = G.Distances(curr_node);

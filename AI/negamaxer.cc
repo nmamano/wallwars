@@ -12,7 +12,7 @@
 
 namespace {
 
-constexpr int kMaxDepth = 4;
+constexpr int kMaxDepth = 3;
 constexpr int kInfinity = 999;  // Larger than any real evaluation.
 
 }  // namespace
