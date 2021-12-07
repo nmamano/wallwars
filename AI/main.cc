@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "assert.h"
+#include "benchmark.h"
 #include "graph.h"
 #include "human.h"
 #include "io.h"
@@ -99,7 +100,8 @@ int main() {
               << ")" << std::endl;
     std::cout << "(3) Change P1 (current: " << MoverEnumToString(p1_mover)
               << ")" << std::endl;
-    std::cout << "(4) Quit." << std::endl;
+    std::cout << "(4) Run benchmark." << std::endl;
+    std::cout << "(5) Quit." << std::endl;
     std::cout << ">> ";
     int option;
     std::cin >> option;
@@ -126,6 +128,8 @@ int main() {
         break;
       }
       case 4:
+        RunBenchmark();
+        return 0;
       default:
         return 0;
     }

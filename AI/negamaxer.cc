@@ -12,8 +12,9 @@
 
 namespace {
 
-constexpr int kMaxDepth = 3;
 constexpr int kInfinity = 999;  // Larger than any real evaluation.
+constexpr int kProgressDot =
+    10'000'000;  // Show one dot after this many direct evaluations.
 
 }  // namespace
 
@@ -23,14 +24,16 @@ int Negamaxer::DirectEval() const {
 }
 
 int Negamaxer::NegamaxEval(int depth) {
-  ++num_explored_situations_;
-  if (num_explored_situations_ % 1000000 == 0) std::cerr << ".";
   if (sit_.IsGameOver()) {
+    ++num_game_over_evals_;
     return sit_.Winner() == sit_.turn ? kInfinity : -kInfinity;
   }
   if (depth == 0) {
+    ++num_direct_evals_;
+    if (num_direct_evals_ % kProgressDot == 0) std::cerr << ".";
     return (sit_.turn == 0 ? 1 : -1) * DirectEval();
   }
+  ++num_recursive_evals_;
   int eval = -kInfinity;
   for (Move move : AllLegalMovesOpt(depth - 1)) {
     sit_.ApplyMove(move);
@@ -42,6 +45,10 @@ int Negamaxer::NegamaxEval(int depth) {
 
 Move Negamaxer::GetMove(Situation sit) {
   sit_ = sit;
+  num_game_over_evals_ = 0;
+  num_direct_evals_ = 0;
+  num_recursive_evals_ = 0;
+
   Move best_move;
   int best_move_eval = -kInfinity - 1;
   for (Move move : AllLegalMovesOpt(kMaxDepth - 1)) {
@@ -57,7 +64,9 @@ Move Negamaxer::GetMove(Situation sit) {
   }
   DUMP(best_move);
   DUMP(best_move_eval);
-  DUMP(num_explored_situations_);
+  DUMP(num_game_over_evals_);
+  DUMP(num_direct_evals_);
+  DUMP(num_recursive_evals_);
   return best_move;
 }
 
