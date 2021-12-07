@@ -12,7 +12,7 @@
 
 namespace {
 
-constexpr int kInfinity = 999;  // Larger than any real evaluation.
+constexpr int kInfinity = 1000;  // Larger than any real evaluation.
 constexpr int kProgressDot =
     10'000'000;  // Show one dot after this many direct evaluations.
 
@@ -26,7 +26,7 @@ int Negamaxer::DirectEval() const {
 int Negamaxer::NegamaxEval(int depth) {
   if (sit_.IsGameOver()) {
     ++num_game_over_evals_;
-    return sit_.Winner() == sit_.turn ? kInfinity : -kInfinity;
+    return (sit_.turn == 0 ? 1 : -1) * kInfinity * DirectEval();
   }
   if (depth == 0) {
     ++num_direct_evals_;
@@ -50,7 +50,7 @@ Move Negamaxer::GetMove(Situation sit) {
   num_recursive_evals_ = 0;
 
   Move best_move;
-  int best_move_eval = -kInfinity - 1;
+  int best_move_eval = -kInfinity * kInfinity - 1;
   for (Move move : AllLegalMovesOpt(kMaxDepth - 1)) {
     sit_.ApplyMove(move);
     int move_eval = -NegamaxEval(kMaxDepth - 1);
