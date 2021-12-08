@@ -6,6 +6,7 @@
 #include "external/span.h"
 #include "mover.h"
 #include "situation.h"
+#include "stdint.h"
 
 constexpr int kMaxDepth = 4;
 class Negamaxer : public Mover {
@@ -22,13 +23,13 @@ class Negamaxer : public Mover {
     return num_game_over_evals_ + num_direct_evals_ + num_memoized_evals_ +
            num_recursive_evals_;
   }
-  int GetNumMemoizedSituations() const;
+  int GetNumMemoizedSituations() const { return memoized_evals_.size(); };
   void PrintMetrics() const;
 
  private:
   // Evaluates situation `sit_` with the Negamax algorithm, exploring `depth`
   // moves ahead. Higher is better for the player to move.
-  int NegamaxEval(int depth);
+  int NegamaxEval(int depth, int alpha, int beta);
 
   // Evaluates situation `sit_` with the formula dist(p1, g1) - dist(p0, g0).
   // Higher is better for P0.
@@ -42,9 +43,19 @@ class Negamaxer : public Mover {
   // The situation that moves are applied to to traverse the search tree.
   Situation sit_;
 
-  // Memoization table. There is one hash table for each depth.
-  std::array<std::unordered_map<Situation, int, SituationHash>, kMaxDepth>
-      memoized_evals;
+  // Values of the memoization table. Designed to fit in one 32-bit word.
+  struct MemoizedEval {
+    // Indicates if the evaluation is exact, a lower bound, or an upper bound.
+    // See the flag constants in `negamaxer.cc`.
+    int8_t alpha_beta_flag;
+    // Depth of the eval. Higher (shallower) depths are based on a longer
+    // lookahead, so they can be used for lower depths too. Depths up to 127 are
+    // possible.
+    int8_t depth;
+    // Eval of a position. Evals with absolute value up to 32767 are possible.
+    int16_t eval;
+  };
+  std::unordered_map<Situation, MemoizedEval, SituationHash> memoized_evals_;
 
   // Search metrics.
   int num_game_over_evals_ = 0;
