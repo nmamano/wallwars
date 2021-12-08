@@ -28,10 +28,16 @@ int Negamaxer::NegamaxEval(int depth) {
     ++num_game_over_evals_;
     return sit_.Winner() == sit_.turn ? kInfinity : -kInfinity;
   }
+  auto eval_iter = memoized_evals[depth].find(sit_);
+  if (eval_iter != memoized_evals[depth].end()) {
+    ++num_memoized_evals_;
+    return eval_iter->second;
+  }
   if (depth == 0) {
     ++num_direct_evals_;
-    if (num_direct_evals_ % kProgressDot == 0) std::cerr << ".";
-    return (sit_.turn == 0 ? 1 : -1) * DirectEval();
+    int eval = (sit_.turn == 0 ? 1 : -1) * DirectEval();
+    memoized_evals[depth].emplace(sit_, eval);
+    return eval;
   }
   ++num_recursive_evals_;
   int eval = -kInfinity;
@@ -40,16 +46,47 @@ int Negamaxer::NegamaxEval(int depth) {
     eval = std::max(eval, -NegamaxEval(depth - 1));
     sit_.UndoMove(move);
   }
+  memoized_evals[depth].emplace(sit_, eval);
   return eval;
 }
 
+int Negamaxer::GetNumMemoizedSituations() const {
+  int res = 0;
+  for (int i = 0; i < kMaxDepth; i++) res += memoized_evals[i].size();
+  return res;
+}
+
+void Negamaxer::PrintMetrics() const {
+  std::cerr << "Evals: " << GetNumEvals()
+            << " (game-over: " << num_game_over_evals_
+            << " memoized: " << num_memoized_evals_
+            << " direct: " << num_direct_evals_
+            << " recursive: " << num_recursive_evals_ << ")" << std::endl;
+  std::cerr << "Memoized situations: " << GetNumMemoizedSituations() << "(";
+  for (int i = 0; i < kMaxDepth; i++) {
+    std::cerr << i << ": " << memoized_evals[i].size();
+    if (i < kMaxDepth - 1) std::cerr << " ";
+  }
+  std::cerr << ")" << std::endl;
+}
+
 Move Negamaxer::GetMove(Situation sit) {
+  // Reset data structures and metrics.
   sit_ = sit;
   num_game_over_evals_ = 0;
+  num_memoized_evals_ = 0;
   num_direct_evals_ = 0;
   num_recursive_evals_ = 0;
+  for (int depth = 0; depth < kMaxDepth; depth++) memoized_evals[depth].clear();
 
+  // Same loop as in `NegamaxEval()`, with the following differences:
+  // - We need to keep track of the best move, not only its evaluation.
+  // - Situations are not memoized, as they are evaluated exactly once since
+  // this is the shallowest search depth.
   Move best_move;
+  // `best_move_eval` is initialized to -kInfinity - 1 so that *some* move is
+  // still chosen in the event that every move is losing, which are evaluated to
+  // -kInfinity.
   int best_move_eval = -kInfinity - 1;
   for (Move move : AllLegalMovesOpt(kMaxDepth - 1)) {
     sit_.ApplyMove(move);
@@ -62,11 +99,7 @@ Move Negamaxer::GetMove(Situation sit) {
                 << " (eval: " << best_move_eval << ")" << std::endl;
     }
   }
-  DUMP(best_move);
-  DUMP(best_move_eval);
-  DUMP(num_game_over_evals_);
-  DUMP(num_direct_evals_);
-  DUMP(num_recursive_evals_);
+  PrintMetrics();
   return best_move;
 }
 

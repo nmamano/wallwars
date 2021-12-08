@@ -2,6 +2,7 @@
 #define SITUATION_H_
 
 #include <array>
+#include <bitset>
 #include <ostream>
 #include <vector>
 
@@ -83,5 +84,12 @@ struct Situation {
 inline std::ostream& operator<<(std::ostream& os, const Situation& s) {
   return os << s.tokens[0] << " " << s.tokens[1] << " " << s.turn << " " << s.G;
 }
+
+struct SituationHash {
+  std::size_t operator()(const Situation& sit) const {
+    return (sit.tokens[0] || sit.tokens[1] << 16) ^
+           std::hash<std::bitset<NumRealAndFakeEdges()>>{}(sit.G.edges);
+  }
+};
 
 #endif  // SITUATION_H_

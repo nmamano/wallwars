@@ -84,11 +84,6 @@ void PlayGame(std::array<MoverEnum, 2> movers) {
 }
 
 int main() {
-  std::cerr << sizeof(int) << " " << sizeof(Situation) << " " << sizeof(Move)
-            << " " << sizeof(Graph) << std::endl;
-  std::cerr << sizeof(std::bitset<NumRealAndFakeEdges()>) << " "
-            << NumRealAndFakeEdges() << std::endl;
-
   MoverEnum p0_mover = MoverEnum::Human;
   MoverEnum p1_mover = MoverEnum::Negamaxer;
 
