@@ -24,7 +24,7 @@ Move Human::GetMove(Situation sit) {
     while (true) {
       std::cout << ">> ";
       std::string s;
-      std::cin >> s;
+      std::getline(std::cin, s);
       if (direction_letter_to_index.count(s)) {
         int dir = direction_letter_to_index.at(s);
         int nbr = sit.G.NeighborInDirection(sit.tokens[sit.turn], dir);

@@ -78,10 +78,16 @@ void PrintBoard(const Situation& sit) {
 
     // One line for vertical edges and pillars between 4 walls.
     if (row == kNumRows - 1) continue;
-    std::cout << "|  ";
+    std::cout << "|";
     for (int col = 0; col < kNumCols; ++col) {
       int node = NodeAtCoordinates(row, col);
       int edge = EdgeBelow(node);
+      if (col == 0) {
+        if (!sit.G.edges[edge])
+          std::cout << "--";
+        else
+          std::cout << "  ";
+      }
       if (!sit.G.edges[edge]) {
         std::cout << std::string(max_col_width, '-');
       } else {
@@ -126,9 +132,14 @@ void PrintBoard(const Situation& sit) {
         } else {
           std::cout << "  +  ";
         }
+      } else {
+        if (!sit.G.edges[edge])
+          std::cout << "--";
+        else
+          std::cout << "  ";
       }
     }
-    std::cout << "  |" << std::endl;
+    std::cout << "|" << std::endl;
   }
   std::cout << "+" << std::string((max_col_width + 5) * kNumCols - 1, '-')
             << "+" << std::endl;
