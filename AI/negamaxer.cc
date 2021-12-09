@@ -99,7 +99,7 @@ Move Negamaxer::GetMove(Situation sit) {
     if (move_eval > best_move_eval) {
       best_move = move;
       best_move_eval = move_eval;
-      std::cerr << "Found better move: " << best_move
+      std::cerr << "Best move: " << sit_.MoveAsPrettyString(move)
                 << " (eval: " << best_move_eval << ")" << std::endl;
     }
   }

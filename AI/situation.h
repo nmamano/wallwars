@@ -79,6 +79,9 @@ struct Situation {
   std::vector<Move> AllLegalMoves() /*const*/;
 
   void PrettyPrint() const;
+  // Returns a string representing a move assuming that the move can be played
+  // on the situation.
+  std::string MoveAsPrettyString(Move move) const;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Situation& s) {

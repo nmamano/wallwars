@@ -44,7 +44,7 @@ void RunBenchmark() {
     auto stop = high_resolution_clock::now();
     milliseconds duration = duration_cast<milliseconds>(stop - start);
     std::cout << " " << duration.count() << std::flush;
-    std::cerr << "Found move: " << move << std::endl;
+    std::cerr << "Found move: " << sit.MoveAsPrettyString(move) << std::endl;
 
     // Track metrics.
     total_ms += duration.count();

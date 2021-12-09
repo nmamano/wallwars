@@ -133,3 +133,48 @@ void Situation::PrettyPrint() const {
     std::cout << std::endl;
   }
 }
+
+std::string Situation::MoveAsPrettyString(Move move) const {
+  int start_node = TokenToMove();
+  int end_node = start_node + move.token_change;
+  std::string dir;
+  if (NodeAbove(start_node) == end_node) dir = "N";
+  if (NodeRight(start_node) == end_node) dir = "E";
+  if (NodeBelow(start_node) == end_node) dir = "S";
+  if (NodeLeft(start_node) == end_node) dir = "W";
+  // In the case of a double token-move we need to find an ordering that makes
+  // sense for the current enabled edges. That is, NE may be valid but EN may
+  // not be.
+  if (G.NeighborAbove(start_node) != -1) {
+    int node_above = NodeAbove(start_node);
+    if (G.NeighborAbove(node_above) == end_node) dir = "NN";
+    if (G.NeighborRight(node_above) == end_node) dir = "NE";
+    if (G.NeighborLeft(node_above) == end_node) dir = "NW";
+  }
+  if (G.NeighborRight(start_node) != -1) {
+    int node_right = NodeRight(start_node);
+    if (G.NeighborAbove(node_right) == end_node) dir = "EN";
+    if (G.NeighborRight(node_right) == end_node) dir = "EE";
+    if (G.NeighborBelow(node_right) == end_node) dir = "ES";
+  }
+  if (G.NeighborBelow(start_node) != -1) {
+    int node_below = NodeBelow(start_node);
+    if (G.NeighborRight(node_below) == end_node) dir = "SE";
+    if (G.NeighborBelow(node_below) == end_node) dir = "SS";
+    if (G.NeighborLeft(node_below) == end_node) dir = "SW";
+  }
+  if (G.NeighborLeft(start_node) != -1) {
+    int node_left = NodeLeft(start_node);
+    if (G.NeighborAbove(node_left) == end_node) dir = "WN";
+    if (G.NeighborBelow(node_left) == end_node) dir = "WS";
+    if (G.NeighborLeft(node_left) == end_node) dir = "WW";
+  }
+  std::string move_str = dir;
+  for (int edge : move.edges) {
+    if (edge != -1) {
+      if (!move_str.empty()) move_str += " ";
+      move_str += std::to_string(edge);
+    }
+  }
+  return "(" + move_str + ")";
+}

@@ -55,8 +55,8 @@ void PlayGame(std::array<std::string, 2> mover_strs) {
     Move move = movers[sit.turn]->GetMove(sit);
     auto stop_time = high_resolution_clock::now();
     seconds duration_s = duration_cast<seconds>(stop_time - start_time);
-    std::cerr << "Played move " << move << " in " << duration_s.count() << "s."
-              << std::endl;
+    std::cerr << "Played move " << sit.MoveAsPrettyString(move) << " in "
+              << duration_s.count() << "s." << std::endl;
 
     sit.ApplyMove(move);
     ++ply;
