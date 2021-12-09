@@ -39,8 +39,12 @@ struct Situation {
   // are active, and it is P0's turn.
   Situation();
 
-  std::array<int, 2> tokens;  // p0 and p1.
-  int turn = 0;               // Index of the player to move; 0 or 1.
+  // Since situations are used as keys in the memoization map, we use a compact
+  // representation.
+
+  // p0 and p1. 8 bits suffice for boards up to 10x12.
+  std::array<int8_t, 2> tokens;
+  int8_t turn = 0;  // Index of the player to move; 0 or 1.
   Graph G;
 
   Situation(const Situation& other)
@@ -59,7 +63,7 @@ struct Situation {
   }
   bool operator!=(const Situation& rhs) const { return !operator==(rhs); }
 
-  inline void FlipTurn() { turn = 1 - turn; }
+  inline void FlipTurn() { turn = (turn == 0) ? 1 : 0; }
 
   void ApplyMove(Move move);
   void UndoMove(Move move);

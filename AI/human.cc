@@ -33,7 +33,7 @@ Move Human::GetMove(Situation sit) {
                     << "'. Try again." << std::endl;
           continue;
         }
-        sit.tokens[sit.turn] = nbr;
+        sit.tokens[sit.turn] = static_cast<int8_t>(nbr);
         --remaining_action_count;
         break;
       } else {

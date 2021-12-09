@@ -9,8 +9,9 @@
 
 namespace {
 
-constexpr std::array<int, 2> InitialTokens() {
-  return {TopLeftNode(), TopRightNode()};
+constexpr std::array<int8_t, 2> InitialTokens() {
+  return {static_cast<int8_t>(TopLeftNode()),
+          static_cast<int8_t>(TopRightNode())};
 }
 
 }  // namespace
@@ -24,7 +25,7 @@ void Situation::ApplyMove(Move move) {
       G.DeactivateEdge(edge);
     }
   }
-  tokens[turn] += move.token_change;
+  tokens[turn] = static_cast<int8_t>(tokens[turn] + move.token_change);
   assert(tokens[turn] >= 0 && tokens[turn] < NumNodes());
   FlipTurn();
 }
@@ -37,7 +38,7 @@ void Situation::UndoMove(Move move) {
       G.ActivateEdge(edge);
     }
   }
-  tokens[turn] -= move.token_change;
+  tokens[turn] = static_cast<int8_t>(tokens[turn] - move.token_change);
   assert(tokens[turn] >= 0 && tokens[turn] < NumNodes());
 }
 
@@ -64,7 +65,7 @@ std::vector<Move> Situation::AllLegalMoves() /*const*/ {
   // Moves with 1 token move and 1 edge removal. At most 4 * num_edges.
   for (int node = 0; node < NumNodes(); ++node) {
     if (dist[node] == 1) {
-      tokens[turn] = node;
+      tokens[turn] = static_cast<int8_t>(node);
       for (int edge = 0; edge < NumRealAndFakeEdges(); ++edge) {
         if (IsRealEdge(edge) && CanDeactivateEdge(edge)) {
           moves.push_back({node - curr_node, {edge, -1}});
@@ -72,7 +73,7 @@ std::vector<Move> Situation::AllLegalMoves() /*const*/ {
       }
     }
   }
-  tokens[turn] = curr_node;
+  tokens[turn] = static_cast<int8_t>(curr_node);
 
   // Moves with 2 edge removals. At most num_edges * num_edges.
   for (int edge1 = 0; edge1 < NumRealAndFakeEdges(); ++edge1) {

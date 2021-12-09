@@ -48,7 +48,7 @@ void PlayGame(std::array<std::string, 2> mover_strs) {
   Situation sit;
   while (!sit.IsGameOver()) {
     PrintBoard(sit);
-    std::cout << "Move " << ply << " by P" << sit.turn << " ("
+    std::cout << "Move " << ply << " by P" << static_cast<int>(sit.turn) << " ("
               << mover_strs[sit.turn] << ")." << std::endl;
 
     auto start_time = high_resolution_clock::now();

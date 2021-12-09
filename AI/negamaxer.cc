@@ -134,7 +134,7 @@ nonstd::span<const Move> Negamaxer::AllLegalMovesOpt(int depth) /*const*/ {
   // Moves with 1 token move and 1 edge removal. At most 4 * num_edges.
   for (int node = 0; node < NumNodes(); ++node) {
     if (dist[node] == 1) {
-      sit_.tokens[sit_.turn] = node;
+      sit_.tokens[sit_.turn] = static_cast<int8_t>(node);
       for (int edge = 0; edge < NumRealAndFakeEdges(); ++edge) {
         if (IsRealEdge(edge) && sit_.CanDeactivateEdge(edge)) {
           moves[move_index++] = {node - curr_node, {edge, -1}};
@@ -142,7 +142,7 @@ nonstd::span<const Move> Negamaxer::AllLegalMovesOpt(int depth) /*const*/ {
       }
     }
   }
-  sit_.tokens[sit_.turn] = curr_node;
+  sit_.tokens[sit_.turn] = static_cast<int8_t>(curr_node);
 
   // Moves with 2 edge removals. At most num_edges * num_edges.
   for (int edge1 = 0; edge1 < NumRealAndFakeEdges(); ++edge1) {
