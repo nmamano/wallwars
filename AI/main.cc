@@ -1,5 +1,8 @@
 #include <array>
+#include <chrono>
+#include <ctime>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -13,54 +16,22 @@
 #include "situation.h"
 #include "walker.h"
 
-enum class MoverEnum { Human, Walker, Negamaxer };
+using namespace std::chrono;
 
-std::string MoverEnumToString(MoverEnum mover_enum) {
-  switch (mover_enum) {
-    case MoverEnum::Human:
-      return "Human";
-    case MoverEnum::Walker:
-      return "Walker";
-    case MoverEnum::Negamaxer:
-      return "Negamaxer";
-    default:
-      assert(0);
-      return "";
+std::vector<std::string> kMoverStrs = {"Human", "Walker", "Negamaxer"};
+
+int MoverStrToInt(std::string mover_str) {
+  for (size_t i = 0; i < kMoverStrs.size(); i++) {
+    if (kMoverStrs[i] == mover_str) return i;
   }
+  return -1;
 }
 
-MoverEnum IntToMoverEnum(int i) {
-  switch (i) {
-    case 1:
-      return MoverEnum::Human;
-    case 2:
-      return MoverEnum::Walker;
-    case 3:
-      return MoverEnum::Negamaxer;
-    default:
-      assert(0);
-      return MoverEnum::Negamaxer;
-  }
-}
-
-Move GetMove(const Situation& sit, MoverEnum mover) {
-  switch (mover) {
-    case MoverEnum::Human: {
-      Human human;
-      return human.GetMove(sit);
-    }
-    case MoverEnum::Walker: {
-      Walker walker;
-      return walker.GetMove(sit);
-    }
-    case MoverEnum::Negamaxer: {
-      Negamaxer negamaxer;
-      return negamaxer.GetMove(sit);
-    }
-    default:
-      assert(0);
-      return {};
-  }
+std::unique_ptr<Mover> GetMover(std::string mover_str) {
+  if (mover_str == "Human") return std::unique_ptr<Mover>(new Human());
+  if (mover_str == "Walker") return std::unique_ptr<Mover>(new Walker());
+  if (mover_str == "Negamaxer") return std::unique_ptr<Mover>(new Negamaxer());
+  return nullptr;
 }
 
 void PrintWinner(const Situation& sit) {
@@ -69,57 +40,58 @@ void PrintWinner(const Situation& sit) {
   PrintBoard(sit);
 }
 
-void PlayGame(std::array<MoverEnum, 2> movers) {
-  Situation sit;
+void PlayGame(std::array<std::string, 2> mover_strs) {
+  std::array<std::unique_ptr<Mover>, 2> movers{GetMover(mover_strs[0]),
+                                               GetMover(mover_strs[1])};
   // Player 0 moves on even plies, player 1 moves on odd plies.
   int ply = 0;
+  Situation sit;
   while (!sit.IsGameOver()) {
     PrintBoard(sit);
     std::cout << "Move " << ply << " by P" << sit.turn << " ("
-              << MoverEnumToString(movers[sit.turn]) << ")." << std::endl;
-    sit.ApplyMove(GetMove(sit, movers[sit.turn]));
+              << mover_strs[sit.turn] << ")." << std::endl;
+
+    auto start_time = high_resolution_clock::now();
+    Move move = movers[sit.turn]->GetMove(sit);
+    auto stop_time = high_resolution_clock::now();
+    seconds duration_s = duration_cast<seconds>(stop_time - start_time);
+    std::cerr << "Played move " << move << " in " << duration_s.count() << "s."
+              << std::endl;
+
+    sit.ApplyMove(move);
     ++ply;
   }
   PrintWinner(sit);
 }
 
 int main() {
-  MoverEnum p0_mover = MoverEnum::Human;
-  MoverEnum p1_mover = MoverEnum::Negamaxer;
-
+  std::array<std::string, 2> mover_strs = {"Human", "Negamaxer"};
   while (true) {
     std::cout << "Enter a number to choose:" << std::endl;
-    std::cout << "(1) Play game (" << MoverEnumToString(p0_mover) << " vs "
-              << MoverEnumToString(p1_mover) << ")." << std::endl;
-    std::cout << "(2) Change P0 (current: " << MoverEnumToString(p0_mover)
-              << ")" << std::endl;
-    std::cout << "(3) Change P1 (current: " << MoverEnumToString(p1_mover)
-              << ")" << std::endl;
+    std::cout << "(1) Play (" << mover_strs[0] << " vs " << mover_strs[1]
+              << ")." << std::endl;
+    std::cout << "(2) Change P0 (current: " << mover_strs[0] << ")"
+              << std::endl;
+    std::cout << "(3) Change P1 (current: " << mover_strs[1] << ")"
+              << std::endl;
     std::cout << "(4) Run benchmark." << std::endl;
     std::cout << "(5) Quit." << std::endl;
     std::cout << ">> ";
-    int option;
-    std::cin >> option;
-    switch (option) {
+    int menu_option;
+    std::cin >> menu_option;
+    switch (menu_option) {
       case 1:
-        PlayGame({p0_mover, p1_mover});
+        PlayGame(mover_strs);
         break;
-      case 2: {
-        std::cout << "(1) Human (2) Walker (3) Negamaxer" << std::endl;
-        do {
-          std::cout << ">> ";
-          std::cin >> option;
-        } while (option < 1 || option > 3);
-        p0_mover = IntToMoverEnum(option);
-        break;
-      }
+      case 2:
       case 3: {
         std::cout << "(1) Human (2) Walker (3) Negamaxer" << std::endl;
+        int mover_option;
         do {
           std::cout << ">> ";
-          std::cin >> option;
-        } while (option < 1 || option > 3);
-        p1_mover = IntToMoverEnum(option);
+          std::cin >> mover_option;
+        } while (mover_option < 1 || mover_option > 3);
+        mover_strs[menu_option == 2 ? 0 : 1] = kMoverStrs[mover_option - 1];
         break;
       }
       case 4:
