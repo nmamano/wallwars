@@ -28,8 +28,10 @@ void PrintBoard(const Situation& sit) {
   // horizontal wall.
   max_col_width =
       std::max(max_col_width, std::to_string(NumRealAndFakeEdges()).size());
-
+  std::cout << "+" << std::string((max_col_width + 5) * kNumCols - 1, '-')
+            << "+" << std::endl;
   for (int row = 0; row < kNumRows; ++row) {
+    std::cout << "|  ";
     // One line for cells and horizontal edges.
     for (int col = 0; col < kNumCols; ++col) {
       int node = NodeAtCoordinates(row, col);
@@ -72,10 +74,11 @@ void PrintBoard(const Situation& sit) {
       std::cout << std::string(left_padding, ' ') << edge
                 << std::string(right_padding, ' ');
     }
-    std::cout << std::endl;
+    std::cout << "  |" << std::endl;
 
     // One line for vertical edges and pillars between 4 walls.
     if (row == kNumRows - 1) continue;
+    std::cout << "|  ";
     for (int col = 0; col < kNumCols; ++col) {
       int node = NodeAtCoordinates(row, col);
       int edge = EdgeBelow(node);
@@ -112,9 +115,21 @@ void PrintBoard(const Situation& sit) {
       }
       // "Pillar" between 4 walls.
       if (col < kNumCols - 1) {
-        std::cout << "  +  ";
+        int next_edge = EdgeBelow(NodeRight(node));
+        if (!sit.G.edges[edge] && !sit.G.edges[next_edge]) {
+          std::cout << "--+--";
+        } else if (!sit.G.edges[edge] && sit.G.edges[next_edge]) {
+          std::cout << "--+  ";
+
+        } else if (sit.G.edges[edge] && !sit.G.edges[next_edge]) {
+          std::cout << "  +--";
+        } else {
+          std::cout << "  +  ";
+        }
       }
     }
-    std::cout << std::endl;
+    std::cout << "  |" << std::endl;
   }
+  std::cout << "+" << std::string((max_col_width + 5) * kNumCols - 1, '-')
+            << "+" << std::endl;
 }
