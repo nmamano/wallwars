@@ -55,8 +55,15 @@ void PlayGame(std::array<std::string, 2> mover_strs) {
     Move move = movers[sit.turn]->GetMove(sit);
     auto stop_time = high_resolution_clock::now();
     seconds duration_s = duration_cast<seconds>(stop_time - start_time);
-    std::cerr << "Played move " << sit.MoveAsPrettyString(move) << " in "
-              << duration_s.count() << "s." << std::endl;
+    Move no_op_move{0, {-1, -1}};
+    if (move == no_op_move) {
+      std::cout << "Played resigned in " << duration_s.count() << "s."
+                << std::endl;
+      return;
+    } else {
+      std::cout << "Played move " << sit.MoveAsPrettyString(move) << " in "
+                << duration_s.count() << "s." << std::endl;
+    }
 
     sit.ApplyMove(move);
     ++ply;

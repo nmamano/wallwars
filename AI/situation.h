@@ -16,6 +16,10 @@ struct Move {
 
   // Edges deactivated by the move, or -1.
   std::array<int, 2> edges;
+
+  bool operator==(const Move& rhs) const {
+    return (token_change == rhs.token_change && edges == rhs.edges);
+  }
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Move& m) {

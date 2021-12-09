@@ -103,6 +103,10 @@ Move Negamaxer::GetMove(Situation sit) {
                 << " (eval: " << best_move_eval << ")" << std::endl;
     }
   }
+  if (best_move_eval == -kInfinity) {
+    // Special "no-op" move that denotes resignation.
+    return {0, {-1, -1}};
+  }
   return best_move;
 }
 
