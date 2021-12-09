@@ -33,15 +33,12 @@ void RunBenchmark() {
             << " Situation: " << sizeof(Situation) << " Move: " << sizeof(Move)
             << std::endl;
   Situation sit;
-  Negamaxer negamaxer;
   long long total_ms = 0;
-  long long total_game_over_evals = 0;
-  long long total_memoized_evals = 0;
-  long long total_direct_evals = 0;
-  long long total_recursive_evals = 0;
+  long long total_evals = 0;
   long long total_memoized_situations = 0;
   std::cout << "Durations (ms):";
   for (int i = 0; i < kNumTrials; i++) {
+    Negamaxer negamaxer;
     auto start = high_resolution_clock::now();
     Move move = negamaxer.GetMove(sit);
     auto stop = high_resolution_clock::now();
@@ -51,24 +48,14 @@ void RunBenchmark() {
 
     // Track metrics.
     total_ms += duration.count();
-    total_game_over_evals += negamaxer.GetNumGameOverEvals();
-    total_memoized_evals += negamaxer.GetNumMemoizedEvals();
-    total_direct_evals += negamaxer.GetNumDirectEvals();
-    total_recursive_evals += negamaxer.GetNumRecursiveEvals();
-    total_memoized_situations += negamaxer.GetNumMemoizedSituations();
+    total_evals += negamaxer.num_evals_;
+    total_memoized_situations += negamaxer.memoized_evals_.size();
   }
   std::cout << std::endl;
 
-  long long total_evals = total_game_over_evals + total_memoized_evals +
-                          total_direct_evals + total_recursive_evals;
-  std::cout << "Avg duration (ms): " << total_ms / kNumTrials << std::endl;
-  std::cout << "Avg evals: " << total_evals / kNumTrials
-            << " (game-over: " << total_game_over_evals / kNumTrials
-            << " memoized: " << total_memoized_evals / kNumTrials
-            << " direct: " << total_direct_evals / kNumTrials
-            << " recursive: " << total_recursive_evals / kNumTrials << ")"
-            << std::endl;
-  std::cout << "Avg memoized situations: "
+  std::cout << "Avg. duration (ms): " << total_ms / kNumTrials << std::endl;
+  std::cout << "Avg. evals: " << total_evals / kNumTrials << std::endl;
+  std::cout << "Avg. memoized situations: "
             << total_memoized_situations / kNumTrials << std::endl;
-  std::cout << "Evals/s: " << 1000 * total_evals / total_ms << std::endl;
+  std::cout << "Avg. evals/s: " << 1000 * total_evals / total_ms << std::endl;
 }

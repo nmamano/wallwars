@@ -13,19 +13,6 @@ class Negamaxer : public Mover {
  public:
   Move GetMove(Situation sit) override;
 
-  // Methods to get metrics about the search. The metrics are reset each time
-  // `GetMove()` is called.
-  inline int GetNumGameOverEvals() const { return num_game_over_evals_; }
-  inline int GetNumDirectEvals() const { return num_direct_evals_; }
-  inline int GetNumMemoizedEvals() const { return num_memoized_evals_; }
-  inline int GetNumRecursiveEvals() const { return num_recursive_evals_; }
-  inline int GetNumEvals() const {
-    return num_game_over_evals_ + num_direct_evals_ + num_memoized_evals_ +
-           num_recursive_evals_;
-  }
-  int GetNumMemoizedSituations() const { return memoized_evals_.size(); };
-  void PrintMetrics() const;
-
  private:
   // Evaluates situation `sit_` with the Negamax algorithm, exploring `depth`
   // moves ahead. Higher is better for the player to move.
@@ -57,11 +44,10 @@ class Negamaxer : public Mover {
   };
   std::unordered_map<Situation, MemoizedEval, SituationHash> memoized_evals_;
 
-  // Search metrics.
-  int num_game_over_evals_ = 0;
-  int num_direct_evals_ = 0;
-  int num_memoized_evals_ = 0;
-  int num_recursive_evals_ = 0;
+  // Gets reset when calling GetMove.
+  int num_evals_ = 0;
+
+  friend void RunBenchmark();
 };
 
 #endif  // NEGAMAXER_H_

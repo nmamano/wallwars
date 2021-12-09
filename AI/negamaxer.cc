@@ -21,59 +21,38 @@ constexpr int8_t kUpperboundFlag = 2;
 
 }  // namespace
 
-void Negamaxer::PrintMetrics() const {
-  std::cerr << "Evals: " << GetNumEvals()
-            << " (game-over: " << num_game_over_evals_
-            << " memoized: " << num_memoized_evals_
-            << " direct: " << num_direct_evals_
-            << " recursive: " << num_recursive_evals_ << ")" << std::endl;
-  std::cerr << "Memoized situations: " << GetNumMemoizedSituations()
-            << std::endl;
-}
-
 int Negamaxer::DirectEval() const {
   return sit_.G.Distance(sit_.tokens[1], kGoals[1]) -
          sit_.G.Distance(sit_.tokens[0], kGoals[0]);
 }
 
 int Negamaxer::NegamaxEval(int depth, int alpha, int beta) {
+  ++num_evals_;
   if (sit_.IsGameOver()) {
-    ++num_game_over_evals_;
     return sit_.Winner() == sit_.turn ? kInfinity : -kInfinity;
+  }
+  if (depth == 0) {
+    return (sit_.turn == 0 ? 1 : -1) * DirectEval();
   }
   int starting_alpha = alpha;
   auto memo_entry = memoized_evals_.find(sit_);
   bool found_memo_entry = memo_entry != memoized_evals_.end();
   if (found_memo_entry) {
-    int eval_depth = memo_entry->second.depth;
-    if (eval_depth >= depth) {
+    if (memo_entry->second.depth >= depth) {
       int memo_alpha_beta_flag = memo_entry->second.alpha_beta_flag;
       int memo_eval = memo_entry->second.eval;
       if (memo_alpha_beta_flag == kExactFlag) {
-        ++num_memoized_evals_;
         return memo_eval;
       } else if (memo_alpha_beta_flag == kLowerboundFlag) {
         alpha = std::max(alpha, memo_eval);
       } else /*(memo_alpha_beta_flag == kUpperboundFlag)*/ {
         beta = std::min(beta, memo_eval);
       }
-      if (alpha >= beta) return memo_eval;
+      if (alpha >= beta) {
+        return memo_eval;
+      }
     }
   }
-  if (depth == 0) {
-    ++num_direct_evals_;
-    int direct_eval = (sit_.turn == 0 ? 1 : -1) * DirectEval();
-    if (found_memo_entry) {
-      memo_entry->second.alpha_beta_flag = kExactFlag;
-      memo_entry->second.depth = 0;
-      memo_entry->second.eval = static_cast<int16_t>(direct_eval);
-    } else {
-      memoized_evals_.insert(
-          {sit_, {kExactFlag, 0, static_cast<int16_t>(direct_eval)}});
-    }
-    return direct_eval;
-  }
-  ++num_recursive_evals_;
   int eval = -kInfinity;
   for (Move move : AllLegalMovesOpt(depth - 1)) {
     sit_.ApplyMove(move);
@@ -102,11 +81,8 @@ int Negamaxer::NegamaxEval(int depth, int alpha, int beta) {
 Move Negamaxer::GetMove(Situation sit) {
   // Reset data structures and metrics.
   sit_ = sit;
-  num_game_over_evals_ = 0;
-  num_memoized_evals_ = 0;
-  num_direct_evals_ = 0;
-  num_recursive_evals_ = 0;
-  for (int depth = 0; depth < kMaxDepth; depth++) memoized_evals_.clear();
+  num_evals_ = 0;
+
   // Same loop as in `NegamaxEval()`, with the following differences:
   // - We need to keep track of the best move, not only its evaluation.
   // - Situations are not memoized, as they are evaluated exactly once since
@@ -127,7 +103,6 @@ Move Negamaxer::GetMove(Situation sit) {
                 << " (eval: " << best_move_eval << ")" << std::endl;
     }
   }
-  PrintMetrics();
   return best_move;
 }
 
