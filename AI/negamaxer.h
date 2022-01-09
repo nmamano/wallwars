@@ -4,9 +4,9 @@
 #include <unordered_map>
 
 #include "external/span.h"
+#include "move.h"
 #include "mover.h"
 #include "situation.h"
-#include "stdint.h"
 
 constexpr int kMaxDepth = 4;
 class Negamaxer : public Mover {
@@ -22,10 +22,13 @@ class Negamaxer : public Mover {
   // Higher is better for P0.
   inline int DirectEval() const;
 
-  // Optimized version of Situation::AllLegalMoves to avoid allocating space for
-  // the moves each time. Note: calls with a given `depth` value overwrites the
-  // output returned for previous calls for the same `depth`.
-  nonstd::span<const Move> AllLegalMovesOpt(int depth);
+  // Returns a list of legal moves ordered heuristically from best to worst
+  // while trying to minimize the number of graph operations (distance
+  // computations, reachability checks, etc.). It might not return every legal
+  // move; it excludes moves that are provably suboptimal. Note: calls with a
+  // given `depth` value overwrites the output returned for previous calls for
+  // the same `depth`.
+  nonstd::span<const ScoredMove> OrderedMoves(int depth);
 
   // The situation that moves are applied to to traverse the search tree.
   Situation sit_;
@@ -48,6 +51,7 @@ class Negamaxer : public Mover {
   int num_evals_ = 0;
 
   friend void RunBenchmark();
+  friend bool NegamaxerOrderedMovesTest();
 };
 
 #endif  // NEGAMAXER_H_

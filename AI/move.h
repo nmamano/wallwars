@@ -4,6 +4,7 @@
 #define MOVE_H_
 
 #include <array>
+#include <ostream>
 #include <string>
 
 struct Move {
@@ -37,6 +38,22 @@ inline Move DoubleBuildMove(int edge1, int edge2) {
 
 inline std::ostream& operator<<(std::ostream& os, const Move& m) {
   return os << m.token_change << " (" << m.edges[0] << " " << m.edges[1] << ")";
+}
+
+struct ScoredMove {
+  Move move;
+  int score;
+
+  bool operator==(const ScoredMove& rhs) const {
+    return (move == rhs.move && score == rhs.score);
+  }
+  bool operator!=(const ScoredMove& rhs) const {
+    return (move != rhs.move || score != rhs.score);
+  }
+};
+
+inline std::ostream& operator<<(std::ostream& os, const ScoredMove& m) {
+  return os << m.move << ": " << m.score;
 }
 
 #endif  // MOVE_H_
