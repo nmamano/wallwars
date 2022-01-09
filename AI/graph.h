@@ -4,6 +4,7 @@
 #include <array>
 #include <bitset>
 #include <ostream>
+#include <string>
 
 // A struct to represent grid graph with missing edges and related functions.
 
@@ -12,25 +13,21 @@
 // positions).
 constexpr int kNumRows = 4;
 constexpr int kNumCols = 4;
-constexpr int NumNodes() { return kNumRows * kNumCols; }
+constexpr int kNumNodes = kNumRows * kNumCols;
 
 // We serialize the nodes from coordinates to indices by row first and by column
 // second.
-constexpr int NodeAtCoordinates(int row, int col) {
-  return row * kNumCols + col;
-}
+constexpr int NodeAt(int row, int col) { return row * kNumCols + col; }
 inline int Row(int v) { return v / kNumCols; }
 inline int Col(int v) { return v % kNumCols; }
 
-constexpr int TopLeftNode() { return NodeAtCoordinates(0, 0); }
-constexpr int TopRightNode() { return NodeAtCoordinates(0, kNumCols - 1); }
-constexpr int BottomLeftNode() { return NodeAtCoordinates(kNumRows - 1, 0); }
-constexpr int BottomRightNode() {
-  return NodeAtCoordinates(kNumRows - 1, kNumCols - 1);
-}
+constexpr int kTopLeftNode = NodeAt(0, 0);
+constexpr int kTopRightNode = NodeAt(0, kNumCols - 1);
+constexpr int kBottomLeftNode = NodeAt(kNumRows - 1, 0);
+constexpr int kBottomRightNode = NodeAt(kNumRows - 1, kNumCols - 1);
 
-inline bool IsNodeInFirstRow(int v) { return v <= TopRightNode(); }
-inline bool IsNodeInLastRow(int v) { return v >= BottomLeftNode(); }
+inline bool IsNodeInFirstRow(int v) { return v <= kTopRightNode; }
+inline bool IsNodeInLastRow(int v) { return v >= kBottomLeftNode; }
 inline bool IsNodeInFirstCol(int v) { return v % kNumCols == 0; }
 inline bool IsNodeInLastCol(int v) { return v % kNumCols == kNumCols - 1; }
 
@@ -41,9 +38,9 @@ inline bool IsNodeInLastCol(int v) { return v % kNumCols == kNumCols - 1; }
 // column and below the last row (we call these "fake" edges). Then, the number
 // of edges (real and fake) is 2*kNumRows*kNumCols, and every node has one edge
 // below and one edge to the right.
-constexpr int NumRealAndFakeEdges() { return 2 * NumNodes(); }
-constexpr int NumFakeEdges() { return kNumRows + kNumCols; }
-constexpr int NumRealEdges() { return NumRealAndFakeEdges() - NumFakeEdges(); }
+constexpr int kNumRealAndFakeEdges = 2 * kNumNodes;
+constexpr int kNumFakeEdges = kNumRows + kNumCols;
+constexpr int kNumRealEdges = kNumRealAndFakeEdges - kNumFakeEdges;
 
 // We give the edge to the right of node v index 2v, and the edge below node v
 // has index 2v+1. This means that horizontal edges have even indices and
@@ -126,6 +123,14 @@ inline int EndpointLeft(int e) { return e / 2; }
 inline int EndpointRight(int e) { return e / 2 + 1; }
 inline int EndpointAbove(int e) { return (e - 1) / 2; }
 inline int EndpointBelow(int e) { return (e - 1) / 2 + kNumCols; }
+// Every edge has a lower endpoint.
+inline int LowerEndpoint(int e) {
+  return IsHorizontalEdge(e) ? EndpointLeft(e) : EndpointAbove(e);
+}
+// Real edges have a higher endpoint, but fake ones do not.
+inline int HigherEndpoint(int e) {
+  return IsHorizontalEdge(e) ? EndpointRight(e) : EndpointBelow(e);
+}
 
 inline bool IsFakeHorizontalEdge(int e) {
   return IsNodeInLastCol(EndpointLeft(e));
@@ -134,7 +139,7 @@ inline bool IsFakeVerticalEdge(int e) {
   return IsNodeInLastRow(EndpointAbove(e));
 }
 inline bool IsRealEdge(int e) {
-  return e >= 0 && e < NumRealAndFakeEdges() &&
+  return e >= 0 && e < kNumRealAndFakeEdges &&
          (IsHorizontalEdge(e) ? !IsFakeHorizontalEdge(e)
                               : !IsFakeVerticalEdge(e));
 }
@@ -146,9 +151,14 @@ struct Graph {
   // deactivated).
   Graph();
 
+  // A metric to measure the efficiency of the AI in terms of graph traversals.
+  // By graph traversal, we mean an operation that takes linear time on the size
+  // of the graph, such as computing the distance between two nodes.
+  static long long graph_traversal_count;
+
   // We need one bit per edge to keep track of active edges, so a `Graph` object
   // uses 2 * kNumRows * kNumCols bits (plus padding).
-  std::bitset<NumRealAndFakeEdges()> edges;
+  std::bitset<kNumRealAndFakeEdges> edges;
 
   bool operator==(const Graph& rhs) const { return (edges == rhs.edges); }
   bool operator!=(const Graph& rhs) const { return !operator==(rhs); }
@@ -182,17 +192,89 @@ struct Graph {
   // `dir` can be 0 for up, 1 for right, 2 for down, or 3 for left.
   int NeighborInDirection(int v, int dir) const;
 
+  // Returns the nodes that are endpoints of an active edge.
+  std::array<bool, kNumNodes> ActiveNodes() const;
+
   // Returns the distance between `s` and `t`, or -1 if they are in separate
   // connected components.
   int Distance(int s, int t) const;
 
+  // Returns whether `s` and `t` are in the same connected component.
+  inline bool CanReach(int s, int t) const { return Distance(s, t) != -1; };
+
   // Returns the distance between `s` and every node, or -1 if they are in
   // separate connected components.
-  std::array<int, NumNodes()> Distances(int s) const;
+  std::array<int, kNumNodes> Distances(int s) const;
+
+  // Returns the indices of the nodes at distance 2 from s, or -1's if there are
+  // fewer than 8.
+  std::array<int, 8> NodesAtDistance2(int s) const;
+
+  // Returns the sequence of nodes in a shortest path from `s` to `t`, both
+  // included. If the path is shorter than `kNumNodes` nodes, the output array
+  // contains -1's after `t`. Assumes that `t` is reachable from `s`.
+  std::array<int, kNumNodes> ShortestPath(int s, int t) const;
+
+  // Returns the sequence of nodes in a shortest path from `s` to `t`, both
+  // included, respecting orientations. There is an orientation for each
+  // edge. 1 means it can only be used in the direction from the smallest- to
+  // the largest-indexed node (that is, left-to-right for horizontal edges and
+  // top-to-bottom for vertical edges). -1 means the opposite. 0 means it can be
+  // used in both directions. Assumes that `t` is reachable from `s`.
+  std::array<int, kNumNodes> ShortestPathWithOrientations(
+      int s, int t,
+      const std::array<int, kNumRealAndFakeEdges>& orientations) const;
+
+  // Returns a label for each node such that nodes in the same connected
+  // component have the same label.
+  std::array<int, kNumNodes> ConnectedComponents() const;
+
+  // Returns the set of edges which are bridges.
+  std::bitset<kNumRealAndFakeEdges> Bridges() const;
+
+  // Returns a label for each edge such that edges in the same two-edge
+  // connected components have the same label.
+  std::array<int, kNumNodes> TwoEdgeConnectedComponents() const;
+
+  // Assumes the graph is 2-edge connected. Returns two edge disjoint paths from
+  // `s` to `t`. The algorithm is best-effort in trying to minimize the length
+  // of the paths, particularly the first one.
+  std::array<std::array<int, kNumNodes>, 2> TwoEdgeDisjointPaths(int s,
+                                                                 int t) const;
+
+  // Returns a string of the graph with `node0_char` at node `node0` and
+  // `node1_char` at node `node1`. If `node0` is not a valid node (e.g., -1),
+  // `node0_char` does not appear anywhere. Same with `node1_char`. `node0_char`
+  // and `node1_char` are variable so that they can represent different things
+  // depending in context, e.g., the positions of the players, or the source and
+  // destination of a shortest path.
+  std::string AsPrettyString(int node0, int node1, char node0_char,
+                             char node1_char) const;
+
+  // Prints the graph as a pretty string to the standard output.
+  void PrettyPrint(int node0, int node1, char node0_char,
+                   char node1_char) const;
+
+ private:
+  struct BridgesState {
+    // DFS visit order, or -1 for unvisited yet.
+    std::array<int, kNumNodes> rank;
+    int next_rank;
+    // Lowest-rank node reachable with a single back-edge in the subtree rooted
+    // at each node.
+    std::array<int, kNumNodes> low_link;
+    std::bitset<kNumRealAndFakeEdges> bridges;
+  };
+  void BridgesDFS(int node, int parent, BridgesState& state) const;
 };
 
+// Converts a path to a bitset. The path is in the format returned by
+// `ShortestPath`.
+std::bitset<kNumRealAndFakeEdges> PathAsEdgeSet(
+    std::array<int, kNumNodes> path);
+
 inline std::ostream& operator<<(std::ostream& os, const Graph& G) {
-  return os << G.edges;
+  return os << G.AsPrettyString(-1, -1, '-', '-');
 }
 
 #endif  // GRAPH_H_
