@@ -9,7 +9,7 @@ Move Walker::GetMove(Situation sit) {
   if (sit.G.Distance(p, g) >= 2) {
     auto dist = sit.G.Distances(g);
     int cur_dist = dist[p];
-    for (int node = 0; node < NumNodes(); ++node) {
+    for (int node = 0; node < kNumNodes; ++node) {
       if (dist[node] == cur_dist - 2) {
         return {node - p, {-1, -1}};
       }

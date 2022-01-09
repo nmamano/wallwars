@@ -2,31 +2,30 @@
 
 #include <array>
 #include <cassert>
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 
 #include "graph.h"
+#include "macros.h"
 
 namespace {
 
-constexpr std::array<int8_t, 2> InitialTokens() {
-  return {static_cast<int8_t>(TopLeftNode()),
-          static_cast<int8_t>(TopRightNode())};
-}
+constexpr std::array<int8_t, 2> kInitialTokens = {
+    static_cast<int8_t>(kTopLeftNode), static_cast<int8_t>(kTopRightNode)};
 
 }  // namespace
 
-Situation::Situation() : tokens(InitialTokens()) {}
+Situation::Situation() : tokens(kInitialTokens) {}
 
 void Situation::ApplyMove(Move move) {
+  DBGS(CrashIfMoveIsIllegal(move));
   for (int edge : move.edges) {
     if (edge != -1) {
-      assert(IsRealEdge(edge) && G.edges[edge]);
       G.DeactivateEdge(edge);
     }
   }
   tokens[turn] = static_cast<int8_t>(tokens[turn] + move.token_change);
-  assert(tokens[turn] >= 0 && tokens[turn] < NumNodes());
   FlipTurn();
 }
 
@@ -39,103 +38,112 @@ void Situation::UndoMove(Move move) {
     }
   }
   tokens[turn] = static_cast<int8_t>(tokens[turn] - move.token_change);
-  assert(tokens[turn] >= 0 && tokens[turn] < NumNodes());
+  DBGS(CrashIfMoveIsIllegal(move));
 }
 
-bool Situation::CanDeactivateEdge(int edge) /*const*/ {
+bool Situation::CanDeactivateEdge(int edge) const {
   if (!G.edges[edge]) return false;  // Already inactive.
-  G.DeactivateEdge(edge);
-  bool players_can_reach_goals = CanPlayersReachGoals();
-  G.ActivateEdge(edge);
+  auto clone = *this;
+  clone.G.DeactivateEdge(edge);
+  bool players_can_reach_goals = clone.CanPlayersReachGoals();
   return players_can_reach_goals;
 }
 
-std::vector<Move> Situation::AllLegalMoves() /*const*/ {
+bool Situation::IsLegalMove(Move move) const {
+  // Check that walls are not fake or already present.
+  for (int edge : move.edges) {
+    if (edge == -1) continue;
+    if (!IsRealEdge(edge) || !G.edges[edge]) return false;
+  }
+  // Check that there is the correct number of actions.
+  int src = tokens[turn];
+  int dst = src + move.token_change;
+  if (dst < 0 || dst >= kNumNodes) return false;
+  int token_move_actions = G.Distance(src, dst);
+  int build_actions = 0;
+  for (int edge : move.edges) {
+    if (edge != -1) ++build_actions;
+  }
+  if (build_actions + token_move_actions != 2) {
+    return false;
+  }
+  // Check that player-goal paths are not blocked by new walls.
+  if (build_actions == 0) {
+    return true;
+  }
+  auto clone = *this;
+  if (build_actions == 1) {
+    clone.tokens[turn] = static_cast<int8_t>(dst);
+    for (int edge : move.edges) {
+      if (edge != -1 && !clone.CanDeactivateEdge(edge)) return false;
+    }
+    return true;
+  }
+  // Case: build_actions == 2
+  for (int edge : move.edges) {
+    clone.G.DeactivateEdge(edge);
+  }
+  return clone.CanPlayersReachGoals();
+}
+
+void Situation::CrashIfMoveIsIllegal(Move move) const {
+  if (IsLegalMove(move)) return;
+  LOG("Illegal move");
+  PrettyPrint();
+  LOGV(move);
+  int src = tokens[turn];
+  int dst = src + move.token_change;
+  LOGV3(src, dst, G.Distance(src, dst));
+  for (int edge : move.edges) {
+    if (edge == -1) continue;
+    LOGV(edge);
+    LOGV2(IsRealEdge(edge), G.edges[edge]);
+  }
+  std::exit(EXIT_FAILURE);
+}
+
+std::vector<Move> Situation::AllLegalMoves() const {
+  Situation clone = *this;
   std::vector<Move> moves;
   int curr_node = tokens[turn];
   auto dist = G.Distances(curr_node);
 
   // Moves with 2 token moves. At most 8.
-  for (int node = 0; node < NumNodes(); ++node) {
+  for (int node = 0; node < kNumNodes; ++node) {
     if (dist[node] == 2) {
-      moves.push_back({node - curr_node, {-1, -1}});
+      moves.push_back(DoubleWalkMove(curr_node, node));
     }
   }
 
   // Moves with 1 token move and 1 edge removal. At most 4 * num_edges.
-  for (int node = 0; node < NumNodes(); ++node) {
+  for (int node = 0; node < kNumNodes; ++node) {
     if (dist[node] == 1) {
-      tokens[turn] = static_cast<int8_t>(node);
-      for (int edge = 0; edge < NumRealAndFakeEdges(); ++edge) {
-        if (IsRealEdge(edge) && CanDeactivateEdge(edge)) {
-          moves.push_back({node - curr_node, {edge, -1}});
+      clone.tokens[turn] = static_cast<int8_t>(node);
+      for (int edge = 0; edge < kNumRealAndFakeEdges; ++edge) {
+        if (IsRealEdge(edge) && clone.CanDeactivateEdge(edge)) {
+          moves.push_back(WalkAndBuildMove(curr_node, node, edge));
         }
       }
     }
   }
-  tokens[turn] = static_cast<int8_t>(curr_node);
+  clone.tokens[turn] = static_cast<int8_t>(curr_node);
 
   // Moves with 2 edge removals. At most num_edges * num_edges.
-  for (int edge1 = 0; edge1 < NumRealAndFakeEdges(); ++edge1) {
+  for (int edge1 = 0; edge1 < kNumRealAndFakeEdges; ++edge1) {
     if (IsRealEdge(edge1) && CanDeactivateEdge(edge1)) {
-      G.DeactivateEdge(edge1);
-      for (int edge2 = edge1 + 1; edge2 < NumRealAndFakeEdges(); ++edge2) {
-        if (IsRealEdge(edge2) && CanDeactivateEdge(edge2)) {
-          moves.push_back({0, {edge1, edge2}});
+      clone.G.DeactivateEdge(edge1);
+      for (int edge2 = edge1 + 1; edge2 < kNumRealAndFakeEdges; ++edge2) {
+        if (IsRealEdge(edge2) && clone.CanDeactivateEdge(edge2)) {
+          moves.push_back(DoubleBuildMove(edge1, edge2));
         }
       }
-      G.ActivateEdge(edge1);
+      clone.G.ActivateEdge(edge1);
     }
   }
   return moves;
 }
 
-void Situation::PrettyPrint() const {
-  int p0 = tokens[0], p1 = tokens[1];
-  int g0 = kGoals[0], g1 = kGoals[1];
-  for (int row = 0; row < kNumRows; ++row) {
-    // One line for cells and horizontal edges.
-    for (int col = 0; col < kNumCols; ++col) {
-      int node = NodeAtCoordinates(row, col);
-      std::string node_str;
-      if (p0 == node && p1 == node)
-        node_str = "01";
-      else if (p0 == node && (g0 == node || g1 == node))
-        node_str = "0*";
-      else if (p1 == node && (g0 == node || g1 == node))
-        node_str = "*1";
-      else if (p0 == node)
-        node_str = "0 ";
-      else if (p1 == node)
-        node_str = " 1";
-      else if (g0 == node || g1 == node)
-        node_str = "**";
-      else
-        node_str = "  ";
-      std::cout << node_str;
-
-      // Horizontal edge to the right.
-      if (col < kNumCols - 1) {
-        std::cout << (G.edges[EdgeRight(node)] ? " " : "|");
-      } else {
-        std::cout << std::endl;
-      }
-    }
-    // One line for vertical edges and pillars between 4 walls.
-    if (row == kNumRows - 1) continue;
-    for (int col = 0; col < kNumCols; ++col) {
-      int node = NodeAtCoordinates(row, col);
-      std::cout << (G.edges[EdgeBelow(node)] ? "  " : "--");
-      // "Pillar" between 4 walls.
-      if (col < kNumCols - 1) {
-        std::cout << "+";
-      }
-    }
-    std::cout << std::endl;
-  }
-}
-
-std::string Situation::MoveAsPrettyString(Move move) const {
+std::string Situation::MoveToString(Move move) const {
   int start_node = TokenToMove();
   int end_node = start_node + move.token_change;
   std::string dir;
@@ -179,3 +187,10 @@ std::string Situation::MoveAsPrettyString(Move move) const {
   }
   return "(" + move_str + ")";
 }
+
+std::string Situation::AsPrettyString() const {
+  return "Turn: " + std::to_string(static_cast<int>(turn)) + "\n" +
+         G.AsPrettyString(tokens[0], tokens[1], '0', '1');
+}
+
+void Situation::PrettyPrint() const { std::cout << AsPrettyString(); }

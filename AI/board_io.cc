@@ -1,21 +1,20 @@
-#include "io.h"
-
 #include <array>
 #include <iostream>
 #include <string>
 
 #include "graph.h"
+#include "io.h"
 #include "situation.h"
 
 // todo: clean up the padding logic.
-void PrintBoard(const Situation& sit) {
+void PrintBoardWithEdgeIndices(const Situation& sit) {
   int p0 = sit.tokens[0], p1 = sit.tokens[1];
   int g0 = kGoals[0], g1 = kGoals[1];
   // First, find the maximum column width.
   std::size_t max_col_width = 2;
   for (int row = 0; row < kNumRows; ++row) {
     for (int col = 0; col < kNumCols; ++col) {
-      int node = NodeAtCoordinates(row, col);
+      int node = NodeAt(row, col);
       std::size_t node_width = 0;
       if (p0 == node) node_width += 2;
       if (g0 == node) node_width += 2;
@@ -27,14 +26,14 @@ void PrintBoard(const Situation& sit) {
   // The maximum column width may also be determined by the index of a
   // horizontal wall.
   max_col_width =
-      std::max(max_col_width, std::to_string(NumRealAndFakeEdges()).size());
+      std::max(max_col_width, std::to_string(kNumRealAndFakeEdges).size());
   std::cout << "+" << std::string((max_col_width + 5) * kNumCols - 1, '-')
             << "+" << std::endl;
   for (int row = 0; row < kNumRows; ++row) {
     std::cout << "|  ";
     // One line for cells and horizontal edges.
     for (int col = 0; col < kNumCols; ++col) {
-      int node = NodeAtCoordinates(row, col);
+      int node = NodeAt(row, col);
       std::string node_str = "";
       if (p0 == node) node_str += "p0";
       if (g0 == node) node_str += "g0";
@@ -80,7 +79,7 @@ void PrintBoard(const Situation& sit) {
     if (row == kNumRows - 1) continue;
     std::cout << "|";
     for (int col = 0; col < kNumCols; ++col) {
-      int node = NodeAtCoordinates(row, col);
+      int node = NodeAt(row, col);
       int edge = EdgeBelow(node);
       if (col == 0) {
         if (!sit.G.edges[edge])

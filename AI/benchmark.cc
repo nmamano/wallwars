@@ -12,6 +12,7 @@
 #include "graph.h"
 #include "human.h"
 #include "io.h"
+#include "macros.h"
 #include "mover.h"
 #include "negamaxer.h"
 #include "situation.h"
@@ -44,7 +45,7 @@ void RunBenchmark() {
     auto stop = high_resolution_clock::now();
     milliseconds duration = duration_cast<milliseconds>(stop - start);
     std::cout << " " << duration.count() << std::flush;
-    std::cerr << "Found move: " << sit.MoveAsPrettyString(move) << std::endl;
+    std::cerr << "Found move: " << sit.MoveToString(move) << std::endl;
 
     // Track metrics.
     total_ms += duration.count();

@@ -5,7 +5,7 @@
 #include <map>
 #include <string>
 
-#include "io.h"
+#include "board_io.h"
 #include "situation.h"
 
 Move Human::GetMove(Situation sit) {
@@ -18,9 +18,10 @@ Move Human::GetMove(Situation sit) {
   int original_node = sit.tokens[sit.turn];
   std::array<int, 2> removed_edges{-1, -1};
   while (remaining_action_count > 0) {
-    if (remaining_action_count < 2) PrintBoard(sit);
-    std::cout << "[P" << sit.turn << " action " << 3 - remaining_action_count
-              << "] (N/E/S/W or wall #)" << std::endl;
+    if (remaining_action_count < 2) PrintBoardWithEdgeIndices(sit);
+    std::cout << "[P" << static_cast<int>(sit.turn) << " action "
+              << 3 - remaining_action_count << "] (N/E/S/W or wall #)"
+              << std::endl;
     while (true) {
       std::cout << ">> ";
       std::string s;

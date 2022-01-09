@@ -8,12 +8,13 @@
 
 #include "assert.h"
 #include "benchmark.h"
+#include "board_io.h"
 #include "graph.h"
 #include "human.h"
-#include "io.h"
 #include "mover.h"
 #include "negamaxer.h"
 #include "situation.h"
+#include "tests.h"
 #include "walker.h"
 
 using namespace std::chrono;
@@ -37,7 +38,7 @@ std::unique_ptr<Mover> GetMover(std::string mover_str) {
 void PrintWinner(const Situation& sit) {
   std::cout << "P" << sit.Winner() << " won!" << std::endl;
   std::cout << "Final board:" << std::endl;
-  PrintBoard(sit);
+  PrintBoardWithEdgeIndices(sit);
 }
 
 void PlayGame(std::array<std::string, 2> mover_strs) {
@@ -47,10 +48,11 @@ void PlayGame(std::array<std::string, 2> mover_strs) {
   int ply = 0;
   Situation sit;
   while (!sit.IsGameOver()) {
-    PrintBoard(sit);
+    PrintBoardWithEdgeIndices(sit);
     std::cout << "Move " << ply << " by P" << static_cast<int>(sit.turn) << " ("
               << mover_strs[sit.turn] << ")." << std::endl;
 
+    Graph::graph_traversal_count = 0;
     auto start_time = high_resolution_clock::now();
     Move move = movers[sit.turn]->GetMove(sit);
     auto stop_time = high_resolution_clock::now();
@@ -61,8 +63,10 @@ void PlayGame(std::array<std::string, 2> mover_strs) {
                 << std::endl;
       return;
     } else {
-      std::cout << "Played move " << sit.MoveAsPrettyString(move) << " in "
+      std::cout << "Played move " << sit.MoveToString(move) << " in "
                 << duration_s.count() << "s." << std::endl;
+      std::cout << "Graph traversal count = " << Graph::graph_traversal_count
+                << std::endl;
     }
 
     sit.ApplyMove(move);
@@ -82,7 +86,8 @@ int main() {
     std::cout << "(3) Change P1 (current: " << mover_strs[1] << ")"
               << std::endl;
     std::cout << "(4) Run benchmark." << std::endl;
-    std::cout << "(5) Quit." << std::endl;
+    std::cout << "(5) Run tests." << std::endl;
+    std::cout << "(6) Quit." << std::endl;
     std::cout << ">> ";
     int menu_option;
     std::cin >> menu_option;
@@ -103,6 +108,9 @@ int main() {
       }
       case 4:
         RunBenchmark();
+        return 0;
+      case 5:
+        RunTests();
         return 0;
       default:
         return 0;
