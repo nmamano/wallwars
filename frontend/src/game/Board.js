@@ -37,6 +37,36 @@ const Board = ({
     setHoveredCell(null);
   };
 
+  // cell highlighting
+  const [highlightedCells, setHighlightedCells] = useState([]);
+  const handleClickOrHighlight = (pos, event) => {
+    //normal move
+    if (!event.ctrlKey) {
+      handleClick(pos);
+      return;
+    }
+
+    // Highlight cells if control is pressed.
+    let pos_index = -1;
+    for (let i = 0; i < highlightedCells.length; ++i) {
+      if (posEq(pos, highlightedCells[i])) {
+        pos_index = i;
+        break;
+      }
+    }
+    if (pos_index === -1) {
+      const newHighlightedCells = [...highlightedCells];
+      newHighlightedCells.push(pos);
+      setHighlightedCells(newHighlightedCells);
+    } else {
+      const newHighlightedCells = [];
+      for (let i = 0; i < highlightedCells.length; ++i) {
+        if (i !== pos_index) newHighlightedCells.push(highlightedCells[i]);
+      }
+      setHighlightedCells(newHighlightedCells);
+    }
+  };
+
   //short-hand for getColor
   const getCol = (elem) => getColor(boardTheme, elem, isDarkModeOn);
 
@@ -96,6 +126,14 @@ const Board = ({
         const shadowHere = ghostHere || premoveHere;
         const anyIconHere = playerHere || goalHere || shadowHere;
 
+        let highlightHere = false;
+        for (let i = 0; i < highlightedCells.length; ++i) {
+          if (posEq(pos, highlightedCells[i])) {
+            highlightHere = true;
+            break;
+          }
+        }
+
         //premoves and ghost moves are displayed the same. We call
         //the combination of both "shadow"
         const [shadow1Here, shadow2Here] = [
@@ -119,13 +157,16 @@ const Board = ({
         //add waves cosmetic effect when clicking a cell
         const cellType = cellTypeByPos(pos);
         let className = "";
-        if (cellType === cellEnum.ground) className += "waves-effect waves-light";
+        if (cellType === cellEnum.ground)
+          className += "waves-effect waves-light";
         if (cellType === cellEnum.wall) className += "waves-effect waves-dark";
 
         let color;
         if (cellType === cellEnum.ground) {
           if (hoveredHere) {
             color = getCol("hoveredGround");
+          } else if (highlightHere) {
+            color = getCol("highlightedGround");
           } else if (traceHere) {
             color = getCol("traceGround");
           } else if (goalHere) {
@@ -145,6 +186,8 @@ const Board = ({
             color = getCol(`ghostWall${creatorToMove ? "2" : "1"}`);
           } else if (hoveredHere) {
             color = getCol("hoveredWall");
+          } else if (highlightHere) {
+            color = getCol("highlightedWall");
           } else {
             color = getCol("emptyWall");
           }
@@ -208,8 +251,8 @@ const Board = ({
             style={style}
             onClick={
               cellType === cellEnum.wall && handleClick !== null
-                ? () => {
-                    handleClick(pos);
+                ? (event) => {
+                    handleClickOrHighlight(pos, event);
                   }
                 : undefined
             }
@@ -219,8 +262,8 @@ const Board = ({
                 style={clickableGroundStyle}
                 onClick={
                   handleClick !== null
-                    ? () => {
-                        handleClick(pos);
+                    ? (event) => {
+                        handleClickOrHighlight(pos, event);
                       }
                     : undefined
                 }

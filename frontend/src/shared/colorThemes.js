@@ -109,6 +109,8 @@ const monochromeBoardTheme = {
   pillar: [C.customGrayDarken1, C.customGrayDarken4],
   hoveredGround: [C.lightOrange, "flip"],
   hoveredWall: ["#f1bfa0", "flip"],
+  highlightedWall: ["#76c795", "flip"],
+  highlightedGround: ["#90e1af", "flip"],
   player1: [C.red, C.redLighten1],
   player2: [C.indigo, C.indigoLighten1],
   timer1: [C.redLighten1, "keep"],
