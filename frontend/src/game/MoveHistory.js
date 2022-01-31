@@ -17,6 +17,13 @@ const tdStyle = {
   borderRadius: "0",
 };
 
+const tdStyleMonospace = {
+  paddingTop: "0.15rem",
+  paddingBottom: "0.15rem",
+  borderRadius: "0",
+  fontFamily: "monospace, monospace",
+};
+
 const MoveHistory = ({
   moveHistory,
   creatorStarts,
@@ -88,12 +95,12 @@ const MoveHistory = ({
                 key={i}
               >
                 <td style={tdStyle}>{i}</td>
-                <td style={tdStyle}>{moveToString(move)}</td>
+                <td style={tdStyleMonospace}>{moveToString(move)}</td>
                 <td style={tdStyle}>
-                  {move.distances[0] + " - " + move.distances[1]}
+                  {`${move.distances[0]} : ${move.distances[1]}`}
                 </td>
                 <td style={tdStyle}>
-                  {move.wallCounts[0] + " - " + move.wallCounts[1]}
+                  {`${move.wallCounts[0]} : ${move.wallCounts[1]}`}
                 </td>
               </tr>
             );

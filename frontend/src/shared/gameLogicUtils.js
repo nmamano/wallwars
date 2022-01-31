@@ -210,17 +210,8 @@ export function actionNotation(pos) {
   else {
     const isVWall = pos[1] % 2 === 1;
     if (isVWall)
-      return (
-        columnNotation([pos[0], pos[1] - 1]) +
-        columnNotation([pos[0], pos[1] + 1]) +
-        rowNotation(pos)
-      );
-    else
-      return (
-        columnNotation(pos) +
-        rowNotation([pos[0] + 1, pos[1]]) +
-        rowNotation([pos[0] - 1, pos[1]])
-      );
+      return columnNotation([pos[0], pos[1] - 1]) + rowNotation(pos) + ">";
+    else return columnNotation(pos) + rowNotation([pos[0] - 1, pos[1]]) + "v";
   }
 }
 
@@ -231,9 +222,8 @@ export function moveNotation(actions) {
   //then sorted by decreasing rows
   const a1First =
     cellTypeByPos(a1) === cellEnum.ground ||
-    cellTypeByPos(a1) !== cellEnum.ground ||
-    a1[1] < a2[1] ||
-    (a1[1] === a2[1] && a1[0] > a2[0]);
+    (cellTypeByPos(a2) !== cellEnum.ground &&
+      (a1[1] < a2[1] || (a1[1] === a2[1] && a1[0] < a2[0])));
   return a1First
     ? actionNotation(a1) + " " + actionNotation(a2)
     : actionNotation(a2) + " " + actionNotation(a1);
