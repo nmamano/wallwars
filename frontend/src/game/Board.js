@@ -41,7 +41,7 @@ const Board = ({
   const [highlightedCells, setHighlightedCells] = useState([]);
   const handleClickOrHighlight = (pos, event) => {
     //normal move
-    if (!event.ctrlKey) {
+    if (!event.ctrlKey && !event.metaKey) {
       handleClick(pos);
       return;
     }
