@@ -163,10 +163,10 @@ const Board = ({
 
         let color;
         if (cellType === cellEnum.ground) {
-          if (hoveredHere) {
-            color = getCol("hoveredGround");
-          } else if (highlightHere) {
+          if (highlightHere) {
             color = getCol("highlightedGround");
+          } else if (hoveredHere) {
+            color = getCol("hoveredGround");
           } else if (traceHere) {
             color = getCol("traceGround");
           } else if (goalHere) {
@@ -184,10 +184,10 @@ const Board = ({
             color = getCol(`ghostWall${creatorToMove ? "1" : "2"}`);
           } else if (premoveHere) {
             color = getCol(`ghostWall${creatorToMove ? "2" : "1"}`);
-          } else if (hoveredHere) {
-            color = getCol("hoveredWall");
           } else if (highlightHere) {
             color = getCol("highlightedWall");
+          } else if (hoveredHere) {
+            color = getCol("hoveredWall");
           } else {
             color = getCol("emptyWall");
           }
