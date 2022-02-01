@@ -255,6 +255,19 @@ const LobbyPage = ({ socket }) => {
     });
   };
 
+  const handleLocalGame = () => {
+    showToastNotification("Offline games coming soon.", 5000);
+  };
+  const handleComputerGame = () => {
+    showToastNotification("Computer games coming soon.", 5000);
+  };
+  const handlePuzzle = () => {
+    showToastNotification("Puzzles coming soon.", 5000);
+  };
+  const handleStudyBoard = () => {
+    showToastNotification("Study board coming soon.", 5000);
+  };
+
   const validateName = () => {
     let name = state.playerName;
     if (name === "") name = "Anon";
@@ -479,6 +492,10 @@ const LobbyPage = ({ socket }) => {
             handleJoinCode={handleJoinCode}
             handleCreateGame={handleCreateGame}
             handleJoinGame={handleJoinGame}
+            handleLocalGame={handleLocalGame}
+            handleComputerGame={handleComputerGame}
+            handlePuzzle={handlePuzzle}
+            handleStudyBoard={handleStudyBoard}
             handleRefreshName={handleRefreshName}
             handleToken={handleToken}
             handleEloId={handleEloId}

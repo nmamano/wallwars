@@ -64,6 +64,10 @@ const LobbyForm = ({
   handleJoinCode,
   handleCreateGame,
   handleJoinGame,
+  handleLocalGame,
+  handleComputerGame,
+  handlePuzzle,
+  handleStudyBoard,
   handleRefreshName,
   handleToken,
   handleEloId,
@@ -105,6 +109,7 @@ const LobbyForm = ({
       className="container"
       style={{
         marginTop: "2rem",
+        paddingBottom: "0.6rem",
         backgroundColor: getColor(menuTheme, "container", isDarkModeOn),
       }}
     >
@@ -538,6 +543,7 @@ const LobbyForm = ({
             onClick={handleJoinGame}
             menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn}
+            isDisabled={clientParams.joinCode === ""}
           />
         </Col>
         <Col s={6} m={5}>
@@ -552,6 +558,44 @@ const LobbyForm = ({
           />
         </Col>
         <Col s={1} m={3}></Col>
+      </Row>
+      <Row className="valign-wrapper">
+        <Col className="center" s={3} m={3}>
+          <TextButton
+            text="Local"
+            tooltip="Play offline as both players."
+            onClick={handleLocalGame}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
+          />
+        </Col>
+        <Col className="center" s={3} m={3}>
+          <TextButton
+            text="AI"
+            tooltip="Play offline versus the computer."
+            onClick={handleComputerGame}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
+          />
+        </Col>
+        <Col className="center" s={3} m={3}>
+          <TextButton
+            text="Puzzle"
+            tooltip="Find the optimal move to solve the puzzle."
+            onClick={handlePuzzle}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
+          />
+        </Col>
+        <Col className="center" s={3} m={3}>
+          <TextButton
+            text="Study"
+            tooltip="A study board that can be modified freely."
+            onClick={handleStudyBoard}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
+          />
+        </Col>
       </Row>
     </div>
   );

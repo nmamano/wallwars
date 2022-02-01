@@ -2,7 +2,14 @@ import React from "react";
 import { Button } from "react-materialize";
 import { getColor } from "./colorThemes";
 
-const TextButton = ({ text, tooltip, onClick, menuTheme, isDarkModeOn }) => {
+const TextButton = ({
+  text,
+  tooltip,
+  onClick,
+  menuTheme,
+  isDarkModeOn,
+  isDisabled,
+}) => {
   return (
     <Button
       style={{
@@ -13,6 +20,7 @@ const TextButton = ({ text, tooltip, onClick, menuTheme, isDarkModeOn }) => {
       waves="light"
       onClick={onClick}
       tooltip={tooltip}
+      disabled={isDisabled}
     >
       {text}
     </Button>
