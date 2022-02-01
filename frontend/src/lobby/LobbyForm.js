@@ -559,25 +559,27 @@ const LobbyForm = ({
         <Col s={1} m={3}></Col>
       </Row>
       <Row className="valign-wrapper">
-        <Col className="center" s={3} m={3}>
+        <Col className="center" s={6} m={6}>
           <TextButton
-            text="Local"
+            text="Offline game"
             tooltip="Play offline as both players."
             onClick={handleLocalGame}
             menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn}
           />
         </Col>
-        <Col className="center" s={3} m={3}>
+        <Col className="center" s={6} m={6}>
           <TextButton
-            text="AI"
+            text="Computer game"
             tooltip="Play offline versus the computer."
             onClick={handleComputerGame}
             menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn}
           />
         </Col>
-        <Col className="center" s={3} m={3}>
+      </Row>
+      <Row className="valign-wrapper">
+        <Col className="center" s={6} m={6}>
           <TextButton
             text="Puzzle"
             tooltip="Find the optimal move to solve the puzzle."
@@ -586,9 +588,9 @@ const LobbyForm = ({
             isDarkModeOn={isDarkModeOn}
           />
         </Col>
-        <Col className="center" s={3} m={3}>
+        <Col className="center" s={6} m={6}>
           <TextButton
-            text="Study"
+            text="Study Board"
             tooltip="A study board that can be modified freely."
             onClick={handleStudyBoard}
             menuTheme={menuTheme}
