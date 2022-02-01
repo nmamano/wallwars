@@ -40,13 +40,22 @@ const Board = ({
   // cell highlighting
   const [highlightedCells, setHighlightedCells] = useState([]);
   const handleClickOrHighlight = (pos, event) => {
-    //normal move
+    //normal move if ctrl (or meta) is not pressed
     if (!event.ctrlKey && !event.metaKey) {
       handleClick(pos);
       return;
     }
+    console.log(pos);
 
-    // Highlight cells if control is pressed.
+    // Manipulate highlights if ctrl is pressed
+
+    // Clicking the top-left pillar is a shortcut to remove all highlights
+    // Other pillars do nothing
+    if (pos[0] % 2 === 1 && pos[1] % 2 === 1) {
+      if (pos[0] === 1 && pos[1] === 1) setHighlightedCells([]);
+      return;
+    }
+
     let pos_index = -1;
     for (let i = 0; i < highlightedCells.length; ++i) {
       if (posEq(pos, highlightedCells[i])) {
@@ -250,7 +259,8 @@ const Board = ({
             onMouseLeave={handleMouseLeave}
             style={style}
             onClick={
-              cellType === cellEnum.wall && handleClick !== null
+              (cellType === cellEnum.wall || cellType === cellEnum.pillar) &&
+              handleClick !== null
                 ? (event) => {
                     handleClickOrHighlight(pos, event);
                   }
