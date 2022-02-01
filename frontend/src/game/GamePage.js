@@ -323,7 +323,7 @@ const GamePage = ({
         timeControl: clientParams.timeControl,
         boardSettings: clientParams.boardSettings,
         eloId: clientParams.eloId,
-        isPublic: clientParams.isPublic,
+        isPublic: !clientParams.isPrivate,
       });
     } else if (clientParams.clientRole === roleEnum.joiner) {
       updateState((draftState) => {

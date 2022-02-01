@@ -57,7 +57,7 @@ const initalLobbyState = (cookies) => {
       cookies.eloId.length <= maxEloIdLen
         ? cookies.eloId
         : randEloId(maxEloIdLen),
-    isPublic: cookies.isPublic && cookies.isPublic === "false" ? false : true,
+    isPrivate: cookies.isPrivate && cookies.isPrivate === "true" ? true : false,
     isGamePageOpen: false,
     hasOngoingGame: false,
     isDarkModeOn:
@@ -79,7 +79,7 @@ const LobbyPage = ({ socket }) => {
     "numRows",
     "numCols",
     "eloId",
-    "isPublic",
+    "isPrivate",
   ]);
   const [state, updateState] = useImmer(initalLobbyState(cookies));
 
@@ -130,11 +130,11 @@ const LobbyPage = ({ socket }) => {
       draftState.timeControl.increment = val;
     });
   };
-  const handleIsPublic = (val) => {
+  const handleIsPrivate = (val) => {
     updateState((draftState) => {
-      draftState.isPublic = val;
+      draftState.isPrivate = val;
     });
-    setCookie("isPublic", val ? "true" : "false", {
+    setCookie("isPrivate", val ? "true" : "false", {
       path: "/",
     });
   };
@@ -483,7 +483,7 @@ const LobbyPage = ({ socket }) => {
             handlePlayerName={handlePlayerName}
             handleDuration={handleDuration}
             handleIncrement={handleIncrement}
-            handleIsPublic={handleIsPublic}
+            handleIsPrivate={handleIsPrivate}
             handleNumRows={handleNumRows}
             handleNumCols={handleNumCols}
             handleShowMoreOptions={handleShowMoreOptions}

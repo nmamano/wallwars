@@ -55,7 +55,7 @@ const LobbyForm = ({
   handlePlayerName,
   handleDuration,
   handleIncrement,
-  handleIsPublic,
+  handleIsPrivate,
   handleNumRows,
   handleNumCols,
   handleShowMoreOptions,
@@ -334,13 +334,12 @@ const LobbyForm = ({
         <Col className="center" s={5} m={4}>
           {" "}
           <Checkbox
-            id="isPublicCheckbox"
-            filledIn
-            label="PUBLIC"
-            value="PUBLIC"
-            checked={clientParams.isPublic}
+            id="isPrivateCheckbox"
+            label="PRIVATE"
+            value="PRIVATE"
+            checked={clientParams.isPrivate}
             onChange={() => {
-              handleIsPublic(!clientParams.isPublic);
+              handleIsPrivate(!clientParams.isPrivate);
             }}
           />
         </Col>
