@@ -106,11 +106,19 @@ Move Negamaxer::GetMove(Situation sit) {
                 << " (eval: " << best_move_eval << ")" << std::endl;
     }
   }
-  if (best_move_eval == -kInfinity) {
-    // Special "no-op" move that denotes resignation.
-    return {0, {-1, -1}};
+  if (best_move_eval != -kInfinity) return best_move;
+
+  // If the game is lost, return the move that moves towards the goal.
+  int cur_dist = sit_.G.Distance(sit_.tokens[sit_.turn], kGoals[sit_.turn]);
+  for (const ScoredMove& scored_move : OrderedMoves(kMaxDepth - 1)) {
+    const Move& move = scored_move.move;
+    sit_.ApplyMove(move);
+    int new_dist = sit_.G.Distance(sit_.tokens[sit_.turn], kGoals[sit_.turn]);
+    if (new_dist == cur_dist - 2) return move;
   }
-  return best_move;
+  // The program cannot reach here, since there is always a move that goes 2
+  // steps closer to the goal.
+  return {0, {-1, -1}};
 }
 
 namespace {

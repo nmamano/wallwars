@@ -57,10 +57,8 @@ void PlayGame(std::array<std::string, 2> mover_strs) {
     Move move = movers[sit.turn]->GetMove(sit);
     auto stop_time = high_resolution_clock::now();
     seconds duration_s = duration_cast<seconds>(stop_time - start_time);
-    Move no_op_move{0, {-1, -1}};
-    if (move == no_op_move) {
-      std::cout << "Played resigned in " << duration_s.count() << "s."
-                << std::endl;
+    if (move == Move{0, {-1, -1}}) {
+      std::cout << "Internal error" << std::endl;
       return;
     } else {
       std::cout << "Played move " << sit.MoveToString(move) << " in "
@@ -76,7 +74,7 @@ void PlayGame(std::array<std::string, 2> mover_strs) {
 }
 
 int main() {
-  std::array<std::string, 2> mover_strs = {"Human", "Negamaxer"};
+  std::array<std::string, 2> mover_strs = {"Negamaxer", "Negamaxer"};
   while (true) {
     std::cout << "Enter a number to choose:" << std::endl;
     std::cout << "(1) Play (" << mover_strs[0] << " vs " << mover_strs[1]
