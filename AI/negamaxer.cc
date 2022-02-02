@@ -109,12 +109,14 @@ Move Negamaxer::GetMove(Situation sit) {
   if (best_move_eval != -kInfinity) return best_move;
 
   // If the game is lost, return the move that moves towards the goal.
-  int cur_dist = sit_.G.Distance(sit_.tokens[sit_.turn], kGoals[sit_.turn]);
+  int turn = sit_.turn;
+  int cur_dist = sit_.G.Distance(sit_.tokens[turn], kGoals[turn]);
   for (const ScoredMove& scored_move : OrderedMoves(kMaxDepth - 1)) {
     const Move& move = scored_move.move;
     sit_.ApplyMove(move);
-    int new_dist = sit_.G.Distance(sit_.tokens[sit_.turn], kGoals[sit_.turn]);
+    int new_dist = sit_.G.Distance(sit_.tokens[turn], kGoals[turn]);
     if (new_dist == cur_dist - 2) return move;
+    sit_.UndoMove(move);
   }
   // The program cannot reach here, since there is always a move that goes 2
   // steps closer to the goal.
