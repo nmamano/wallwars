@@ -135,10 +135,9 @@
   do {          \
   } while (0)
 #else
-#define DBGS(x)                                \
-  do {                                         \
-    std::cerr << __LINE__ << ":" << std::endl; \
-    { x; }                                     \
+#define DBGS(x) \
+  do {          \
+    { x; }      \
   } while (0)
 #endif
 
