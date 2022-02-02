@@ -22,6 +22,7 @@ export const roleEnum = {
   joiner: "joiner",
   spectator: "spectator",
   returner: "returner",
+  offline: "offline",
 };
 
 //pure utility functions
@@ -289,6 +290,18 @@ export const applyJoinerJoined = (
   draftState.tokens[1] = joinerToken;
   draftState.lifeCycleStage = 1;
   draftState.ratings[1] = joinerRating;
+};
+
+export const applyCreatedLocally = (
+  draftState,
+  timeControl,
+  boardSettings,
+  name,
+  token
+) => {
+  applyAddCreator(draftState, timeControl, boardSettings, name, token);
+  applyCreatedOnServer(draftState, "local", Math.random() < 0.5, 0);
+  applyJoinerJoined(draftState, name + "2", "cloud_off", 0);
 };
 
 export const applyReturnToGame = (
@@ -756,6 +769,7 @@ export const applyAbandonGame = (draftState, abandonerIsCreator) => {
   draftState.finishReason = "abandon";
   closeDialogs(draftState);
 };
+
 export const applyTakeback = (draftState, requesterIsCreator) => {
   draftState.showTakebackDialog = false;
   if (draftState.lifeCycleStage !== 2 && draftState.lifeCycleStage !== 3)
@@ -769,6 +783,7 @@ export const applyTakeback = (draftState, requesterIsCreator) => {
   else if (tc === 1) draftState.lifeCycleStage = 2;
   closeDialogs(draftState);
 };
+
 export const applyNewRatingsNotification = (draftState, ratings) => {
   draftState.ratings = ratings;
 };

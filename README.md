@@ -4,7 +4,8 @@
 
 Url to play: http://nmamano.com/wallwars/index.html
 
-Note: if nobody has played in a while, sometimes the server takes a few seconds to wake up.
+WallWars discord: https://discord.gg/nwHWzbyJtd
+(to find players to play, or discuss the game's development)
 
 ## About
 
@@ -23,6 +24,7 @@ place a wall in the same turn).
 - No registration needed to play (start playing with 1 click).
 - Navigate through recent past games played by anyone and watch any of them.
 - Random past games are showcased (auto-played) in the lobby.
+- Play offline games against real-life friends.
 - Customizable game settings, like time controls (duration + increment) and board dimensions.
 - Make premoves during your opponent's turn.
 - Move with mouse or keyboard arrows.
@@ -40,6 +42,7 @@ place a wall in the same turn).
 - Customizable tokens (the look of your piece).
 - Settings are stored in cookies for convenience (username, time control, board dimensions, token, color theme, dark mode, ...).
 - Visual highlight of the last move played on the board.
+- Use ctrl+click to highlight cells without making a move.
 
 ## Planned features
 

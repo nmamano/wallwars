@@ -2,7 +2,6 @@ import React from "react";
 
 import MoveHistory from "./MoveHistory";
 import IconButton from "./../shared/IconButton";
-import showToastNotification from "../shared/showToastNotification";
 import { getColor } from "../shared/colorThemes";
 
 const GameControlPanel = ({
@@ -86,13 +85,7 @@ const GameControlPanel = ({
       <IconButton
         icon={"replay"}
         tooltip={"Request takeback"}
-        onClick={() => {
-          showToastNotification(
-            "A takeback request was sent to the opponent.",
-            5000
-          );
-          handleRequestTakeback();
-        }}
+        onClick={handleRequestTakeback}
         disabled={isSpectator || !isOpponentPresent || !takebackEnabled}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
@@ -100,10 +93,7 @@ const GameControlPanel = ({
       <IconButton
         icon={"add_alarm"}
         tooltip={"Give 60 seconds"}
-        onClick={() => {
-          showToastNotification("You added 60s to the opponent's clock.", 5000);
-          handleGiveExtraTime();
-        }}
+        onClick={handleGiveExtraTime}
         disabled={isSpectator || lifeCycleStage !== 3}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}

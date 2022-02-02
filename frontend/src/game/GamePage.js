@@ -34,6 +34,7 @@ import {
   applyNewRatingsNotification,
   getTracePos,
   creatorToMoveAtIndex,
+  applyCreatedLocally,
 } from "./gameState";
 
 import Board from "./Board";
@@ -345,17 +346,37 @@ const GamePage = ({
       socket.emit("getGame", { gameId: clientParams.watchGameId });
     } else if (clientParams.clientRole === roleEnum.returner) {
       socket.emit("returnToOngoingGame", { eloId: clientParams.eloId });
+    } else if (clientParams.clientRole === roleEnum.offline) {
+      updateState((draftState) => {
+        applyCreatedLocally(
+          draftState,
+          clientParams.timeControl,
+          clientParams.boardSettings,
+          clientParams.playerName,
+          clientParams.token
+        );
+        draftState.arePlayersPresent[0] = true;
+        draftState.arePlayersPresent[1] = true;
+      });
     } else {
       console.error("unknown client role", clientParams.clientRole);
     }
   });
 
   const handleLeaveGame = () => {
-    socket.emit("leaveGame");
+    if (clientParams.clientRole !== roleEnum.offline) socket.emit("leaveGame");
     handleReturnToLobby();
   };
-  const handleSendRematchOffer = () => {
-    socket.emit("offerRematch");
+  const handleRematchButton = () => {
+    if (clientParams.clientRole !== roleEnum.offline) {
+      showToastNotification("Rematch offer sent.", 5000);
+      socket.emit("offerRematch");
+    } else {
+      updateState((draftState) => {
+        draftState.shouldPlaySound = true;
+        applySetupRematch(draftState);
+      });
+    }
   };
   const handleAnswerRematchOffer = (accepted) => {
     if (accepted) {
@@ -371,7 +392,13 @@ const GamePage = ({
     }
   };
   const handleOfferDraw = () => {
-    socket.emit("offerDraw");
+    if (clientParams.clientRole !== roleEnum.offline) {
+      socket.emit("offerDraw");
+    } else {
+      updateState((draftState) => {
+        applyDrawGame(draftState, "agreement");
+      });
+    }
   };
   const handleAnswerDrawOffer = (accepted) => {
     if (accepted) {
@@ -387,7 +414,18 @@ const GamePage = ({
     }
   };
   const handleRequestTakeback = () => {
-    socket.emit("requestTakeback");
+    if (clientParams.clientRole !== roleEnum.offline) {
+      showToastNotification(
+        "A takeback request was sent to the opponent.",
+        5000
+      );
+      socket.emit("requestTakeback");
+    } else {
+      updateState((draftState) => {
+        // In offline mode, we always undo only one ply.
+        applyTakeback(draftState, !creatorToMove(draftState));
+      });
+    }
   };
   const handleAnswerTakebackRequest = (accepted) => {
     if (accepted) {
@@ -408,17 +446,33 @@ const GamePage = ({
     }
   };
   const handleGiveExtraTime = () => {
-    socket.emit("giveExtraTime");
-    updateState((draftState) => {
-      const receiverIndex = draftState.clientRole === roleEnum.creator ? 1 : 0;
-      applyAddExtraTime(draftState, receiverIndex);
-    });
+    if (clientParams.clientRole !== roleEnum.offline) {
+      showToastNotification("You added 60s to the opponent's clock.", 5000);
+      socket.emit("giveExtraTime");
+      updateState((draftState) => {
+        const receiverIndex =
+          draftState.clientRole === roleEnum.creator ? 1 : 0;
+        applyAddExtraTime(draftState, receiverIndex);
+      });
+    } else {
+      updateState((draftState) => {
+        // In offline mode, the player to move gets extra time.
+        applyAddExtraTime(draftState, creatorToMove(draftState) ? 0 : 1);
+      });
+    }
   };
   const handleResign = () => {
-    socket.emit("resign");
-    updateState((draftState) => {
-      applyResignGame(draftState, draftState.clientRole === roleEnum.creator);
-    });
+    if (clientParams.clientRole !== roleEnum.offline) {
+      socket.emit("resign");
+      updateState((draftState) => {
+        applyResignGame(draftState, draftState.clientRole === roleEnum.creator);
+      });
+    } else {
+      updateState((draftState) => {
+        // In offline mode, the player that resigns is the one to move.
+        applyResignGame(draftState, creatorToMove(draftState));
+      });
+    }
   };
 
   //===================================================
@@ -452,6 +506,7 @@ const GamePage = ({
   useEffect(() => {
     const pingInterval = 5000;
     const interval = setInterval(() => {
+      if (clientParams.clientRole === roleEnum.offline) return;
       if (state.lifeCycleStage !== 3) return;
       if (state.waitingForPing === 1) {
         socket.emit("pingServer");
@@ -466,7 +521,13 @@ const GamePage = ({
       });
     }, pingInterval);
     return () => clearInterval(interval);
-  }, [socket, state.lifeCycleStage, state.waitingForPing, updateState]);
+  }, [
+    socket,
+    state.lifeCycleStage,
+    state.waitingForPing,
+    clientParams.clientRole,
+    updateState,
+  ]);
 
   //===================================================
   //game logic when a player selects a board cell
@@ -476,15 +537,17 @@ const GamePage = ({
   //make a full move, in which case it is also sent to the other client
   const handleSelectedCell = (pos) => {
     updateState((draftState) => {
+      const clientIsCreator = draftState.clientRole === roleEnum.creator;
       const clientToMove =
-        creatorToMove(draftState) ===
-        (draftState.clientRole === roleEnum.creator);
+        creatorToMove(draftState) === clientIsCreator ||
+        clientParams.clientRole === roleEnum.offline;
       applySelectedCell(draftState, pos, clientToMove);
     });
   };
 
   useEffect(() => {
     if (state.moveToSend) {
+      if (clientParams.clientRole === roleEnum.offline) return;
       socket.emit("move", state.moveToSend);
       updateState((draftState) => {
         draftState.moveToSend = null;
@@ -496,14 +559,24 @@ const GamePage = ({
   //this is necessary because the server does not run its own clock
   //and does not understand the rules of the game
   useEffect(() => {
-    if (state.clientRole === roleEnum.spectator) return;
+    if (
+      state.clientRole === roleEnum.spectator ||
+      clientParams.clientRole === roleEnum.offline
+    )
+      return;
     if (state.finishReason === "goal") {
       socket.emit("playerReachedGoal", { winner: state.winner });
     }
     if (state.finishReason === "time") {
       socket.emit("playerWonOnTime", { winner: state.winner });
     }
-  }, [socket, state.clientRole, state.winner, state.finishReason]);
+  }, [
+    socket,
+    state.clientRole,
+    state.winner,
+    clientParams.clientRole,
+    state.finishReason,
+  ]);
 
   const handleBoardClick = (clickedPos) => handleSelectedCell(clickedPos);
 
@@ -829,10 +902,7 @@ const GamePage = ({
               }}
               node="button"
               waves="light"
-              onClick={() => {
-                showToastNotification("Rematch offer sent.", 5000);
-                handleSendRematchOffer();
-              }}
+              onClick={handleRematchButton}
               disabled={!isOpponentPresent(state)}
             >
               Rematch

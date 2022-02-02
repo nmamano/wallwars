@@ -49,7 +49,7 @@ const initalLobbyState = (cookies) => {
       goalPos: defaultGoalPos([nr, nc]),
     },
     joinCode: "",
-    clientRole: "", //creator, joiner, returner, spectator
+    clientRole: "", //creator, joiner, returner, spectator, offline
     watchGameId: null,
     eloId:
       cookies.eloId &&
@@ -256,7 +256,22 @@ const LobbyPage = ({ socket }) => {
   };
 
   const handleLocalGame = () => {
-    showToastNotification("Offline games coming soon.", 5000);
+    const dur = validateDuration();
+    const inc = validateIncrement();
+    const bs = validateBoardSettings();
+    const name = validateName();
+    const eloId = validateEloId();
+    updateState((draftState) => {
+      draftState.clientRole = "offline";
+      //note: duration and increment are converted from string to number here
+      draftState.timeControl.duration = dur;
+      draftState.timeControl.increment = inc;
+      draftState.boardSettings = bs;
+      draftState.playerName = name;
+      draftState.eloId = eloId;
+      draftState.hasOngoingGame = false;
+      draftState.isGamePageOpen = true;
+    });
   };
   const handleComputerGame = () => {
     showToastNotification("Computer games coming soon.", 5000);
