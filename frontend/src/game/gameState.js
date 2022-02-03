@@ -23,6 +23,7 @@ export const roleEnum = {
   spectator: "spectator",
   returner: "returner",
   offline: "offline",
+  computer: "computer",
 };
 
 //pure utility functions
@@ -302,6 +303,18 @@ export const applyCreatedLocally = (
   applyAddCreator(draftState, timeControl, boardSettings, name, token);
   applyCreatedOnServer(draftState, "local", Math.random() < 0.5, 0);
   applyJoinerJoined(draftState, name + "2", "cloud_off", 0);
+};
+
+export const applyCreatedVsComputer = (
+  draftState,
+  timeControl,
+  boardSettings,
+  name,
+  token
+) => {
+  applyAddCreator(draftState, timeControl, boardSettings, name, token);
+  applyCreatedOnServer(draftState, "AI", Math.random() < 0.5, 0);
+  applyJoinerJoined(draftState, "AI", "memory", 0);
 };
 
 export const applyReturnToGame = (

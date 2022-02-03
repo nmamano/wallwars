@@ -5,7 +5,7 @@ import UIfx from "uifx";
 import moveSoundAudio from "./../static/moveSound.mp3";
 import showToastNotification from "../shared/showToastNotification";
 import { useCookies } from "react-cookie";
-
+import { getAiMove } from "../shared/computerAi";
 import { cellSizes, maxBoardDims } from "../shared/globalSettings";
 import {
   roleEnum,
@@ -35,6 +35,7 @@ import {
   getTracePos,
   creatorToMoveAtIndex,
   applyCreatedLocally,
+  applyCreatedVsComputer,
 } from "./gameState";
 
 import Board from "./Board";
@@ -358,17 +359,34 @@ const GamePage = ({
         draftState.arePlayersPresent[0] = true;
         draftState.arePlayersPresent[1] = true;
       });
+    } else if (clientParams.clientRole === roleEnum.computer) {
+      updateState((draftState) => {
+        applyCreatedVsComputer(
+          draftState,
+          clientParams.timeControl,
+          clientParams.boardSettings,
+          clientParams.playerName,
+          clientParams.token
+        );
+        draftState.arePlayersPresent[0] = true;
+        draftState.arePlayersPresent[1] = true;
+      });
     } else {
       console.error("unknown client role", clientParams.clientRole);
     }
   });
 
+  const isOfflineMode = () =>
+    clientParams.clientRole === roleEnum.offline ||
+    clientParams.clientRole === roleEnum.computer;
+  const isOnlineMode = () => !isOfflineMode();
+
   const handleLeaveGame = () => {
-    if (clientParams.clientRole !== roleEnum.offline) socket.emit("leaveGame");
+    if (isOnlineMode()) socket.emit("leaveGame");
     handleReturnToLobby();
   };
   const handleRematchButton = () => {
-    if (clientParams.clientRole !== roleEnum.offline) {
+    if (isOnlineMode()) {
       showToastNotification("Rematch offer sent.", 5000);
       socket.emit("offerRematch");
     } else {
@@ -392,7 +410,7 @@ const GamePage = ({
     }
   };
   const handleOfferDraw = () => {
-    if (clientParams.clientRole !== roleEnum.offline) {
+    if (isOnlineMode()) {
       socket.emit("offerDraw");
     } else {
       updateState((draftState) => {
@@ -414,7 +432,7 @@ const GamePage = ({
     }
   };
   const handleRequestTakeback = () => {
-    if (clientParams.clientRole !== roleEnum.offline) {
+    if (isOnlineMode()) {
       showToastNotification(
         "A takeback request was sent to the opponent.",
         5000
@@ -422,8 +440,13 @@ const GamePage = ({
       socket.emit("requestTakeback");
     } else {
       updateState((draftState) => {
-        // In offline mode, we always undo only one ply.
-        applyTakeback(draftState, !creatorToMove(draftState));
+        if (clientParams.clientRole === roleEnum.offline) {
+          // In a local game, we always undo only one ply.
+          applyTakeback(draftState, !creatorToMove(draftState));
+        } else {
+          // Vs the computer, we always undo the player (creator) move
+          applyTakeback(draftState, true);
+        }
       });
     }
   };
@@ -446,7 +469,7 @@ const GamePage = ({
     }
   };
   const handleGiveExtraTime = () => {
-    if (clientParams.clientRole !== roleEnum.offline) {
+    if (isOnlineMode()) {
       showToastNotification("You added 60s to the opponent's clock.", 5000);
       socket.emit("giveExtraTime");
       updateState((draftState) => {
@@ -462,15 +485,20 @@ const GamePage = ({
     }
   };
   const handleResign = () => {
-    if (clientParams.clientRole !== roleEnum.offline) {
+    if (isOnlineMode()) {
       socket.emit("resign");
       updateState((draftState) => {
         applyResignGame(draftState, draftState.clientRole === roleEnum.creator);
       });
     } else {
       updateState((draftState) => {
-        // In offline mode, the player that resigns is the one to move.
-        applyResignGame(draftState, creatorToMove(draftState));
+        if (clientParams.clientRole === roleEnum.offline) {
+          // In local games, the player that resigns is the one to move.
+          applyResignGame(draftState, creatorToMove(draftState));
+        } else {
+          // Versus the computer, only the human can resign.
+          applyResignGame(draftState, true);
+        }
       });
     }
   };
@@ -506,7 +534,11 @@ const GamePage = ({
   useEffect(() => {
     const pingInterval = 5000;
     const interval = setInterval(() => {
-      if (clientParams.clientRole === roleEnum.offline) return;
+      if (
+        clientParams.clientRole === roleEnum.offline ||
+        clientParams.clientRole === roleEnum.computer
+      )
+        return;
       if (state.lifeCycleStage !== 3) return;
       if (state.waitingForPing === 1) {
         socket.emit("pingServer");
@@ -537,21 +569,45 @@ const GamePage = ({
   //make a full move, in which case it is also sent to the other client
   const handleSelectedCell = (pos) => {
     updateState((draftState) => {
+      if (clientParams.clientRole === roleEnum.offline) {
+        // It is always the client's turn in local games.
+        applySelectedCell(draftState, pos, true);
+        return;
+      }
       const clientIsCreator = draftState.clientRole === roleEnum.creator;
-      const clientToMove =
-        creatorToMove(draftState) === clientIsCreator ||
-        clientParams.clientRole === roleEnum.offline;
+      const clientToMove = creatorToMove(draftState) === clientIsCreator;
       applySelectedCell(draftState, pos, clientToMove);
     });
   };
 
   useEffect(() => {
     if (state.moveToSend) {
-      if (clientParams.clientRole === roleEnum.offline) return;
+      if (isOfflineMode()) return;
       socket.emit("move", state.moveToSend);
       updateState((draftState) => {
         draftState.moveToSend = null;
       });
+    }
+  });
+
+  //===================================================
+  //compute and play the AI move in computer mode
+  //===================================================
+  useEffect(() => {
+    if (clientParams.clientRole !== roleEnum.computer) return;
+    if (
+      state.lifeCycleStage >= 1 &&
+      state.lifeCycleStage <= 3 &&
+      !creatorToMove(state)
+    ) {
+      const moveIndex = turnCount(state) + 1;
+      // Async. call in case the AI takes long to move. The player
+      // is still able to premove and such.
+      getAiMove(state).then((aiActions) =>
+        updateState((draftState) => {
+          applyMove(draftState, aiActions, 3600, moveIndex);
+        })
+      );
     }
   });
 
@@ -561,7 +617,8 @@ const GamePage = ({
   useEffect(() => {
     if (
       state.clientRole === roleEnum.spectator ||
-      clientParams.clientRole === roleEnum.offline
+      clientParams.clientRole === roleEnum.offline ||
+      clientParams.clientRole === roleEnum.computer
     )
       return;
     if (state.finishReason === "goal") {

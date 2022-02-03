@@ -49,7 +49,7 @@ const initalLobbyState = (cookies) => {
       goalPos: defaultGoalPos([nr, nc]),
     },
     joinCode: "",
-    clientRole: "", //creator, joiner, returner, spectator, offline
+    clientRole: "", //creator, joiner, returner, spectator, offline, computer
     watchGameId: null,
     eloId:
       cookies.eloId &&
@@ -274,7 +274,19 @@ const LobbyPage = ({ socket }) => {
     });
   };
   const handleComputerGame = () => {
-    showToastNotification("Computer games coming soon.", 5000);
+    const bs = validateBoardSettings();
+    const name = validateName();
+    const eloId = validateEloId();
+    updateState((draftState) => {
+      draftState.clientRole = "computer";
+      draftState.timeControl.duration = 60;
+      draftState.timeControl.increment = 0;
+      draftState.boardSettings = bs;
+      draftState.playerName = name;
+      draftState.eloId = eloId;
+      draftState.hasOngoingGame = false;
+      draftState.isGamePageOpen = true;
+    });
   };
   const handlePuzzle = () => {
     showToastNotification("Puzzles coming soon.", 5000);

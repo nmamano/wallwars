@@ -71,7 +71,7 @@ export function posEq(pos1, pos2) {
   return pos1[0] === pos2[0] && pos1[1] === pos2[1];
 }
 
-function dimensions(grid) {
+export function dimensions(grid) {
   return [grid.length, grid[0].length];
 }
 
@@ -84,7 +84,7 @@ export function emptyGrid(dims) {
   return grid;
 }
 
-function inBounds(pos, dims) {
+export function inBounds(pos, dims) {
   return pos[0] >= 0 && pos[0] < dims[0] && pos[1] >= 0 && pos[1] < dims[1];
 }
 
