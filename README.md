@@ -1,8 +1,8 @@
 # WallWars
 
-## [Click here to play](http://nmamano.com/wallwars/index.html)
+## [Click here to play](http://wallwars.net)
 
-Url to play: http://nmamano.com/wallwars/index.html
+Url to play: http://wallwars.net
 
 WallWars discord: https://discord.gg/nwHWzbyJtd
 (to find players to play, or discuss the game's development)
@@ -20,35 +20,34 @@ place a wall in the same turn).
 
 ## Features
 
-- Create public games that anyone can see and join from the lobby, or private games that can only be joined with a join code.
-- No registration needed to play (start playing with 1 click).
-- Navigate through recent past games played by anyone and watch any of them.
-- Random past games are showcased (auto-played) in the lobby.
-- Play offline games against real-life friends.
-- Customizable game settings, like time controls (duration + increment) and board dimensions.
-- Make premoves during your opponent's turn.
-- Move with mouse or keyboard arrows.
-- Out-of-board interactions: resign, offer draw, request takeback, and increase the opponent's remaining time.
-- Navigate to any previous position during or after the game.
-- Ability to request a rematch and play multi-game matches.
-- Gicko-2 rating system and ranking (ELO-like system).
-- Multi-game scores (a win is 1 point and a draw is 0.5).
-- Ability to return to a game even after leaving the page.
-- Real-time indicator of when the opponent disconnects/returns to the game.
-- Responsive design for mobile (smaller board dimensions recommended, as it can be hard to tap the right cell in a small screen).
-- Optional sound effect for moves.
-- Two color themes (red/green and blue only), each with a dark mode.
-- Adjustable board scaling to fit different screen sizes.
-- Customizable tokens (the look of your piece).
-- Settings are stored in cookies for convenience (username, time control, board dimensions, token, color theme, dark mode, ...).
-- Visual highlight of the last move played on the board.
-- Use ctrl+click to highlight cells without making a move.
+1. Create public games that anyone can see and join from the lobby, or private games that can only be joined with a join code.
+1. No registration needed to play (start playing with 1 click).
+1. Navigate through recent past games played by anyone and watch any of them.
+1. Random past games are showcased (auto-played) in the lobby.
+1. Play offline games against real-life friends.
+1. Customizable game settings, like time controls (duration + increment) and board dimensions.
+1. Make premoves during your opponent's turn.
+1. Move with mouse or keyboard arrows.
+1. Out-of-board interactions: resign, offer draw, request takeback, and increase the opponent's remaining time.
+1. Navigate to any previous position during or after the game.
+1. Ability to request a rematch and play multi-game matches.
+1. Gicko-2 rating system and ranking (ELO-like system).
+1. Multi-game scores (a win is 1 point and a draw is 0.5).
+1. Ability to return to a game even after leaving the page.
+1. Real-time indicator of when the opponent disconnects/returns to the game.
+1. Responsive design for mobile (smaller board dimensions recommended, as it can be hard to tap the right cell in a small screen).
+1. Optional sound effect for moves.
+1. Two color themes (red/green and blue only), each with a dark mode.
+1. Adjustable board scaling to fit different screen sizes.
+1. Customizable tokens (the look of your piece).
+1. Settings are stored in cookies for convenience (username, time control, board dimensions, token, color theme, dark mode, ...).
+1. Visual highlight of the last move played on the board.
+1. Use ctrl+click to highlight cells without making a move.
 
 ## Planned features
 
 - List ongoing public games in the lobby and allow to spectate them in real time.
-- Study session: mode where you can explore a game with more flexibility (e.g., you can branch off and return to the main move sequence). This mode will be online so you can invite other people to a study session with a join code.
-- On mobile, place walls by sliding the finger between two ground cells (to require less precision).
+- Play against an AI.
 
 ## Tools used
 
