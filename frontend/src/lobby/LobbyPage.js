@@ -279,8 +279,6 @@ const LobbyPage = ({ socket }) => {
     const eloId = validateEloId();
     updateState((draftState) => {
       draftState.clientRole = "computer";
-      draftState.timeControl.duration = 60;
-      draftState.timeControl.increment = 0;
       draftState.boardSettings = bs;
       draftState.playerName = name;
       draftState.eloId = eloId;

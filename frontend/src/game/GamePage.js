@@ -363,7 +363,10 @@ const GamePage = ({
       updateState((draftState) => {
         applyCreatedVsComputer(
           draftState,
-          clientParams.timeControl,
+          {
+            duration: 60,
+            increment: 0,
+          },
           clientParams.boardSettings,
           clientParams.playerName,
           clientParams.token
