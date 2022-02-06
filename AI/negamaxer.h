@@ -3,12 +3,12 @@
 
 #include <unordered_map>
 
+#include "constants.h"
 #include "external/span.h"
 #include "move.h"
 #include "mover.h"
 #include "situation.h"
 
-constexpr int kMaxDepth = 4;
 class Negamaxer : public Mover {
  public:
   Move GetMove(Situation sit) override;
