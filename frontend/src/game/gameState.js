@@ -410,8 +410,8 @@ export const applyCreatedPuzzle = (draftState, name, token) => {
   applyCreatedOnServer(draftState, "Puzzle", false, 0);
   applyJoinerJoined(draftState, name + "2", "extension", 0);
   const moves = puzzleMoves();
-  // The first 10 moves are the setup:
-  for (let i = 0; i < 10; i++) {
+  // The first 12 moves are the setup:
+  for (let i = 0; i < 12; i++) {
     applyMove(draftState, moves[i], 60 * 60, i + 1);
   }
 };
