@@ -49,7 +49,7 @@ const initalLobbyState = (cookies) => {
       goalPos: defaultGoalPos([nr, nc]),
     },
     joinCode: "",
-    clientRole: "", //creator, joiner, returner, spectator, offline, computer
+    clientRole: "", //creator, joiner, returner, spectator, offline, computer, puzzle
     watchGameId: null,
     eloId:
       cookies.eloId &&
@@ -287,7 +287,15 @@ const LobbyPage = ({ socket }) => {
     });
   };
   const handlePuzzle = () => {
-    showToastNotification("Puzzles coming soon.", 5000);
+    const name = validateName();
+    const eloId = validateEloId();
+    updateState((draftState) => {
+      draftState.clientRole = "puzzle";
+      draftState.playerName = name;
+      draftState.eloId = eloId;
+      draftState.hasOngoingGame = false;
+      draftState.isGamePageOpen = true;
+    });
   };
   const handleStudyBoard = () => {
     showToastNotification("Study board coming soon.", 5000);

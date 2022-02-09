@@ -36,6 +36,8 @@ import {
   creatorToMoveAtIndex,
   applyCreatedLocally,
   applyCreatedVsComputer,
+  applyCreatedPuzzle,
+  LastPuzzleMoveIsCorrect,
 } from "./gameState";
 
 import Board from "./Board";
@@ -363,11 +365,17 @@ const GamePage = ({
       updateState((draftState) => {
         applyCreatedVsComputer(
           draftState,
-          {
-            duration: 60,
-            increment: 0,
-          },
           clientParams.boardSettings,
+          clientParams.playerName,
+          clientParams.token
+        );
+        draftState.arePlayersPresent[0] = true;
+        draftState.arePlayersPresent[1] = true;
+      });
+    } else if (clientParams.clientRole === roleEnum.puzzle) {
+      updateState((draftState) => {
+        applyCreatedPuzzle(
+          draftState,
           clientParams.playerName,
           clientParams.token
         );
@@ -381,7 +389,8 @@ const GamePage = ({
 
   const isOfflineMode = () =>
     clientParams.clientRole === roleEnum.offline ||
-    clientParams.clientRole === roleEnum.computer;
+    clientParams.clientRole === roleEnum.computer ||
+    clientParams.clientRole === roleEnum.puzzle;
   const isOnlineMode = () => !isOfflineMode();
 
   const handleLeaveGame = () => {
@@ -539,7 +548,8 @@ const GamePage = ({
     const interval = setInterval(() => {
       if (
         clientParams.clientRole === roleEnum.offline ||
-        clientParams.clientRole === roleEnum.computer
+        clientParams.clientRole === roleEnum.computer ||
+        clientParams.clientRole === roleEnum.puzzle
       )
         return;
       if (state.lifeCycleStage !== 3) return;
@@ -572,7 +582,10 @@ const GamePage = ({
   //make a full move, in which case it is also sent to the other client
   const handleSelectedCell = (pos) => {
     updateState((draftState) => {
-      if (clientParams.clientRole === roleEnum.offline) {
+      if (
+        clientParams.clientRole === roleEnum.offline ||
+        clientParams.clientRole === roleEnum.puzzle
+      ) {
         // It is always the client's turn in local games.
         applySelectedCell(draftState, pos, true);
         return;
@@ -598,19 +611,29 @@ const GamePage = ({
   //===================================================
   useEffect(() => {
     if (clientParams.clientRole !== roleEnum.computer) return;
-    if (
-      state.lifeCycleStage >= 1 &&
-      state.lifeCycleStage <= 3 &&
-      !creatorToMove(state)
-    ) {
-      const moveIndex = turnCount(state) + 1;
-      // Async. call in case the AI takes long to move. The player
-      // is still able to premove and such.
-      getAiMove(state).then((aiActions) =>
-        updateState((draftState) => {
-          applyMove(draftState, aiActions, 3600, moveIndex);
-        })
-      );
+    if (state.lifeCycleStage < 1 || state.lifeCycleStage > 3) return;
+    if (creatorToMove(state)) return;
+    const moveIndex = turnCount(state) + 1;
+    // Async. call in case the AI takes long to move. The player
+    // is still able to premove and such.
+    getAiMove(state).then((aiActions) =>
+      updateState((draftState) => {
+        applyMove(draftState, aiActions, 60 * 60, moveIndex);
+      })
+    );
+  });
+
+  //===================================================
+  //play right continuations in puzzle mode
+  //===================================================
+  useEffect(() => {
+    if (clientParams.clientRole !== roleEnum.puzzle) return;
+    if (state.lifeCycleStage < 1 || state.lifeCycleStage > 3) return;
+    if (!LastPuzzleMoveIsCorrect(state)) {
+      showToastNotification("Suboptimal move!");
+      updateState((draftState) => {
+        applyTakeback(draftState, !creatorToMove(draftState));
+      });
     }
   });
 
@@ -621,7 +644,8 @@ const GamePage = ({
     if (
       state.clientRole === roleEnum.spectator ||
       clientParams.clientRole === roleEnum.offline ||
-      clientParams.clientRole === roleEnum.computer
+      clientParams.clientRole === roleEnum.computer ||
+      clientParams.clientRole === roleEnum.puzzle
     )
       return;
     if (state.finishReason === "goal") {
@@ -948,28 +972,30 @@ const GamePage = ({
           isOpponentPresent={isOpponentPresent(state)}
         />
       </div>
-      {state.lifeCycleStage === 4 && state.clientRole !== roleEnum.spectator && (
-        <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
-          <Col className="center" s={12}>
-            <Button
-              large
-              style={{
-                backgroundColor: getColor(
-                  menuTheme,
-                  "importantButton",
-                  isDarkModeOn
-                ),
-              }}
-              node="button"
-              waves="light"
-              onClick={handleRematchButton}
-              disabled={!isOpponentPresent(state)}
-            >
-              Rematch
-            </Button>
-          </Col>
-        </Row>
-      )}
+      {state.lifeCycleStage === 4 &&
+        state.clientRole !== roleEnum.spectator &&
+        clientParams.clientRole !== roleEnum.puzzle && (
+          <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
+            <Col className="center" s={12}>
+              <Button
+                large
+                style={{
+                  backgroundColor: getColor(
+                    menuTheme,
+                    "importantButton",
+                    isDarkModeOn
+                  ),
+                }}
+                node="button"
+                waves="light"
+                onClick={handleRematchButton}
+                disabled={!isOpponentPresent(state)}
+              >
+                Rematch
+              </Button>
+            </Col>
+          </Row>
+        )}
       <div style={{ height: "100%" }}></div>
       <Dialog
         isOpen={state.showDrawDialog}

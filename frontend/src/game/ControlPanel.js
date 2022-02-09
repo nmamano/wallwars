@@ -44,6 +44,7 @@ const GameControlPanel = ({
 
   //all game functions are disabled for spectator
   const isSpectator = clientRole === "spectator";
+  const isPuzzle = clientRole === "puzzle";
 
   return (
     <div
@@ -67,7 +68,7 @@ const GameControlPanel = ({
         modalBody={"Are you sure you want to resign?"}
         modalConfirmButtonText={"Resign"}
         onClick={handleResign}
-        disabled={isSpectator || lifeCycleStage !== 3}
+        disabled={isSpectator || isPuzzle || lifeCycleStage !== 3}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
       />
@@ -78,7 +79,9 @@ const GameControlPanel = ({
         modalBody={"Are you sure you want to offer a draw?"}
         modalConfirmButtonText={"Offer draw"}
         onClick={handleOfferDraw}
-        disabled={isSpectator || !isOpponentPresent || lifeCycleStage !== 3}
+        disabled={
+          isSpectator || isPuzzle || !isOpponentPresent || lifeCycleStage !== 3
+        }
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
       />
@@ -86,7 +89,9 @@ const GameControlPanel = ({
         icon={"replay"}
         tooltip={"Request takeback"}
         onClick={handleRequestTakeback}
-        disabled={isSpectator || !isOpponentPresent || !takebackEnabled}
+        disabled={
+          isSpectator || isPuzzle || !isOpponentPresent || !takebackEnabled
+        }
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
       />
@@ -94,7 +99,7 @@ const GameControlPanel = ({
         icon={"add_alarm"}
         tooltip={"Give 60 seconds"}
         onClick={handleGiveExtraTime}
-        disabled={isSpectator || lifeCycleStage !== 3}
+        disabled={isSpectator || isPuzzle || lifeCycleStage !== 3}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
       />

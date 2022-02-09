@@ -10,7 +10,11 @@ import {
   emptyBoardDistances,
   cellEnum,
 } from "../shared/gameLogicUtils";
-import { defaultBoardSettings } from "../shared/globalSettings";
+import {
+  defaultBoardSettings,
+  defaultInitialPlayerPos,
+  defaultGoalPos,
+} from "../shared/globalSettings";
 
 /* this file contains functions that modify a copy of the state of GamePage
 the state itself is immutable, as per the react philosophy, but we can
@@ -24,6 +28,7 @@ export const roleEnum = {
   returner: "returner",
   offline: "offline",
   computer: "computer",
+  puzzle: "puzzle",
 };
 
 //pure utility functions
@@ -300,21 +305,115 @@ export const applyCreatedLocally = (
   name,
   token
 ) => {
-  applyAddCreator(draftState, timeControl, boardSettings, name, token);
+  applyAddCreator(draftState, timeControl, boardSettings, name + "1", token);
   applyCreatedOnServer(draftState, "local", Math.random() < 0.5, 0);
   applyJoinerJoined(draftState, name + "2", "cloud_off", 0);
 };
 
 export const applyCreatedVsComputer = (
   draftState,
-  timeControl,
   boardSettings,
   name,
   token
 ) => {
+  const timeControl = {
+    duration: 60,
+    increment: 0,
+  };
   applyAddCreator(draftState, timeControl, boardSettings, name, token);
   applyCreatedOnServer(draftState, "AI", Math.random() < 0.5, 0);
   applyJoinerJoined(draftState, "AI", "memory", 0);
+};
+
+const puzzleMoves = () => {
+  return [
+    [[2, 6]],
+    [[2, 2]],
+    [[4, 4]],
+    [[4, 4]],
+    [
+      [4, 2],
+      [3, 2],
+    ],
+    [
+      [6, 3],
+      [7, 2],
+    ],
+    [
+      [8, 3],
+      [10, 3],
+    ],
+    [
+      [3, 4],
+      [9, 0],
+    ],
+    [
+      [1, 0],
+      [3, 0],
+    ],
+    [
+      [0, 1],
+      [2, 1],
+    ],
+    [
+      [5, 4],
+      [5, 6],
+    ],
+    [
+      [4, 6],
+      [3, 6],
+    ],
+    [
+      [9, 6],
+      [9, 8],
+    ],
+    [[6, 8]],
+    [[6, 0]],
+    [
+      [6, 6],
+      [6, 7],
+    ],
+    [[8, 2]],
+    [[8, 4]],
+    [[10, 0]],
+  ];
+};
+
+const IsSameMove = (actions1, actions2) => {
+  if (actions1.length !== actions2.length) return false;
+  if (actions1.length === 1) return posEq(actions1[0], actions2[0]);
+  return (
+    (posEq(actions1[0], actions2[0]) && posEq(actions1[1], actions2[1])) ||
+    (posEq(actions1[0], actions2[1]) && posEq(actions1[1], actions2[0]))
+  );
+};
+
+export const LastPuzzleMoveIsCorrect = (draftState) => {
+  const tc = turnCount(draftState);
+  return (
+    tc < 10 ||
+    IsSameMove(puzzleMoves()[tc - 1], draftState.moveHistory[tc].actions)
+  );
+};
+
+export const applyCreatedPuzzle = (draftState, name, token) => {
+  const timeControl = {
+    duration: 60,
+    increment: 0,
+  };
+  const boardSettings = {
+    dims: [11, 9],
+    startPos: defaultInitialPlayerPos([11, 9]),
+    goalPos: defaultGoalPos([11, 9]),
+  };
+  applyAddCreator(draftState, timeControl, boardSettings, name + "1", token);
+  applyCreatedOnServer(draftState, "Puzzle", false, 0);
+  applyJoinerJoined(draftState, name + "2", "extension", 0);
+  const moves = puzzleMoves();
+  // The first 10 moves are the setup:
+  for (let i = 0; i < 10; i++) {
+    applyMove(draftState, moves[i], 60 * 60, i + 1);
+  }
 };
 
 export const applyReturnToGame = (
