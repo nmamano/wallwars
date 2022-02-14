@@ -22,4 +22,19 @@ const puzzle1 = {
   startIndex: 12,
 };
 
-export const puzzles = [puzzle1];
+const puzzle2 = {
+  author: "Nilo",
+  difficulty: 1650,
+  boardSettings: {
+    dims: classicToInternalBoardDims([3, 7]),
+    startPos: [classicToInternalPos([2, 6]), classicToInternalPos([2, 2])],
+    goalPos: defaultGoalPos(classicToInternalBoardDims([3, 7])),
+  },
+  creatorStarts: true,
+  playAsCreator: true,
+  moves:
+    "a2> b2v; f2v f2>; a2v c2v, a1v c2v, a1> c2v; e2v g2v; c2> d1v; c2 e2>; e1; d1; d2; e2; e3; d3; g3",
+  startIndex: 0,
+};
+
+export const puzzles = [puzzle1, puzzle2];
