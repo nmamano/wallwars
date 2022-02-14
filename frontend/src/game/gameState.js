@@ -337,7 +337,7 @@ export const applyCreatedPuzzle = (draftState, name, token, puzzle) => {
   applyCreatedOnServer(draftState, "Puzzle", puzzle.creatorStarts, 0);
   applyJoinerJoined(
     draftState,
-    !puzzle.play_as_creator ? name : puzzle.author,
+    !puzzle.playAsCreator ? name : puzzle.author,
     "extension",
     0
   );

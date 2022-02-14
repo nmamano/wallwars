@@ -24,7 +24,7 @@ const puzzle1 = {
 
 const puzzle2 = {
   author: "Nilo",
-  difficulty: 1650,
+  difficulty: 1750,
   boardSettings: {
     dims: classicToInternalBoardDims([3, 7]),
     startPos: [classicToInternalPos([2, 6]), classicToInternalPos([2, 2])],
