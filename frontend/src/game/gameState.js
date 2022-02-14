@@ -10,11 +10,8 @@ import {
   emptyBoardDistances,
   cellEnum,
 } from "../shared/gameLogicUtils";
-import {
-  defaultBoardSettings,
-  defaultInitialPlayerPos,
-  defaultGoalPos,
-} from "../shared/globalSettings";
+import { defaultBoardSettings } from "../shared/globalSettings";
+import { parsePuzzleMoveList } from "./puzzleLogic";
 
 /* this file contains functions that modify a copy of the state of GamePage
 the state itself is immutable, as per the react philosophy, but we can
@@ -325,95 +322,36 @@ export const applyCreatedVsComputer = (
   applyJoinerJoined(draftState, "AI", "memory", 0);
 };
 
-const puzzleMoves = () => {
-  return [
-    [[2, 6]],
-    [[2, 2]],
-    [[4, 4]],
-    [[4, 4]],
-    [
-      [4, 2],
-      [3, 2],
-    ],
-    [
-      [6, 3],
-      [7, 2],
-    ],
-    [
-      [8, 3],
-      [10, 3],
-    ],
-    [
-      [3, 4],
-      [9, 0],
-    ],
-    [
-      [1, 0],
-      [3, 0],
-    ],
-    [
-      [0, 1],
-      [2, 1],
-    ],
-    [
-      [5, 4],
-      [5, 6],
-    ],
-    [
-      [4, 6],
-      [3, 6],
-    ],
-    [
-      [9, 6],
-      [9, 8],
-    ],
-    [[6, 8]],
-    [[6, 0]],
-    [
-      [6, 6],
-      [6, 7],
-    ],
-    [[8, 2]],
-    [[8, 4]],
-    [[10, 0]],
-  ];
-};
-
-const IsSameMove = (actions1, actions2) => {
-  if (actions1.length !== actions2.length) return false;
-  if (actions1.length === 1) return posEq(actions1[0], actions2[0]);
-  return (
-    (posEq(actions1[0], actions2[0]) && posEq(actions1[1], actions2[1])) ||
-    (posEq(actions1[0], actions2[1]) && posEq(actions1[1], actions2[0]))
-  );
-};
-
-export const LastPuzzleMoveIsCorrect = (draftState) => {
-  const tc = turnCount(draftState);
-  return (
-    tc < 10 ||
-    IsSameMove(puzzleMoves()[tc - 1], draftState.moveHistory[tc].actions)
-  );
-};
-
-export const applyCreatedPuzzle = (draftState, name, token) => {
+export const applyCreatedPuzzle = (draftState, name, token, puzzle) => {
   const timeControl = {
     duration: 60,
     increment: 0,
   };
-  const boardSettings = {
-    dims: [11, 9],
-    startPos: defaultInitialPlayerPos([11, 9]),
-    goalPos: defaultGoalPos([11, 9]),
-  };
-  applyAddCreator(draftState, timeControl, boardSettings, name + "1", token);
-  applyCreatedOnServer(draftState, "Puzzle", false, 0);
-  applyJoinerJoined(draftState, name + "2", "extension", 0);
-  const moves = puzzleMoves();
-  // The first 12 moves are the setup:
-  for (let i = 0; i < 12; i++) {
-    applyMove(draftState, moves[i], 60 * 60, i + 1);
+  applyAddCreator(
+    draftState,
+    timeControl,
+    puzzle.boardSettings,
+    puzzle.playAsCreator ? name : puzzle.author,
+    token
+  );
+  applyCreatedOnServer(draftState, "Puzzle", puzzle.creatorStarts, 0);
+  applyJoinerJoined(
+    draftState,
+    !puzzle.play_as_creator ? name : puzzle.author,
+    "extension",
+    0
+  );
+  const moves = parsePuzzleMoveList(puzzle.moves);
+  // Play setup moves:
+  for (let i = 0; i < puzzle.startIndex; i++) {
+    applyMove(draftState, moves[i][0], 60 * 60, i + 1);
   }
+};
+
+export const applyPuzzleMove = (draftState, puzzle) => {
+  const tc = turnCount(draftState);
+  const actions = parsePuzzleMoveList(puzzle.moves)[tc][0];
+  applyMove(draftState, actions, 60 * 60, tc + 1);
 };
 
 export const applyReturnToGame = (

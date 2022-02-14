@@ -72,8 +72,6 @@ const LobbyForm = ({
   handleJoinGame,
   handleLocalGame,
   handleComputerGame,
-  handlePuzzle,
-  handleStudyBoard,
   handleRefreshName,
   handleToken,
   handleEloId,
@@ -579,26 +577,6 @@ const LobbyForm = ({
             text="Computer game"
             tooltip="Play offline versus the computer."
             onClick={handleComputerGame}
-            menuTheme={menuTheme}
-            isDarkModeOn={isDarkModeOn}
-          />
-        </Col>
-      </Row>
-      <Row className="valign-wrapper">
-        <Col className="center" s={6} m={6}>
-          <TextButton
-            text="Puzzle"
-            tooltip="Find the optimal move to solve the puzzle."
-            onClick={handlePuzzle}
-            menuTheme={menuTheme}
-            isDarkModeOn={isDarkModeOn}
-          />
-        </Col>
-        <Col className="center" s={6} m={6}>
-          <TextButton
-            text="Study Board"
-            tooltip="A study board that can be modified freely."
-            onClick={handleStudyBoard}
             menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn}
           />

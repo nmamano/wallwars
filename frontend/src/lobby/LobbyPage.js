@@ -19,6 +19,7 @@ import {
 import LobbyForm from "./LobbyForm";
 import LobbyTabs from "./LobbyTabs";
 import RankingList from "./RankingList";
+import PuzzleList from "./PuzzleList";
 import GamePage from "../game/GamePage";
 import GameShowcase from "./GameShowcase";
 import Header from "../shared/Header";
@@ -286,7 +287,7 @@ const LobbyPage = ({ socket }) => {
       draftState.isGamePageOpen = true;
     });
   };
-  const handlePuzzle = () => {
+  const handleSolvePuzzle = (puzzle) => {
     const name = validateName();
     const eloId = validateEloId();
     updateState((draftState) => {
@@ -295,10 +296,8 @@ const LobbyPage = ({ socket }) => {
       draftState.eloId = eloId;
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = true;
+      draftState.puzzle = puzzle;
     });
-  };
-  const handleStudyBoard = () => {
-    showToastNotification("Study board coming soon.", 5000);
   };
 
   const validateName = () => {
@@ -442,6 +441,25 @@ const LobbyPage = ({ socket }) => {
       ELO Ranking
     </div>
   );
+  const puzzleHeight = `${comboHeight / 2}px`;
+  const puzzleWidth = `${bWidth / 2}px`;
+  const puzzleHeader = (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        alignSelf: "center",
+        justifySelf: "center",
+        fontSize: "20px",
+        paddingBottom: gapSize,
+        height: headerHeight,
+      }}
+      title={"Find the best move."}
+    >
+      Puzzles
+    </div>
+  );
 
   const gameShowcaseHeader = (
     <div
@@ -527,8 +545,6 @@ const LobbyPage = ({ socket }) => {
             handleJoinGame={handleJoinGame}
             handleLocalGame={handleLocalGame}
             handleComputerGame={handleComputerGame}
-            handlePuzzle={handlePuzzle}
-            handleStudyBoard={handleStudyBoard}
             handleRefreshName={handleRefreshName}
             handleToken={handleToken}
             handleEloId={handleEloId}
@@ -580,6 +596,7 @@ const LobbyPage = ({ socket }) => {
                 "container",
                 state.isDarkModeOn
               )}`,
+              paddingBottom: "2rem",
             }}
           >
             <RankingList
@@ -589,6 +606,26 @@ const LobbyPage = ({ socket }) => {
               isDarkModeOn={state.isDarkModeOn}
             />
           </div>
+          {puzzleHeader}
+          <div
+            style={{
+              height: puzzleHeight,
+              width: puzzleWidth,
+              marginLeft: "auto",
+              marginRight: "auto",
+              border: `1px solid ${getColor(
+                state.menuTheme,
+                "container",
+                state.isDarkModeOn
+              )}`,
+            }}
+          >
+            <PuzzleList
+              menuTheme={state.menuTheme}
+              isDarkModeOn={state.isDarkModeOn}
+              handleSolvePuzzle={handleSolvePuzzle}
+            />
+          </div>{" "}
         </div>
       )}
     </div>

@@ -37,8 +37,9 @@ import {
   applyCreatedLocally,
   applyCreatedVsComputer,
   applyCreatedPuzzle,
-  LastPuzzleMoveIsCorrect,
+  applyPuzzleMove,
 } from "./gameState";
+import { lastPuzzleMoveIsCorrect } from "./puzzleLogic";
 
 import Board from "./Board";
 import Header from "../shared/Header";
@@ -377,7 +378,8 @@ const GamePage = ({
         applyCreatedPuzzle(
           draftState,
           clientParams.playerName,
-          clientParams.token
+          clientParams.token,
+          clientParams.puzzle
         );
         draftState.arePlayersPresent[0] = true;
         draftState.arePlayersPresent[1] = true;
@@ -455,9 +457,14 @@ const GamePage = ({
         if (clientParams.clientRole === roleEnum.offline) {
           // In a local game, we always undo only one ply.
           applyTakeback(draftState, !creatorToMove(draftState));
-        } else {
+        } else if (clientParams.clientRole === roleEnum.computer) {
           // Vs the computer, we always undo the player (creator) move
           applyTakeback(draftState, true);
+        } else {
+          // In a puzzle, always undo two moves, except don't undo the setup moves.
+          const tc = turnCount(draftState);
+          if (tc <= clientParams.puzzle.startIndex) return;
+          applyTakeback(draftState, creatorToMove(draftState));
         }
       });
     }
@@ -629,10 +636,15 @@ const GamePage = ({
   useEffect(() => {
     if (clientParams.clientRole !== roleEnum.puzzle) return;
     if (state.lifeCycleStage < 1 || state.lifeCycleStage > 3) return;
-    if (!LastPuzzleMoveIsCorrect(state)) {
+    if (!lastPuzzleMoveIsCorrect(state, clientParams.puzzle)) {
       showToastNotification("Suboptimal move!");
       updateState((draftState) => {
         applyTakeback(draftState, !creatorToMove(draftState));
+      });
+    } else {
+      updateState((draftState) => {
+        if (clientParams.puzzle.playAsCreator !== creatorToMove(draftState))
+          applyPuzzleMove(draftState, clientParams.puzzle);
       });
     }
   });
