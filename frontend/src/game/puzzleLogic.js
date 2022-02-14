@@ -12,6 +12,7 @@ const isSameMove = (actions1, actions2) => {
 
 export const lastPuzzleMoveIsCorrect = (draftState, puzzle) => {
   const tc = turnCount(draftState);
+  if (tc === 0) return true; // no moves played yet.
   const moves = parsePuzzleMoveList(puzzle.moves);
   if (tc < puzzle.startIndex) return true;
   for (let i = 0; i < moves[tc - 1].length; i++) {

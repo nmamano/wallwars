@@ -38,6 +38,7 @@ import {
   applyCreatedVsComputer,
   applyCreatedPuzzle,
   applyPuzzleMove,
+  applyPuzzleTakeback,
 } from "./gameState";
 import { lastPuzzleMoveIsCorrect } from "./puzzleLogic";
 
@@ -635,14 +636,15 @@ const GamePage = ({
   //===================================================
   useEffect(() => {
     if (clientParams.clientRole !== roleEnum.puzzle) return;
-    if (state.lifeCycleStage < 1 || state.lifeCycleStage > 3) return;
+    if (state.lifeCycleStage < 1) return;
     if (!lastPuzzleMoveIsCorrect(state, clientParams.puzzle)) {
       showToastNotification("Suboptimal move!");
       updateState((draftState) => {
-        applyTakeback(draftState, !creatorToMove(draftState));
+        applyPuzzleTakeback(draftState, !creatorToMove(draftState));
       });
     } else {
       updateState((draftState) => {
+        if (draftState.lifeCycleStage === 4) return; // game finished.
         if (clientParams.puzzle.playAsCreator !== creatorToMove(draftState))
           applyPuzzleMove(draftState, clientParams.puzzle);
       });

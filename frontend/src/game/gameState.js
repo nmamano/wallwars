@@ -834,6 +834,18 @@ export const applyTakeback = (draftState, requesterIsCreator) => {
   closeDialogs(draftState);
 };
 
+// Unlike a normal takeback, this can take back a move that ends the game.
+export const applyPuzzleTakeback = (draftState, requesterIsCreator) => {
+  const requesterToMove = requesterIsCreator === creatorToMove(draftState);
+  const numMovesToUndo = requesterToMove ? 2 : 1;
+  for (let k = 0; k < numMovesToUndo; k++) draftState.moveHistory.pop();
+  const tc = turnCount(draftState);
+  draftState.viewIndex = tc;
+  if (tc === 0) draftState.lifeCycleStage = 1;
+  else if (tc === 1) draftState.lifeCycleStage = 2;
+  draftState.matchScore = [0, 0];
+};
+
 export const applyNewRatingsNotification = (draftState, ratings) => {
   draftState.ratings = ratings;
 };
