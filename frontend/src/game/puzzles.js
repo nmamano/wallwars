@@ -2,14 +2,18 @@ import {
   defaultInitialPlayerPos,
   defaultGoalPos,
 } from "../shared/globalSettings";
+import {
+  classicToInternalPos,
+  classicToInternalBoardDims,
+} from "../shared/gameLogicUtils";
 
 const puzzle1 = {
   author: "Nilo",
   difficulty: 1700,
   boardSettings: {
-    dims: [11, 9],
-    startPos: defaultInitialPlayerPos([11, 9]),
-    goalPos: defaultGoalPos([11, 9]),
+    dims: classicToInternalBoardDims([6, 5]),
+    startPos: defaultInitialPlayerPos(classicToInternalBoardDims([6, 5])),
+    goalPos: defaultGoalPos(classicToInternalBoardDims([6, 5])),
   },
   creatorStarts: false,
   playAsCreator: false,

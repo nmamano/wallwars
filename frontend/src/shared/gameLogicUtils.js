@@ -27,6 +27,12 @@ export const internalToClassicBoardSize = (internalDim) => {
 export const classicToInternalBoardSize = (classicDim) => {
   return 2 * classicDim - 1;
 };
+export const classicToInternalBoardDims = (classicDims) => {
+  return [
+    classicToInternalBoardSize(classicDims[0]),
+    classicToInternalBoardSize(classicDims[1]),
+  ];
+};
 
 //maps 0->1, 2->2, 4->3, ...
 export const internalToClassicCoord = (internalCoord) => {
@@ -34,6 +40,12 @@ export const internalToClassicCoord = (internalCoord) => {
 };
 export const classicToInternalCoord = (classicCoord) => {
   return 2 * (classicCoord - 1);
+};
+export const classicToInternalPos = (classicCoords) => {
+  return [
+    classicToInternalCoord(classicCoords[0]),
+    classicToInternalCoord(classicCoords[1]),
+  ];
 };
 
 const boardPixelHeight = (dims, groundSize, wallWidth) =>
