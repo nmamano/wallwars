@@ -55,8 +55,16 @@ struct Situation {
   inline bool IsGameOver() const {
     return tokens[0] == kGoals[0] || tokens[1] == kGoals[1];
   }
+
+  // Return 0 if player 0 won, 1 if player 1 won, 2 if there is a draw because
+  // player 0 reached the goal but player 1 is within distance 2 of the goal, or
+  // -1 if nobody won.
   inline int Winner() const {
-    return IsGameOver() ? (tokens[0] == kGoals[0] ? 0 : 1) : -1;
+    if (tokens[1] == kGoals[1]) return true;
+    if (tokens[0] == kGoals[0]) {
+      return G.Distance(tokens[1], kGoals[1]) > 2 ? 0 : 2;  // 2 means draw
+    }
+    return -1;
   }
 
   inline bool CanPlayersReachGoals() const {

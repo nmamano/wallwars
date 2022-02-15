@@ -36,7 +36,11 @@ std::unique_ptr<Mover> GetMover(std::string mover_str) {
 }
 
 void PrintWinner(const Situation& sit) {
-  std::cout << "P" << sit.Winner() << " won!" << std::endl;
+  if (sit.Winner() == 2) {
+    std::cout << "Players drew by the one-move rule." << std::endl;
+  } else {
+    std::cout << "P" << sit.Winner() << " won!" << std::endl;
+  }
   std::cout << "Final board:" << std::endl;
   PrintBoardWithEdgeIndices(sit);
 }

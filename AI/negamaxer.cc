@@ -29,7 +29,12 @@ int Negamaxer::DirectEval() const {
 int Negamaxer::NegamaxEval(int depth, int alpha, int beta) {
   ++num_evals_;
   if (sit_.IsGameOver()) {
-    return sit_.Winner() == sit_.turn ? kInfinity : -kInfinity;
+    // Adding `depth` to winning positions makes the AI choose moves that
+    // win faster. Subtracting `depth` from losing positions makes the AI choose
+    // moves that take the longest to lose.
+    int winner = sit_.Winner();
+    if (winner == 2) return 0;  // Draw.
+    return winner == sit_.turn ? kInfinity + depth : -kInfinity - depth;
   }
   if (depth == 0) {
     return (sit_.turn == 0 ? 1 : -1) * DirectEval();
@@ -53,7 +58,7 @@ int Negamaxer::NegamaxEval(int depth, int alpha, int beta) {
       }
     }
   }
-  int eval = -kInfinity;
+  int eval = -2 * kInfinity;
   for (const ScoredMove& scored_move : OrderedMoves(depth - 1)) {
     const Move& move = scored_move.move;
     sit_.ApplyMove(move);
@@ -89,37 +94,28 @@ Move Negamaxer::GetMove(Situation sit) {
   // - Situations are not memoized, as they are evaluated exactly once since
   // this is the shallowest search depth.
   Move best_move;
-  // `best_move_eval` is initialized to -kInfinity - 1 so that *some* move is
+  // `best_move_eval` is initialized to -2*kInfinity so that *some* move is
   // still chosen in the event that every move is losing, which are evaluated to
   // -kInfinity.
-  int best_move_eval = -kInfinity - 1;
+  int best_move_eval = -2 * kInfinity;
+  int alpha = -2 * kInfinity;
+  int beta = 2 * kInfinity;
   for (const ScoredMove& scored_move : OrderedMoves(kMaxDepth - 1)) {
     const Move& move = scored_move.move;
     sit_.ApplyMove(move);
-    int move_eval = -NegamaxEval(kMaxDepth - 1, -kInfinity, kInfinity);
+    int move_eval = -NegamaxEval(kMaxDepth - 1, alpha, beta);
     sit_.UndoMove(move);
     if (move_eval > best_move_eval) {
       best_move = move;
       best_move_eval = move_eval;
       std::cerr << "Best move: " << sit_.MoveToString(move)
                 << " (eval: " << best_move_eval << ")" << std::endl;
+    } else if (move_eval == best_move_eval) {
+      std::cerr << "Matching move: " << sit_.MoveToString(move)
+                << " (eval: " << move_eval << ")" << std::endl;
     }
   }
-  if (best_move_eval != -kInfinity) return best_move;
-
-  // If the game is lost, return the move that moves towards the goal.
-  int turn = sit_.turn;
-  int cur_dist = sit_.G.Distance(sit_.tokens[turn], kGoals[turn]);
-  for (const ScoredMove& scored_move : OrderedMoves(kMaxDepth - 1)) {
-    const Move& move = scored_move.move;
-    sit_.ApplyMove(move);
-    int new_dist = sit_.G.Distance(sit_.tokens[turn], kGoals[turn]);
-    if (new_dist == cur_dist - 2) return move;
-    sit_.UndoMove(move);
-  }
-  // The program cannot reach here, since there is always a move that goes 2
-  // steps closer to the goal.
-  return {0, {-1, -1}};
+  return best_move;
 }
 
 namespace {
@@ -219,6 +215,7 @@ nonstd::span<const ScoredMove> Negamaxer::OrderedMoves(int depth) {
   // both players and both goals, or two connected components, one with one
   // player and goal each. In addition, every remaining bridge must be crossed
   // by every path of at least one of the players.
+  int opp_dist = G_pruned.Distance(tokens[opp_turn], kGoals[opp_turn]);
 
   // Label edges by 2-edge connected component, using -1 for bridges, and -2 for
   // disabled edges (i.e., fake edges, already-built walls, or pruned edges).
@@ -264,11 +261,15 @@ nonstd::span<const ScoredMove> Negamaxer::OrderedMoves(int depth) {
     for (int node : G_pruned.NodesAtDistance2(tokens[turn])) {
       if (node == -1) continue;
       if (distances_from_goal[node] == 0) {
-        // We found a winning move, so we can discard any previously generated
-        // moves and return the single winning move.
-        moves[0] = {DoubleWalkMove(tokens[turn], node), 1000};
-        DBGS(sit_.CrashIfMoveIsIllegal(moves[0].move));
-        return nonstd::span<const ScoredMove>(moves.begin(), moves.begin() + 1);
+        bool is_draw_by_one_move = turn == 0 && opp_dist <= 2;
+        if (!is_draw_by_one_move) {
+          // We found a winning move, so we can discard any previously generated
+          // moves and return the single winning move.
+          moves[0] = {DoubleWalkMove(tokens[turn], node), 1000};
+          DBGS(sit_.CrashIfMoveIsIllegal(moves[0].move));
+          return nonstd::span<const ScoredMove>(moves.begin(),
+                                                moves.begin() + 1);
+        }
       }
       const int dist_to_goal_reduction =
           distances_from_goal[tokens[turn]] - distances_from_goal[node];
@@ -348,12 +349,15 @@ nonstd::span<const ScoredMove> Negamaxer::OrderedMoves(int depth) {
           continue;
 
         if (walk_score == 1000) {
-          // We found a winning move, so we can discard any previously generated
-          // moves and return the single winning move.
-          moves[0] = {WalkAndBuildMove(tokens[turn], node, edge), 1000};
-          DBGS(sit_.CrashIfMoveIsIllegal(moves[0].move));
-          return nonstd::span<const ScoredMove>(moves.begin(),
-                                                moves.begin() + 1);
+          bool is_draw_by_one_move = turn == 0 && opp_dist <= 2;
+          if (!is_draw_by_one_move) {
+            // We found a winning move, so we can discard any previously
+            // generated moves and return the single winning move.
+            moves[0] = {WalkAndBuildMove(tokens[turn], node, edge), 1000};
+            DBGS(sit_.CrashIfMoveIsIllegal(moves[0].move));
+            return nonstd::span<const ScoredMove>(moves.begin(),
+                                                  moves.begin() + 1);
+          }
         }
         // We score walk-and-build moves as follows: if the wall is in the
         // shortest path of the opponent, it gets a bonus of +5. If it is in the
