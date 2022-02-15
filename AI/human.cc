@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 
+#include "Negamaxer.h"
 #include "board_io.h"
 #include "situation.h"
 
@@ -26,6 +27,10 @@ Move Human::GetMove(Situation sit) {
       std::cout << ">> ";
       std::string s;
       std::getline(std::cin, s);
+      if (s == "x") {
+        Negamaxer negamaxer;
+        return negamaxer.GetMove(sit);
+      }
       if (direction_letter_to_index.count(s)) {
         int dir = direction_letter_to_index.at(s);
         int nbr = sit.G.NeighborInDirection(sit.tokens[sit.turn], dir);
