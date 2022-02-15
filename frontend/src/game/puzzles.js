@@ -79,32 +79,31 @@ export const puzzles = [
     startIndex: 7,
   },
   {
-      author: "Tim",
-      difficulty: 1700,
-      boardSettings: {
-        dims: classicToInternalBoardDims([6, 9]),
-        startPos: defaultInitialPlayerPos(classicToInternalBoardDims([6, 9])),
-        goalPos: defaultGoalPos(classicToInternalBoardDims([6, 9])),
-      },
-      creatorStarts: true,
-      playAsCreator: true,
-      moves:
-        "g3v h3v; b3v c3v; e3v f3v; c4> d3v; f4> f5>; c5> c6>; f1> f6>; c1> c2>; a2 f2>; h2> h3>; b2 a3>; h2; c3; g3; e3; e3; f3 d3>; d2; h4> h5>; a4> a5>; g2; c3; h1; b2; a2> b1v; c1; i2; a1; i4; a3; i6",
-      startIndex: 10
+    author: "Tim",
+    difficulty: 1700,
+    boardSettings: {
+      dims: classicToInternalBoardDims([6, 9]),
+      startPos: defaultInitialPlayerPos(classicToInternalBoardDims([6, 9])),
+      goalPos: defaultGoalPos(classicToInternalBoardDims([6, 9])),
     },
-    {
-      author: "Nilo",
-      difficulty: 1725,
-      boardSettings: {
-        dims: classicToInternalBoardDims([5, 5]),
-        startPos: [classicToInternalPos([1, 1]), classicToInternalPos([1, 1])],
-        goalPos: [classicToInternalPos([3, 3]), classicToInternalPos([3, 3])],
-      },
-      creatorStarts: true,
-      playAsCreator: true,
-      moves:
-        "b2v c2v; b2; c3> c4>; b4v a4>; a2> c5>; a1; a3; a3; b3 a3>; a5; c3 a1>, c3 a1v, c3 b1>, c3 b1v, c3 c1>, c3 c1v, c3 d1>, c3 d1v, c3 e1v, c3 a2v, c3 b2>, c3 c2>, c3 d2v, c3 d2>, c3 e2v, c3 a3v, c3 b3v, c3 b3>, c3 c3v, c3 d3v, c3 d3>, c3 e3v, c3 a4v, c3 b4>, c3 d4v, c3 d4>, c3 e4v, c3 d5>",
-      startIndex: 4,
+    creatorStarts: true,
+    playAsCreator: true,
+    moves:
+      "g3v h3v; b3v c3v; e3v f3v; c4> d3v; f4> f5>; c5> c6>; f1> f6>; c1> c2>; a2 f2>; h2> h3>; b2 a3>; h2; c3; g3; e3; e3; f3 d3>; d2; h4> h5>; a4> a5>; g2; c3; h1; b2; a2> b1v; c1; i2; a1; i4; a3; i6",
+    startIndex: 10
+  },
+  {
+    author: "Nilo",
+    difficulty: 1725,
+    boardSettings: {
+      dims: classicToInternalBoardDims([5, 5]),
+      startPos: [classicToInternalPos([1, 1]), classicToInternalPos([1, 1])],
+      goalPos: [classicToInternalPos([3, 3]), classicToInternalPos([3, 3])],
     },
-  ].sort((p1, p2) => p1.difficulty - p2.difficulty);
-
+    creatorStarts: true,
+    playAsCreator: true,
+    moves:
+      "b2v c2v; b2; c3> c4>; b4v a4>; a2> c5>; a1; a3; a3; b3 a3>; a5; c3 a1>, c3 a1v, c3 b1>, c3 b1v, c3 c1>, c3 c1v, c3 d1>, c3 d1v, c3 e1v, c3 a2v, c3 b2>, c3 c2>, c3 d2v, c3 d2>, c3 e2v, c3 a3v, c3 b3v, c3 b3>, c3 c3v, c3 d3v, c3 d3>, c3 e3v, c3 a4v, c3 b4>, c3 d4v, c3 d4>, c3 e4v, c3 d5>",
+    startIndex: 4,
+  },
+].sort((p1, p2) => p1.difficulty - p2.difficulty);
