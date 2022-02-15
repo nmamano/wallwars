@@ -52,4 +52,6 @@ const puzzle3 = {
   startIndex: 6,
 };
 
-export const puzzles = [puzzle1, puzzle2, puzzle3];
+export const puzzles = [puzzle1, puzzle2, puzzle3].sort(
+  (p1, p2) => p1.difficulty - p2.difficulty
+);

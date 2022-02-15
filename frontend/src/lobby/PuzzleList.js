@@ -42,7 +42,7 @@ const PuzzleList = ({ menuTheme, isDarkModeOn, handleSolvePuzzle }) => {
         <thead>
           <tr>
             <th style={headEntryStyle}>Puzzle</th>
-            <th style={headEntryStyle}>Difficulty</th>
+            <th style={headEntryStyle}>Rating</th>
             <th style={headEntryStyle}>Author</th>
           </tr>
         </thead>
