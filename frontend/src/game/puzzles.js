@@ -37,4 +37,19 @@ const puzzle2 = {
   startIndex: 0,
 };
 
-export const puzzles = [puzzle1, puzzle2];
+const puzzle3 = {
+  author: "Nilo",
+  difficulty: 1550,
+  boardSettings: {
+    dims: classicToInternalBoardDims([5, 5]),
+    startPos: defaultInitialPlayerPos(classicToInternalBoardDims([5, 5])),
+    goalPos: defaultGoalPos(classicToInternalBoardDims([5, 5])),
+  },
+  creatorStarts: true,
+  playAsCreator: true,
+  moves:
+    "d2> d3>; d4v d4>; b4v c4v; a3> a4>; a2> b1v; b2> b3>; c1> e1v, c1> e2v, c1> e3v, c1> e4v; d2; c2> c3>; d4; a3; c3; a5; c1; c5; a1; e5",
+  startIndex: 6,
+};
+
+export const puzzles = [puzzle1, puzzle2, puzzle3];
