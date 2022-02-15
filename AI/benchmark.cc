@@ -11,7 +11,6 @@
 #include "assert.h"
 #include "graph.h"
 #include "human.h"
-#include "io.h"
 #include "macros.h"
 #include "mover.h"
 #include "negamaxer.h"

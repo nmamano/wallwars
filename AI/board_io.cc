@@ -3,7 +3,6 @@
 #include <string>
 
 #include "graph.h"
-#include "io.h"
 #include "situation.h"
 
 // todo: clean up the padding logic.

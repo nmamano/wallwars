@@ -6,7 +6,6 @@
 
 #include "external/span.h"
 #include "graph.h"
-#include "io.h"
 #include "macros.h"
 #include "move.h"
 #include "situation.h"
