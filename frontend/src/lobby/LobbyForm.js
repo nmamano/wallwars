@@ -16,7 +16,7 @@ import TextButton from "../shared/TextButton";
 import { maxBoardDims } from "../shared/globalSettings";
 import CoordinateSlider from "../shared/CoordinateSlider";
 import BoardSizeSlider from "../shared/BoardSizeSlider";
-import { eloIdAboutText } from "./lobbyHelp";
+import { eloIdAboutText } from "./LobbyHelp";
 
 //random icons until I find a nicer set to use
 const tokens = [

@@ -47,7 +47,7 @@ import Header from "../shared/Header";
 import Dialog from "../shared/Dialog";
 import StatusHeader from "./StatusHeader";
 import TimerHeader from "./TimerHeader";
-import gameHelp from "./gameHelp";
+import gameHelp from "./GameHelp";
 import ControlPanel from "./ControlPanel";
 import { getColor } from "../shared/colorThemes";
 import { cellEnum } from "../shared/gameLogicUtils";

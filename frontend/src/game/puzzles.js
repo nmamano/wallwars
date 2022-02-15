@@ -78,4 +78,18 @@ export const puzzles = [
       "c1; e1; a1> a2>; f1> f2>; c1v d1v; c2v e1v; d2v e2v; b1v f2v, b1> f2v; e1; f2; f2; d2; d2; b2; b2; a3",
     startIndex: 7,
   },
+  {
+    author: "Tim",
+    difficulty: 1700,
+    boardSettings: {
+      dims: classicToInternalBoardDims([6, 9]),
+      startPos: defaultInitialPlayerPos(classicToInternalBoardDims([6, 9])),
+      goalPos: defaultGoalPos(classicToInternalBoardDims([6, 9])),
+    },
+    creatorStarts: true,
+    playAsCreator: true,
+    moves:
+      "g3v h3v; b3v c3v; e3v f3v; c4> d3v; f4> f5>; c5> c6>; f1> f6>; c1> c2>; a2 f2>; h2> h3>; b2 a3>; h2; c3; g3; e3; e3; f3 d3>; d2; h4> h5>; a4> a5>; g2; c3; h1; b2; a2> b1v; c1; i2; a1; i4; a3; i6",
+    startIndex: 10
+  }
 ].sort((p1, p2) => p1.difficulty - p2.difficulty);

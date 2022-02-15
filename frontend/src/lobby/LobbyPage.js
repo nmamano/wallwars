@@ -23,7 +23,7 @@ import PuzzleList from "./PuzzleList";
 import GamePage from "../game/GamePage";
 import GameShowcase from "./GameShowcase";
 import Header from "../shared/Header";
-import { lobbyHelpText, aboutText } from "./lobbyHelp";
+import { lobbyHelpText, aboutText } from "./LobbyHelp";
 import showToastNotification from "../shared/showToastNotification";
 import { emptyBoardDistances, boardPixelDims } from "../shared/gameLogicUtils";
 
