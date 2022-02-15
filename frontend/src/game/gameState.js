@@ -332,13 +332,13 @@ export const applyCreatedPuzzle = (draftState, name, token, puzzle) => {
     timeControl,
     puzzle.boardSettings,
     puzzle.playAsCreator ? name : puzzle.author,
-    token
+    puzzle.playAsCreator ? token : "extension"
   );
   applyCreatedOnServer(draftState, "Puzzle", puzzle.creatorStarts, 0);
   applyJoinerJoined(
     draftState,
     !puzzle.playAsCreator ? name : puzzle.author,
-    "extension",
+    !puzzle.playAsCreator ? token : "extension",
     0
   );
   const moves = parsePuzzleMoveList(puzzle.moves);
