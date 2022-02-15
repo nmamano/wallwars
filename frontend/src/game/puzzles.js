@@ -64,4 +64,18 @@ export const puzzles = [
       "b2; d2; a4> b3v; b2v b2>; d3v d4>; d2v d2>; b4> c4>; a2> c2>; b3> c1>, a3> c1>; e1; c1; e3; c3; c3; e3; c1; e4 d1v, e4 d1>, e4 e1v, e4 e2v, e4 e3v, e4 d3>, e4 c3>, e4 c3v, e4 c2v, e4 c1v, e4 a3>, e4 b1v",
     startIndex: 8,
   },
+  {
+    author: "Nilo",
+    difficulty: 1400,
+    boardSettings: {
+      dims: classicToInternalBoardDims([3, 7]),
+      startPos: defaultInitialPlayerPos(classicToInternalBoardDims([3, 7])),
+      goalPos: defaultGoalPos(classicToInternalBoardDims([3, 7])),
+    },
+    creatorStarts: true,
+    playAsCreator: false,
+    moves:
+      "c1; e1; a1> a2>; f1> f2>; c1v d1v; c2v e1v; d2v e2v; b1v f2v, b1> f2v; e1; f2; f2; d2; d2; b2; b2; a3",
+    startIndex: 7,
+  },
 ].sort((p1, p2) => p1.difficulty - p2.difficulty);
