@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "constants.h"
 #include "external/span.h"
 #include "graph.h"
 #include "macros.h"
@@ -33,6 +34,11 @@
 // the test name.
 #define RUN_TEST(test) RunTest(test, #test)
 
+// Uncomment this line to avoid compiling the tests. This is necessary to
+// compile the code with boards smaller than 16 cells.
+
+// #define NTEST
+#ifndef NTEST
 namespace {
 
 static int num_failed_tests, num_executed_tests;
@@ -846,11 +852,13 @@ bool NegamaxerOrderedMovesTest() {
       ASSERT_EQ(actual, expected);
     }
     {
-      // Similar case.
+      // Similar case, but now the player cannot win, it can only draw due to
+      // the 1-move rule.
       negamaxer.sit_.tokens = {14, 14};
       auto actual_span = negamaxer.OrderedMoves(0);
       std::vector<ScoredMove> actual(actual_span.begin(), actual_span.end());
-      auto expected = ScoredMoveVectorAsString("[1 (0 -1): 1000]");
+      auto expected = ScoredMoveVectorAsString(
+          "[1 (0 -1): 1000, -1 (0 -1): -10, -2 (-1 -1): -20]");
       ASSERT_EQ(actual, expected);
     }
   }
@@ -892,12 +900,13 @@ bool NegamaxerOrderedMovesTest() {
     }
     {
       // Similar case but now the opponent is not at node 15, so the edge 14->15
-      // (28) becomes a useless edge when crossed by the player. Thus, the
-      // player can win.
+      // (28) becomes a useless edge when crossed by the player. The player
+      // cannot win due to the one-move-rule.
       negamaxer.sit_.tokens = {14, 14};
       auto actual_span = negamaxer.OrderedMoves(0);
       std::vector<ScoredMove> actual(actual_span.begin(), actual_span.end());
-      auto expected = ScoredMoveVectorAsString("[1 (28 -1): 1000]");
+      auto expected =
+          ScoredMoveVectorAsString("[1 (28 -1): 996, -2 (-1 -1): -20]");
       ASSERT_EQ(actual, expected);
     }
   }
@@ -1116,3 +1125,9 @@ void RunTests() {
             << "Failed tests: " << num_failed_tests << "/" << num_executed_tests
             << std::endl;
 }
+
+#else
+
+void RunTests() { std::cerr << "Tests disabled." << std::endl; }
+
+#endif
