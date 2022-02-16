@@ -6,17 +6,13 @@
 #include <iostream>
 #include <vector>
 
+#include "constants.h"
 #include "graph.h"
 #include "macros.h"
 
-namespace {
-
-constexpr std::array<int8_t, 2> kInitialTokens = {
-    static_cast<int8_t>(kTopLeftNode), static_cast<int8_t>(kTopRightNode)};
-
-}  // namespace
-
-Situation::Situation() : tokens(kInitialTokens) {}
+Situation::Situation()
+    : tokens(
+          {static_cast<int8_t>(kStarts[0]), static_cast<int8_t>(kStarts[1])}) {}
 
 void Situation::ApplyMove(Move move) {
   DBGS(CrashIfMoveIsIllegal(move));

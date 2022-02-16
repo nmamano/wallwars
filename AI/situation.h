@@ -10,9 +10,6 @@
 #include "graph.h"
 #include "move.h"
 
-// The goals g0 and g1, which never change.
-constexpr std::array<int, 2> kGoals{kBottomRightNode, kBottomLeftNode};
-
 constexpr int kMaxNumLegalMoves =
     8 + 4 * kNumRealEdges + kNumRealEdges * kNumRealEdges;
 

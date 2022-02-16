@@ -17,14 +17,8 @@ constexpr int kNumNodes = kNumRows * kNumCols;
 
 // We serialize the nodes from coordinates to indices by row first and by column
 // second.
-constexpr int NodeAt(int row, int col) { return row * kNumCols + col; }
 inline int Row(int v) { return v / kNumCols; }
 inline int Col(int v) { return v % kNumCols; }
-
-constexpr int kTopLeftNode = NodeAt(0, 0);
-constexpr int kTopRightNode = NodeAt(0, kNumCols - 1);
-constexpr int kBottomLeftNode = NodeAt(kNumRows - 1, 0);
-constexpr int kBottomRightNode = NodeAt(kNumRows - 1, kNumCols - 1);
 
 inline bool IsNodeInFirstRow(int v) { return v <= kTopRightNode; }
 inline bool IsNodeInLastRow(int v) { return v >= kBottomLeftNode; }
