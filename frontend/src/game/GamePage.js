@@ -642,17 +642,15 @@ const GamePage = ({
       updateState((draftState) => {
         applyPuzzleTakeback(draftState, !creatorToMove(draftState));
       });
+    } else if (state.lifeCycleStage === 4) {
+      socket.emit("solvedPuzzle", {
+        eloId: clientParams.eloId,
+        name: state.names[clientParams.puzzle.playAsCreator ? 0 : 1],
+        puzzleId: clientParams.puzzle.id,
+      });
     } else {
       updateState((draftState) => {
-        if (draftState.lifeCycleStage === 4) {
-          // game finished.
-          socket.emit("solvedPuzzle", {
-            eloId: clientParams.eloId,
-            name: state.names[clientParams.puzzle.playAsCreator ? 0 : 1],
-            puzzleId: clientParams.puzzle.id,
-          });
-          return;
-        }
+        if (draftState.lifeCycleStage === 4) return;
         if (clientParams.puzzle.playAsCreator !== creatorToMove(draftState))
           applyPuzzleMove(draftState, clientParams.puzzle);
       });
@@ -727,6 +725,11 @@ const GamePage = ({
       return;
     }
     //normal case: use arrow keys to move the player token
+    if (clientParams.clientRole === roleEnum.puzzle) {
+      // disable moving with arrow keys in puzzle mode because for some reason it
+      // does not check if the moves are correct.
+      return;
+    }
     let p;
     if (state.ghostAction && ghostType(state.ghostAction) === cellEnum.ground)
       p = state.ghostAction;

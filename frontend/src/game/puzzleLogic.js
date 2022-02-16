@@ -11,13 +11,13 @@ const isSameMove = (actions1, actions2) => {
   );
 };
 
-export const lastPuzzleMoveIsCorrect = (draftState, puzzle) => {
-  const tc = turnCount(draftState);
+export const lastPuzzleMoveIsCorrect = (state, puzzle) => {
+  const tc = turnCount(state);
   if (tc === 0) return true; // no moves played yet.
   const moves = parsePuzzleMoveList(puzzle.moves);
   if (tc < puzzle.startIndex) return true;
   for (let i = 0; i < moves[tc - 1].length; i++) {
-    if (isSameMove(moves[tc - 1][i], draftState.moveHistory[tc].actions))
+    if (isSameMove(moves[tc - 1][i], state.moveHistory[tc].actions))
       return true;
   }
   return false;
