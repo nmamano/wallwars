@@ -1,20 +1,11 @@
-import {
-  defaultInitialPlayerPos,
-  defaultGoalPos,
-} from "../shared/globalSettings";
-import {
-  classicToInternalPos,
-  classicToInternalBoardDims,
-} from "../shared/gameLogicUtils";
-
 export const puzzles = [
   {
     author: "Nilo",
-    difficulty: 1700,
+    difficulty: 1650,
     boardSettings: {
-      dims: classicToInternalBoardDims([6, 5]),
-      startPos: defaultInitialPlayerPos(classicToInternalBoardDims([6, 5])),
-      goalPos: defaultGoalPos(classicToInternalBoardDims([6, 5])),
+      dims: [6, 5],
+      startPos: ["a1", "e1"],
+      goalPos: ["e6", "a6"],
     },
     creatorStarts: false,
     playAsCreator: false,
@@ -26,9 +17,9 @@ export const puzzles = [
     author: "Nilo",
     difficulty: 1750,
     boardSettings: {
-      dims: classicToInternalBoardDims([3, 7]),
-      startPos: [classicToInternalPos([2, 6]), classicToInternalPos([2, 2])],
-      goalPos: defaultGoalPos(classicToInternalBoardDims([3, 7])),
+      dims: [3, 7],
+      startPos: ["f2", "b2"],
+      goalPos: ["g3", "a3"],
     },
     creatorStarts: true,
     playAsCreator: true,
@@ -40,9 +31,9 @@ export const puzzles = [
     author: "Nilo",
     difficulty: 1550,
     boardSettings: {
-      dims: classicToInternalBoardDims([5, 5]),
-      startPos: defaultInitialPlayerPos(classicToInternalBoardDims([5, 5])),
-      goalPos: defaultGoalPos(classicToInternalBoardDims([5, 5])),
+      dims: [5, 5],
+      startPos: ["a1", "e1"],
+      goalPos: ["e5", "a5"],
     },
     creatorStarts: true,
     playAsCreator: true,
@@ -54,9 +45,9 @@ export const puzzles = [
     author: "Nilo",
     difficulty: 1600,
     boardSettings: {
-      dims: classicToInternalBoardDims([4, 5]),
-      startPos: defaultInitialPlayerPos(classicToInternalBoardDims([4, 5])),
-      goalPos: defaultGoalPos(classicToInternalBoardDims([4, 5])),
+      dims: [4, 5],
+      startPos: ["a1", "e1"],
+      goalPos: ["e4", "a4"],
     },
     creatorStarts: true,
     playAsCreator: true,
@@ -68,9 +59,9 @@ export const puzzles = [
     author: "Nilo",
     difficulty: 1400,
     boardSettings: {
-      dims: classicToInternalBoardDims([3, 7]),
-      startPos: defaultInitialPlayerPos(classicToInternalBoardDims([3, 7])),
-      goalPos: defaultGoalPos(classicToInternalBoardDims([3, 7])),
+      dims: [3, 7],
+      startPos: ["a1", "g1"],
+      goalPos: ["g3", "a3"],
     },
     creatorStarts: true,
     playAsCreator: false,
@@ -82,9 +73,9 @@ export const puzzles = [
     author: "Nilo",
     difficulty: 1725,
     boardSettings: {
-      dims: classicToInternalBoardDims([5, 5]),
-      startPos: [classicToInternalPos([1, 1]), classicToInternalPos([1, 1])],
-      goalPos: [classicToInternalPos([3, 3]), classicToInternalPos([3, 3])],
+      dims: [5, 5],
+      startPos: ["a1", "a1"],
+      goalPos: ["c3", "c3"],
     },
     creatorStarts: true,
     playAsCreator: true,

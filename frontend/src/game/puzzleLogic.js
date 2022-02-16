@@ -1,5 +1,6 @@
 import { posEq } from "../shared/gameLogicUtils";
 import { turnCount } from "./gameState";
+import { classicToInternalBoardDims } from "../shared/gameLogicUtils";
 
 const isSameMove = (actions1, actions2) => {
   if (actions1.length !== actions2.length) return false;
@@ -67,4 +68,20 @@ export const parsePuzzleMoveList = (move_list_str) => {
     res.push(alternative_moves);
   });
   return res;
+};
+
+export const puzzleBoardSettingsToInternalBoardSettings = (
+  puzzleBoardSettings
+) => {
+  return {
+    dims: classicToInternalBoardDims(puzzleBoardSettings.dims),
+    startPos: [
+      actionStrToCoordinates(puzzleBoardSettings.startPos[0]),
+      actionStrToCoordinates(puzzleBoardSettings.startPos[1]),
+    ],
+    goalPos: [
+      actionStrToCoordinates(puzzleBoardSettings.goalPos[0]),
+      actionStrToCoordinates(puzzleBoardSettings.goalPos[1]),
+    ],
+  };
 };

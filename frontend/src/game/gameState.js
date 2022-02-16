@@ -11,7 +11,10 @@ import {
   cellEnum,
 } from "../shared/gameLogicUtils";
 import { defaultBoardSettings } from "../shared/globalSettings";
-import { parsePuzzleMoveList } from "./puzzleLogic";
+import {
+  parsePuzzleMoveList,
+  puzzleBoardSettingsToInternalBoardSettings,
+} from "./puzzleLogic";
 
 /* this file contains functions that modify a copy of the state of GamePage
 the state itself is immutable, as per the react philosophy, but we can
@@ -330,7 +333,7 @@ export const applyCreatedPuzzle = (draftState, name, token, puzzle) => {
   applyAddCreator(
     draftState,
     timeControl,
-    puzzle.boardSettings,
+    puzzleBoardSettingsToInternalBoardSettings(puzzle.boardSettings),
     puzzle.playAsCreator ? name : puzzle.author,
     puzzle.playAsCreator ? token : "extension"
   );
