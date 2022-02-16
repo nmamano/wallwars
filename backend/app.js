@@ -456,11 +456,26 @@ io.on(M.connectionMsg, (socket) => {
   socket.on(M.getRankingMsg, async ({ count }) => {
     logReceivedMessage(M.getRankingMsg, { count });
     const ranking = await gameController.getRanking(count);
-    if (ranking)
+    if (ranking) {
       emitMessage(M.requestedRankingMsg, {
         ranking: ranking,
       });
-    else emitMessage(M.rankingNotFoundMsg);
+    } else emitMessage(M.rankingNotFoundMsg);
+  });
+
+  socket.on(M.getSolvedPuzzlesMsg, async ({ eloId }) => {
+    logReceivedMessage(M.getSolvedPuzzlesMsg, { eloId });
+    const pseudoPlayer = await gameController.getPseudoPlayer(eloId);
+    if (pseudoPlayer) {
+      emitMessage(M.requestedSolvedPuzzlesMsg, {
+        solvedPuzzles: pseudoPlayer.solvedPuzzles,
+      });
+    } else emitMessage(M.solvedPuzzlesNotFoundMsg);
+  });
+
+  socket.on(M.solvedPuzzleMsg, async ({ eloId, name, puzzleId }) => {
+    logReceivedMessage(M.solvedPuzzleMsg, { eloId, name, puzzleId });
+    await gameController.addPseudoPlayerSolvedPuzzle(eloId, name, puzzleId);
   });
 
   socket.on(M.getRecentGameSummariesMsg, async ({ count }) => {

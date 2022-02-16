@@ -37,6 +37,7 @@ const pseudoPlayerSchema = new Schema({
   drawCount: { type: Number, required: true },
   firstGameDate: { type: Date, required: true },
   lastGameDate: { type: Date, required: true },
+  solvedPuzzles: { type: [String], required: true },
 });
 
 const PseudoPlayer = mongoose.model("PseudoPlayer", pseudoPlayerSchema);
@@ -75,6 +76,7 @@ const createNewPseudoPlayer = (eloId) => {
     drawCount: 0,
     firstGameDate: null,
     lastGameDate: null,
+    solvedPuzzles: [],
   };
 };
 
@@ -97,6 +99,34 @@ const updatePseudoPlayer = (pseudoPlayer, game, score, newRating) => {
   if (score === 0.5) pseudoPlayer.drawCount++;
   if (!pseudoPlayer.firstGameDate) pseudoPlayer.firstGameDate = game.startDate;
   pseudoPlayer.lastGameDate = game.startDate;
+};
+
+// Adds a puzzle to the list of the players' solved puzzles, if it is not
+// already marked as solved.
+const addPseudoPlayerSolvedPuzzle = async (eloId, name, puzzleId) => {
+  if (!connectedToDB) return;
+  let p = await PseudoPlayer.findOne({ eloId: eloId });
+  if (!p) {
+    const timestamp = Date.now();
+    console.log("creating new pseudoPlayer");
+    p = new PseudoPlayer(createNewPseudoPlayer(eloId));
+    p.name = name;
+    p.firstGameDate = timestamp;
+    p.lastGameDate = timestamp;
+  }
+  if (p.solvedPuzzles.includes(puzzleId)) return;
+  p.solvedPuzzles.push(puzzleId);
+  try {
+    await p.save();
+    console.log(
+      `Stored pseudoplayer in DB ${process.env.DB_NAME}: name ${p.name} eloId ${p.eloId}`
+    );
+  } catch (err) {
+    console.error(
+      `Store pseudoplayer ${p} to DB ${process.env.DB_NAME} failed`
+    );
+    console.log(err);
+  }
 };
 
 // updates both pseudoplayers of a game in the database. If a pseudoplayer is not yet
@@ -347,3 +377,4 @@ exports.getRanking = getRanking;
 exports.getRandomGame = getRandomGame;
 exports.getRecentGameSummaries = getRecentGameSummaries;
 exports.createNewPseudoPlayer = createNewPseudoPlayer;
+exports.addPseudoPlayerSolvedPuzzle = addPseudoPlayerSolvedPuzzle;

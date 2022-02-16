@@ -1,5 +1,6 @@
-export const puzzles = [
+const puzzleList = [
   {
+    id: "1",
     author: "Nilo",
     difficulty: 1650,
     boardSettings: {
@@ -14,6 +15,7 @@ export const puzzles = [
     startIndex: 12,
   },
   {
+    id: "2",
     author: "Nilo",
     difficulty: 1750,
     boardSettings: {
@@ -28,6 +30,7 @@ export const puzzles = [
     startIndex: 0,
   },
   {
+    id: "3",
     author: "Nilo",
     difficulty: 1550,
     boardSettings: {
@@ -42,6 +45,7 @@ export const puzzles = [
     startIndex: 6,
   },
   {
+    id: "4",
     author: "Nilo",
     difficulty: 1600,
     boardSettings: {
@@ -52,10 +56,11 @@ export const puzzles = [
     creatorStarts: true,
     playAsCreator: true,
     moves:
-      "b2; d2; a4> b3v; b2v b2>; d3v d4>; d2v d2>; b4> c4>; a2> c2>; b3> c1>, a3> c1>; e1; c1; e3; c3; c3; e3; c1; e4 d1v, e4 d1>, e4 e1v, e4 e2v, e4 e3v, e4 d3>, e4 c3>, e4 c3v, e4 c2v, e4 c1v, e4 a3>, e4 b1v",
+      "b2; d2; a4> b3v; b2v b2>; d3v d4>; d2v d2>; b4> c4>; a2> c2>; b3> c1>, a3> c1>; e1; c1; e3; c3; c3; e3; c1; e4 d1v, e4 d1>, e4 e1v, e4 e2v, e4 e3v, e4 d3>, e4 c3>, e4 c3v, e4 c2v, e4 c1v, e4 a3>, e4 b3>, e4 b1v",
     startIndex: 8,
   },
   {
+    id: "5",
     author: "Nilo",
     difficulty: 1400,
     boardSettings: {
@@ -70,6 +75,7 @@ export const puzzles = [
     startIndex: 7,
   },
   {
+    id: "6",
     author: "Nilo",
     difficulty: 1725,
     boardSettings: {
@@ -83,4 +89,9 @@ export const puzzles = [
       "b2v c2v; b2; c3> c4>; b4v a4>; a2> c5>; a1; a3; a3; b3 a3>; a5; c3 a1>, c3 a1v, c3 b1>, c3 b1v, c3 c1>, c3 c1v, c3 d1>, c3 d1v, c3 e1v, c3 a2v, c3 b2>, c3 c2>, c3 d2v, c3 d2>, c3 e2v, c3 a3v, c3 b3v, c3 b3>, c3 c3v, c3 d3v, c3 d3>, c3 e3v, c3 a4v, c3 b4>, c3 d4v, c3 d4>, c3 e4v, c3 d5>",
     startIndex: 4,
   },
-].sort((p1, p2) => p1.difficulty - p2.difficulty);
+  // Add new puzzles here...
+];
+
+export const puzzles = puzzleList.sort(
+  (p1, p2) => p1.difficulty - p2.difficulty
+);

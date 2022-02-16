@@ -644,7 +644,15 @@ const GamePage = ({
       });
     } else {
       updateState((draftState) => {
-        if (draftState.lifeCycleStage === 4) return; // game finished.
+        if (draftState.lifeCycleStage === 4) {
+          // game finished.
+          socket.emit("solvedPuzzle", {
+            eloId: clientParams.eloId,
+            name: state.names[clientParams.puzzle.playAsCreator ? 0 : 1],
+            puzzleId: clientParams.puzzle.id,
+          });
+          return;
+        }
         if (clientParams.puzzle.playAsCreator !== creatorToMove(draftState))
           applyPuzzleMove(draftState, clientParams.puzzle);
       });

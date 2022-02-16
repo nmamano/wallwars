@@ -1,10 +1,39 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useImmer } from "use-immer";
 import { Table } from "react-materialize";
 import { getColor } from "../shared/colorThemes";
 import hoverHighlight from "../shared/hoverHighlight.module.css";
 import { puzzles } from "../game/puzzles";
 
-const PuzzleList = ({ menuTheme, isDarkModeOn, handleSolvePuzzle }) => {
+const PuzzleList = ({
+  socket,
+  eloId,
+  menuTheme,
+  isDarkModeOn,
+  handleSolvePuzzle,
+}) => {
+  const [state, updateState] = useImmer({
+    needToRequestSolvedPuzzles: true,
+    solvedPuzzles: [],
+  });
+  useEffect(() => {
+    if (state.needToRequestSolvedPuzzles) {
+      updateState((draftState) => {
+        draftState.needToRequestSolvedPuzzles = false;
+      });
+      socket.emit("getSolvedPuzzles", {
+        eloId: eloId,
+      });
+    }
+  }, [socket, eloId, updateState, state.needToRequestSolvedPuzzles]);
+  useEffect(() => {
+    socket.once("requestedSolvedPuzzles", ({ solvedPuzzles }) => {
+      updateState((draftState) => {
+        draftState.solvedPuzzles = solvedPuzzles;
+      });
+    });
+  }, [socket, updateState]);
+
   const [col1, col2, colBg] = [
     getColor(menuTheme, "recentGamesBackground", isDarkModeOn),
     getColor(menuTheme, "recentGamesAlternate", isDarkModeOn),
@@ -44,6 +73,7 @@ const PuzzleList = ({ menuTheme, isDarkModeOn, handleSolvePuzzle }) => {
             <th style={headEntryStyle}>Puzzle</th>
             <th style={headEntryStyle}>Rating</th>
             <th style={headEntryStyle}>Author</th>
+            <th style={headEntryStyle}>Solved</th>
           </tr>
         </thead>
         <tbody>
@@ -61,6 +91,9 @@ const PuzzleList = ({ menuTheme, isDarkModeOn, handleSolvePuzzle }) => {
                 <td style={entryStyle}>{i + 1}</td>
                 <td style={entryStyle}>{puzzle.difficulty}</td>
                 <td style={entryStyle}>{puzzle.author}</td>
+                <td style={entryStyle}>
+                  {state.solvedPuzzles.includes(puzzle.id) ? "Yes" : "No"}
+                </td>
               </tr>
             );
           })}

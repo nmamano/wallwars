@@ -8,6 +8,7 @@ module.exports = {
   pongFromServerMsg: "pongFromServer",
   newRatingsNotificationMsg: "newRatingsNotification",
   invalidEloIdErrorMsg: "invalidEloIdError",
+  solvedPuzzleMsg: "solvedPuzzle",
 
   //client-server-client messages
   joinGameMsg: "joinGame",
@@ -66,6 +67,9 @@ module.exports = {
   getRankingMsg: "getRanking",
   requestedRankingMsg: "requestedRanking",
   rankingNotFoundMsg: "rankingNotFound",
+  getSolvedPuzzlesMsg: "getSolvedPuzzles",
+  requestedSolvedPuzzlesMsg: "requestedSolvedPuzzles",
+  solvedPuzzlesNotFoundMsg: "solvedPuzzlesNotFound",
   requestCurrentChallengesMsg: "requestCurrentChallenges",
   requestedCurrentChallengesMsg: "requestedCurrentChallenges",
 };

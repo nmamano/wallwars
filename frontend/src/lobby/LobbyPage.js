@@ -442,7 +442,7 @@ const LobbyPage = ({ socket }) => {
     </div>
   );
   const puzzleHeight = `${comboHeight / 2}px`;
-  const puzzleWidth = `${bWidth / 2}px`;
+  const puzzleWidth = `${bWidth}px`;
   const puzzleHeader = (
     <div
       style={{
@@ -621,6 +621,8 @@ const LobbyPage = ({ socket }) => {
             }}
           >
             <PuzzleList
+              socket={socket}
+              eloId={state.eloId}
               menuTheme={state.menuTheme}
               isDarkModeOn={state.isDarkModeOn}
               handleSolvePuzzle={handleSolvePuzzle}
