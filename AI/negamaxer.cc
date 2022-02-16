@@ -84,38 +84,55 @@ int Negamaxer::NegamaxEval(int depth, int alpha, int beta) {
   return eval;
 }
 
-Move Negamaxer::GetMove(Situation sit) {
-  // Reset data structures and metrics.
-  sit_ = sit;
-  num_evals_ = 0;
+// Same function as `NegamaxEval()`, with the following differences:
+// - We need to keep track of the best move, not only its evaluation.
+// - Situations are not memoized, as they are evaluated exactly once since
+// this is the shallowest search depth.
+// - Assumes it is not game over.
+// - Assumes depth > 0.
+Move Negamaxer::NegamaxEvalReturnMove(int depth, int alpha, int beta) {
+  constexpr bool kShowMatchingMoves = false;
+  ++num_evals_;
 
-  // Same loop as in `NegamaxEval()`, with the following differences:
-  // - We need to keep track of the best move, not only its evaluation.
-  // - Situations are not memoized, as they are evaluated exactly once since
-  // this is the shallowest search depth.
   Move best_move;
   // `best_move_eval` is initialized to -2*kInfinity so that *some* move is
   // still chosen in the event that every move is losing, which are evaluated to
   // -kInfinity.
   int best_move_eval = -2 * kInfinity;
-  int alpha = -2 * kInfinity;
-  int beta = 2 * kInfinity;
-  for (const ScoredMove& scored_move : OrderedMoves(kMaxDepth - 1)) {
+
+  int eval = best_move_eval;
+  for (const ScoredMove& scored_move : OrderedMoves(depth - 1)) {
     const Move& move = scored_move.move;
     sit_.ApplyMove(move);
-    int move_eval = -NegamaxEval(kMaxDepth - 1, alpha, beta);
+    int move_eval = -NegamaxEval(depth - 1, -beta, -alpha);
+    eval = std::max(eval, move_eval);
     sit_.UndoMove(move);
+    alpha = std::max(alpha, eval);
+
     if (move_eval > best_move_eval) {
       best_move = move;
       best_move_eval = move_eval;
       std::cerr << "Best move: " << sit_.MoveToString(move)
                 << " (eval: " << best_move_eval << ")" << std::endl;
-    } else if (move_eval == best_move_eval) {
+    } else if (kShowMatchingMoves && move_eval == best_move_eval) {
       std::cerr << "Matching move: " << sit_.MoveToString(move)
                 << " (eval: " << move_eval << ")" << std::endl;
     }
+
+    // comment out the line below to evaluate all the moves
+    // e.g., to find all the optimal moves.
+    if (alpha >= beta) break;
   }
   return best_move;
+}
+
+Move Negamaxer::GetMove(Situation sit) {
+  // Reset data structures and metrics.
+  num_evals_ = 0;
+  sit_ = sit;
+  int alpha = -2 * kInfinity;
+  int beta = 2 * kInfinity;
+  return NegamaxEvalReturnMove(kMaxDepth, alpha, beta);
 }
 
 namespace {

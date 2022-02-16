@@ -17,6 +17,7 @@ class Negamaxer : public Mover {
   // Evaluates situation `sit_` with the Negamax algorithm, exploring `depth`
   // moves ahead. Higher is better for the player to move.
   int NegamaxEval(int depth, int alpha, int beta);
+  Move NegamaxEvalReturnMove(int depth, int alpha, int beta);
 
   // Evaluates situation `sit_` with the formula dist(p1, g1) - dist(p0, g0).
   // Higher is better for P0.
