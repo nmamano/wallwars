@@ -48,6 +48,7 @@ import Dialog from "../shared/Dialog";
 import StatusHeader from "./StatusHeader";
 import TimerHeader from "./TimerHeader";
 import gameHelp from "./gameHelp";
+import puzzleHelp from "./puzzleHelp";
 import ControlPanel from "./ControlPanel";
 import { getColor } from "../shared/colorThemes";
 import { cellEnum } from "../shared/gameLogicUtils";
@@ -905,7 +906,7 @@ const GamePage = ({
           state.clientRole === roleEnum.spectator ? "spectator" : "player"
         }
         joinCode={state.joinCode}
-        helpText={gameHelp}
+        helpText={clientParams.clientRole === "puzzle" ? puzzleHelp : gameHelp}
         handleLeaveGame={handleLeaveGame}
         isLargeScreen={isLargeScreen}
         menuTheme={menuTheme}
