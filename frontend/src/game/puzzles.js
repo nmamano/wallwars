@@ -107,7 +107,7 @@ const puzzleList = [
   {
     id: "8",
     author: "Nilo",
-    difficulty: 1450,
+    difficulty: 1430,
     boardSettings: {
       dims: [3, 5],
       startPos: ["c1", "c1"],
@@ -116,6 +116,35 @@ const puzzleList = [
     creatorStarts: true,
     playAsCreator: true,
     moves: "a2> d2>; a3> d3>; b1> c1v; d2; e1; b2; e3",
+    startIndex: 2,
+  },
+  {
+    id: "9",
+    author: "Nilo",
+    difficulty: 1350,
+    boardSettings: {
+      dims: [4, 4],
+      startPos: ["a1", "d1"],
+      goalPos: ["d4", "a4"],
+    },
+    creatorStarts: true,
+    playAsCreator: true,
+    moves:
+      "a4> a3>; a2> c3>; d2v c3v; d3v d1v; b1> b2>; c2; b2; b3; b4; b1; d4",
+    startIndex: 4,
+  },
+  {
+    id: "10",
+    author: "Nilo",
+    difficulty: 1450,
+    boardSettings: {
+      dims: [4, 4],
+      startPos: ["c2", "c2"],
+      goalPos: ["d4", "a4"],
+    },
+    creatorStarts: true,
+    playAsCreator: true,
+    moves: "a2v b3>; b3; a3> b3v; c2; c3 c2v; d3; d4",
     startIndex: 2,
   },
   // Add new puzzles here...
