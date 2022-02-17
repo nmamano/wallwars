@@ -1,7 +1,9 @@
 #ifndef CONSTANTS_H_
 #define CONSTANTS_H_
 
-// Dimensions of the board.
+// The dimensions are compile time constants to optimize the space used to
+// represent the graph (since we might want an AI to memorize millions of
+// positions).
 constexpr int kNumRows = 4;
 constexpr int kNumCols = 4;
 
@@ -17,5 +19,9 @@ constexpr int kBottomRightNode = NodeAt(kNumRows - 1, kNumCols - 1);
 // Start and goals of the players.
 constexpr std::array<int, 2> kStarts{kTopLeftNode, kTopRightNode};
 constexpr std::array<int, 2> kGoals{kBottomRightNode, kBottomLeftNode};
+
+// Edges that are not present from the beginning. Add a -1 at the end to mark
+// the end (the array will be filled with 0's after that).
+constexpr std::array<int, kNumRows * kNumCols * 2> kRemovedEdges{-1};
 
 #endif  // CONSTANTS_H_

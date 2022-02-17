@@ -8,11 +8,6 @@
 
 #include "constants.h"
 
-// A struct to represent grid graph with missing edges and related functions.
-
-// The dimensions are compile time constants to optimize the space used to
-// represent the graph (since we might want an AI to memorize millions of
-// positions).
 constexpr int kNumNodes = kNumRows * kNumCols;
 
 // We serialize the nodes from coordinates to indices by row first and by column

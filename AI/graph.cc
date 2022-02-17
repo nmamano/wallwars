@@ -5,6 +5,7 @@
 #include <cassert>
 #include <iostream>
 
+#include "constants.h"
 #include "macros.h"
 #include "template_utils.h"
 
@@ -13,9 +14,11 @@ long long Graph::graph_traversal_count = 0;
 Graph::Graph() {
   edges.set();
   for (int e = 0; e < kNumRealAndFakeEdges; e++) {
-    if (!IsRealEdge(e)) {
-      DeactivateEdge(e);
-    }
+    if (!IsRealEdge(e)) DeactivateEdge(e);
+  }
+  for (int e : kRemovedEdges) {
+    if (e == -1) return;
+    DeactivateEdge(e);
   }
 }
 
