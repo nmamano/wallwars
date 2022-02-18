@@ -5,7 +5,7 @@
 #include <map>
 #include <string>
 
-#include "Negamaxer.h"
+#include "negamaxer.h"
 #include "board_io.h"
 #include "situation.h"
 
