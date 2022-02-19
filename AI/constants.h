@@ -24,4 +24,8 @@ constexpr std::array<int, 2> kGoals{kBottomRightNode, kBottomLeftNode};
 // the end (the array will be filled with 0's after that).
 constexpr std::array<int, kNumRows * kNumCols * 2> kRemovedEdges{-1};
 
+// Indicate whether the AI should indicate alternative moves that are as good as
+// the found move.
+constexpr bool kShowMatchingMoves = false;
+
 #endif  // CONSTANTS_H_

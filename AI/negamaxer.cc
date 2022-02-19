@@ -4,6 +4,7 @@
 #include <bitset>
 #include <iostream>
 
+#include "constants.h"
 #include "external/span.h"
 #include "graph.h"
 #include "macros.h"
@@ -91,7 +92,6 @@ int Negamaxer::NegamaxEval(int depth, int alpha, int beta) {
 // - Assumes it is not game over.
 // - Assumes depth > 0.
 Move Negamaxer::NegamaxEvalReturnMove(int depth, int alpha, int beta) {
-  constexpr bool kShowMatchingMoves = false;
   ++num_evals_;
 
   Move best_move;
