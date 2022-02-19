@@ -14,6 +14,7 @@
 namespace {
 
 constexpr int kInfinity = 999;  // Larger than any real evaluation.
+constexpr int kPossiblyIllegalMoveScore = -500;
 
 // Alpha-beta flags.
 constexpr int8_t kExactFlag = 0;
@@ -62,6 +63,14 @@ int Negamaxer::NegamaxEval(int depth, int alpha, int beta) {
   int eval = -2 * kInfinity;
   for (const ScoredMove& scored_move : OrderedMoves(depth - 1)) {
     const Move& move = scored_move.move;
+
+    // If it's a move that we haven't validated yet, we need to check if it is
+    // legal.
+    if (scored_move.score == kPossiblyIllegalMoveScore &&
+        !sit_.IsLegalMove(move)) {
+      continue;
+    }
+
     sit_.ApplyMove(move);
     eval = std::max(eval, -NegamaxEval(depth - 1, -beta, -alpha));
     sit_.UndoMove(move);
@@ -103,6 +112,14 @@ Move Negamaxer::NegamaxEvalReturnMove(int depth, int alpha, int beta) {
   int eval = best_move_eval;
   for (const ScoredMove& scored_move : OrderedMoves(depth - 1)) {
     const Move& move = scored_move.move;
+
+    // If it's a move that we haven't validated yet, we need to check if it is
+    // legal.
+    if (scored_move.score == kPossiblyIllegalMoveScore &&
+        !sit_.IsLegalMove(move)) {
+      continue;
+    }
+
     sit_.ApplyMove(move);
     int move_eval = -NegamaxEval(depth - 1, -beta, -alpha);
     eval = std::max(eval, move_eval);
@@ -478,54 +495,43 @@ nonstd::span<const ScoredMove> Negamaxer::OrderedMoves(int depth) {
         // do not always need to compute those distances, in which case
         // `subgraph_distances_after_build` may contain the invalid distance
         // -2.
-        std::array<int, 2> subgraph_distances_after_build = {-2, -2};
-        for (int i = 0; i < 2; i++) {
-          if ((MP_edges[i][edge1] && AP_edges[i][edge2]) ||
-              (MP_edges[i][edge2] && AP_edges[i][edge1])) {
-            // edge1 and edge2 may block player i's path. We need to check.
-            auto subgraph_copy = subgraph;
-            subgraph_copy.DeactivateEdge(edge1);
-            subgraph_copy.DeactivateEdge(edge2);
-            subgraph_distances_after_build[i] = subgraph_copy.Distance(
-                subgraph_starts_and_ends[i][0], subgraph_starts_and_ends[i][1]);
-            // The move is illegal -- no need to check if the other player can
-            // reach the player.
-            if (subgraph_distances_after_build[i] == -1) break;
-          }
+        if ((MP_edges[turn][edge1] && AP_edges[turn][edge2]) ||
+            (MP_edges[turn][edge2] && AP_edges[turn][edge1])) {
+          // edge1 and edge2 may disconnect the player from its goal. It's
+          // probably a bad move, so we give it a really bad score and defer
+          // checking if it is legal until it is time to explore it.
+          moves[move_index++] = {DoubleBuildMove(edge1, edge2),
+                                 kPossiblyIllegalMoveScore};
+          continue;
         }
-
-        if (subgraph_distances_after_build[0] == -1 ||
-            subgraph_distances_after_build[1] == -1) {
-          // The move is illegal because it disconnects a player from its
+        int subgraph_opp_distance_after_build = -2;
+        if ((MP_edges[opp_turn][edge1] && AP_edges[opp_turn][edge2]) ||
+            (MP_edges[opp_turn][edge2] && AP_edges[opp_turn][edge1])) {
+          // edge1 and edge2 may block the opponent's path. We need to check.
+          Graph subgraph_copy = subgraph;
+          subgraph_copy.DeactivateEdge(edge1);
+          subgraph_copy.DeactivateEdge(edge2);
+          subgraph_opp_distance_after_build =
+              subgraph_copy.Distance(subgraph_starts_and_ends[opp_turn][0],
+                                     subgraph_starts_and_ends[opp_turn][1]);
+          // The move is illegal because it disconnects the opponent from its
           // goal.
           continue;
         }
+
         // The move is legal. We score it as follows:
         int score = 0;
 
-        // If we computed the distance after build of the player, we give a
-        // 10 point penalty for each distance increase.
-        if (subgraph_distances_after_build[turn] != -2) {
-          const int dist_to_goal_increase =
-              subgraph_distances_after_build[turn] - subgraph_distances[turn];
-          score -= 10 * dist_to_goal_increase;
-        }
-
         // If we computed the distance after build of the opponent, we give a
         // 10 point bonus for each distance increase.
-        if (subgraph_distances_after_build[opp_turn] != -2) {
+        if (subgraph_opp_distance_after_build != -2) {
           const int opp_dist_to_goal_increase =
-              subgraph_distances_after_build[opp_turn] -
-              subgraph_distances[opp_turn];
+              subgraph_opp_distance_after_build - subgraph_distances[opp_turn];
           score += 10 * opp_dist_to_goal_increase;
         }
 
-        // Given a penalty if the walls block the player's paths. The penalty is
-        // most severe if it blocks both the main and alternative paths.
-        if ((MP_edges[turn][edge1] && AP_edges[turn][edge2]) ||
-            (MP_edges[turn][edge2] && AP_edges[turn][edge1])) {
-          score -= 9;
-        } else if (MP_edges[turn][edge1] || MP_edges[turn][edge2]) {
+        // Given a penalty if the walls block the player's paths.
+        if (MP_edges[turn][edge1] || MP_edges[turn][edge2]) {
           score -= 6;
         } else if (AP_edges[turn][edge1] || AP_edges[turn][edge2]) {
           score -= 3;
