@@ -564,7 +564,8 @@ nonstd::span<const ScoredMove> Negamaxer::OrderedMoves(int depth) {
   DBGS(for (auto scored_move
             : nonstd::span<ScoredMove>(moves.begin(),
                                        moves.begin() + move_index)) {
-    sit_.CrashIfMoveIsIllegal(scored_move.move);
+    if (scored_move.score != kPossiblyIllegalMoveScore)
+      sit_.CrashIfMoveIsIllegal(scored_move.move);
   });
   return nonstd::span<const ScoredMove>(moves.begin(),
                                         moves.begin() + move_index);
