@@ -94,7 +94,7 @@ inline std::ostream& operator<<(std::ostream& os, const Situation& sit) {
 // Todo: improve hash function.
 struct SituationHash {
   std::size_t operator()(const Situation& sit) const {
-    return (sit.tokens[0] || sit.tokens[1] << 16) ^
+    return (sit.tokens[0] | (sit.tokens[1] << 16)) ^
            std::hash<std::bitset<kNumRealAndFakeEdges>>{}(sit.G.edges);
   }
 };

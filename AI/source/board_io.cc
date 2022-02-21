@@ -58,7 +58,6 @@ void PrintBoardWithEdgeIndices(const Situation& sit) {
         continue;
       }
       // Find necessary padding for a width of 5.
-      left_padding = -1, right_padding = -1;
       if (edge < 10) {
         left_padding = 2;
         right_padding = 2;
@@ -90,7 +89,7 @@ void PrintBoardWithEdgeIndices(const Situation& sit) {
         std::cout << std::string(max_col_width, '-');
       } else {
         // Find necessary padding for a width of `max_col_width`.
-        int left_padding = -1, right_padding = -1;
+        int left_padding, right_padding;
         if (max_col_width % 2 == 0) {
           if (edge < 10) {
             left_padding = max_col_width / 2 - 1;

@@ -1,6 +1,8 @@
 #ifndef CONSTANTS_H_
 #define CONSTANTS_H_
 
+#include <array>
+
 // The dimensions are compile time constants to optimize the space used to
 // represent the graph (since we might want an AI to memorize millions of
 // positions).

@@ -516,7 +516,7 @@ nonstd::span<const ScoredMove> Negamaxer::OrderedMoves(int depth) {
                                      subgraph_starts_and_ends[opp_turn][1]);
           // The move is illegal because it disconnects the opponent from its
           // goal.
-          continue;
+          if (subgraph_opp_distance_after_build == -1) continue;
         }
 
         // The move is legal. We score it as follows:
