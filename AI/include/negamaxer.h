@@ -48,9 +48,6 @@ class Negamaxer : public Mover {
   };
   std::unordered_map<Situation, MemoizedEval, SituationHash> memoized_evals_;
 
-  // Gets reset when calling GetMove.
-  int num_evals_ = 0;
-
   friend void RunBenchmark();
   friend bool NegamaxerOrderedMovesTest();
 };

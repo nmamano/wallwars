@@ -8,6 +8,7 @@
 
 #include "assert.h"
 #include "benchmark.h"
+#include "benchmark_metrics.h"
 #include "board_io.h"
 #include "graph.h"
 #include "human.h"
@@ -18,6 +19,8 @@
 #include "walker.h"
 
 using namespace std::chrono;
+
+BenchmarkMetrics benchmark_metrics;
 
 std::vector<std::string> kMoverStrs = {"Human", "Walker", "Negamaxer"};
 
@@ -56,7 +59,6 @@ void PlayGame(std::array<std::string, 2> mover_strs) {
     std::cout << "Move " << ply << " by P" << static_cast<int>(sit.turn) << " ("
               << mover_strs[sit.turn] << ")." << std::endl;
 
-    Graph::graph_traversal_count = 0;
     auto start_time = high_resolution_clock::now();
     Move move = movers[sit.turn]->GetMove(sit);
     auto stop_time = high_resolution_clock::now();
@@ -67,8 +69,8 @@ void PlayGame(std::array<std::string, 2> mover_strs) {
     } else {
       std::cout << "Played move " << sit.MoveToString(move) << " in "
                 << duration_s.count() << "s." << std::endl;
-      std::cout << "Graph traversal count = " << Graph::graph_traversal_count
-                << std::endl;
+      std::cout << "Graph traversal count = "
+                << benchmark_metrics.num_graph_primitives << std::endl;
     }
 
     sit.ApplyMove(move);

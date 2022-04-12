@@ -5,11 +5,10 @@
 #include <cassert>
 #include <iostream>
 
+#include "benchmark_metrics.h"
 #include "constants.h"
 #include "macros.h"
 #include "template_utils.h"
-
-long long Graph::graph_traversal_count = 0;
 
 Graph::Graph() {
   edges.set();
@@ -38,7 +37,7 @@ int Graph::NeighborInDirection(int v, int dir) const {
 }
 
 std::array<bool, kNumNodes> Graph::ActiveNodes() const {
-  ++graph_traversal_count;
+  METRIC_INC(num_graph_primitives);
   std::array<bool, kNumNodes> active_nodes;
   active_nodes.fill(false);
   for (int edge = 0; edge < kNumRealAndFakeEdges; ++edge) {
@@ -51,7 +50,7 @@ std::array<bool, kNumNodes> Graph::ActiveNodes() const {
 }
 
 int Graph::Distance(int s, int t) const {
-  ++graph_traversal_count;
+  METRIC_INC(num_graph_primitives);
   thread_local std::array<int, kNumNodes> BFS_queue;
   thread_local std::array<int, kNumNodes> dist;
   if (s == t) return 0;
@@ -74,7 +73,7 @@ int Graph::Distance(int s, int t) const {
 }
 
 std::array<int, kNumNodes> Graph::Distances(int s) const {
-  ++graph_traversal_count;
+  METRIC_INC(num_graph_primitives);
   thread_local std::array<int, kNumNodes> BFS_queue;
   std::array<int, kNumNodes> dist;
   dist.fill(-1);
@@ -122,7 +121,7 @@ std::array<int, 8> Graph::NodesAtDistance2(int s) const {
 }
 
 std::array<int, kNumNodes> Graph::ShortestPath(int s, int t) const {
-  ++graph_traversal_count;
+  METRIC_INC(num_graph_primitives);
   thread_local std::array<int, kNumNodes> BFS_queue;
   thread_local std::array<int, kNumNodes> dist;
   thread_local std::array<int, kNumNodes> predecessor;
@@ -165,7 +164,7 @@ std::array<int, kNumNodes> Graph::ShortestPath(int s, int t) const {
 std::array<int, kNumNodes> Graph::ShortestPathWithOrientations(
     int s, int t,
     const std::array<int, kNumRealAndFakeEdges>& orientations) const {
-  ++graph_traversal_count;
+  METRIC_INC(num_graph_primitives);
   thread_local std::array<int, kNumNodes> BFS_queue;
   thread_local std::array<int, kNumNodes> dist;
   thread_local std::array<int, kNumNodes> predecessor;
@@ -208,7 +207,7 @@ std::array<int, kNumNodes> Graph::ShortestPathWithOrientations(
 }
 
 std::array<int, kNumNodes> Graph::ConnectedComponents() const {
-  ++graph_traversal_count;
+  METRIC_INC(num_graph_primitives);
   thread_local std::array<int, kNumNodes> BFS_queue;
   std::array<int, kNumNodes> connected_components;
   connected_components.fill(-1);
@@ -254,7 +253,7 @@ void Graph::BridgesDFS(int node, int parent, BridgesState& state) const {
 }
 
 std::bitset<kNumRealAndFakeEdges> Graph::Bridges() const {
-  ++graph_traversal_count;
+  METRIC_INC(num_graph_primitives);
   static BridgesState state;
   state.rank.fill(-1);
   state.next_rank = 0;

@@ -4,6 +4,7 @@
 #include <bitset>
 #include <iostream>
 
+#include "benchmark_metrics.h"
 #include "constants.h"
 #include "external/span.h"
 #include "graph.h"
@@ -29,8 +30,8 @@ int Negamaxer::DirectEval() const {
 }
 
 int Negamaxer::NegamaxEval(int depth, int alpha, int beta) {
-  ++num_evals_;
   if (sit_.IsGameOver()) {
+    METRIC_INC(num_exits[depth][GAME_OVER_EXIT]);
     // Adding `depth` to winning positions makes the AI choose moves that
     // win faster. Subtracting `depth` from losing positions makes the AI choose
     // moves that take the longest to lose.
@@ -39,8 +40,10 @@ int Negamaxer::NegamaxEval(int depth, int alpha, int beta) {
     return winner == sit_.turn ? kInfinity + depth : -kInfinity - depth;
   }
   if (depth == 0) {
+    METRIC_INC(num_exits[depth][LEAF_EVAL_EXIT]);
     return (sit_.turn == 0 ? 1 : -1) * DirectEval();
   }
+
   int starting_alpha = alpha;
   auto memo_entry = memoized_evals_.find(sit_);
   bool found_memo_entry = memo_entry != memoized_evals_.end();
@@ -49,19 +52,37 @@ int Negamaxer::NegamaxEval(int depth, int alpha, int beta) {
       int memo_alpha_beta_flag = memo_entry->second.alpha_beta_flag;
       int memo_eval = memo_entry->second.eval;
       if (memo_alpha_beta_flag == kExactFlag) {
+        METRIC_INC(num_exits[depth][TABLE_HIT_EXIT]);
         return memo_eval;
       } else if (memo_alpha_beta_flag == kLowerboundFlag) {
-        alpha = std::max(alpha, memo_eval);
+        if (memo_eval > alpha) {
+          METRIC_INC(table_bound_improvement[depth]);
+          alpha = memo_eval;
+        } else {
+          METRIC_INC(table_useless_hit[depth]);
+        }
       } else /*(memo_alpha_beta_flag == kUpperboundFlag)*/ {
-        beta = std::min(beta, memo_eval);
+        if (memo_eval < beta) {
+          METRIC_INC(table_bound_improvement[depth]);
+          beta = memo_eval;
+        } else {
+          METRIC_INC(table_useless_hit[depth]);
+        }
       }
       if (alpha >= beta) {
+        METRIC_INC(num_exits[depth][TABLE_CUTOFF_EXIT]);
         return memo_eval;
       }
     }
   }
+
   int eval = -2 * kInfinity;
-  for (const ScoredMove& scored_move : OrderedMoves(depth - 1)) {
+
+  const auto& ordered_moves = OrderedMoves(depth - 1);
+  if (kBenchmark) {
+    benchmark_metrics.num_generated_children[depth] += ordered_moves.size();
+  }
+  for (const ScoredMove& scored_move : ordered_moves) {
     const Move& move = scored_move.move;
 
     // If it's a move that we haven't validated yet, we need to check if it is
@@ -77,6 +98,7 @@ int Negamaxer::NegamaxEval(int depth, int alpha, int beta) {
     alpha = std::max(alpha, eval);
     if (alpha >= beta) break;
   }
+
   int8_t alpha_beta_flag = kExactFlag;
   if (eval <= starting_alpha)
     alpha_beta_flag = kUpperboundFlag;
@@ -87,10 +109,12 @@ int Negamaxer::NegamaxEval(int depth, int alpha, int beta) {
     memo_entry->second.depth = static_cast<int8_t>(depth);
     memo_entry->second.eval = static_cast<int16_t>(eval);
   } else {
+    METRIC_INC(transposition_table_insertions[depth]);
     memoized_evals_.insert({sit_,
                             {alpha_beta_flag, static_cast<int8_t>(depth),
                              static_cast<int16_t>(eval)}});
   }
+  METRIC_INC(num_exits[depth][NORMAL_EXIT]);
   return eval;
 }
 
@@ -101,8 +125,6 @@ int Negamaxer::NegamaxEval(int depth, int alpha, int beta) {
 // - Assumes it is not game over.
 // - Assumes depth > 0.
 Move Negamaxer::NegamaxEvalReturnMove(int depth, int alpha, int beta) {
-  ++num_evals_;
-
   Move best_move;
   // `best_move_eval` is initialized to -2*kInfinity so that *some* move is
   // still chosen in the event that every move is losing, which are evaluated to
@@ -110,7 +132,11 @@ Move Negamaxer::NegamaxEvalReturnMove(int depth, int alpha, int beta) {
   int best_move_eval = -2 * kInfinity;
 
   int eval = best_move_eval;
-  for (const ScoredMove& scored_move : OrderedMoves(depth - 1)) {
+  const auto& ordered_moves = OrderedMoves(depth - 1);
+  if (kBenchmark) {
+    benchmark_metrics.num_generated_children[depth] += ordered_moves.size();
+  }
+  for (const ScoredMove& scored_move : ordered_moves) {
     const Move& move = scored_move.move;
 
     // If it's a move that we haven't validated yet, we need to check if it is
@@ -140,12 +166,12 @@ Move Negamaxer::NegamaxEvalReturnMove(int depth, int alpha, int beta) {
     // e.g., to find all the optimal moves.
     if (alpha >= beta) break;
   }
+  METRIC_INC(num_exits[depth][NORMAL_EXIT]);
   return best_move;
 }
 
 Move Negamaxer::GetMove(Situation sit) {
-  // Reset data structures and metrics.
-  num_evals_ = 0;
+  // Reset data structures.
   sit_ = sit;
   int alpha = -2 * kInfinity;
   int beta = 2 * kInfinity;

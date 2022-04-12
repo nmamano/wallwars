@@ -140,11 +140,6 @@ struct Graph {
   // deactivated).
   Graph();
 
-  // A metric to measure the efficiency of the AI in terms of graph traversals.
-  // By graph traversal, we mean an operation that takes linear time on the size
-  // of the graph, such as computing the distance between two nodes.
-  static long long graph_traversal_count;
-
   // We need one bit per edge to keep track of active edges, so a `Graph` object
   // uses 2 * kNumRows * kNumCols bits (plus padding).
   std::bitset<kNumRealAndFakeEdges> edges;
