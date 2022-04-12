@@ -20,6 +20,13 @@ struct Situation {
   // are active, and it is P0's turn.
   Situation();
 
+  // Creates a Situation by applying a string representing a valid sequence of
+  // moves in standard notation. For example: "1. b2 2. b3v c2>". Returns
+  // whether `moves` is parsed correctly, in which case `output` is set to the
+  // resulting situation.
+  static bool BuildFromStandardNotationMoves(const std::string& moves,
+                                         Situation& output);
+
   // Since situations are used as keys in the memoization map, we use a compact
   // representation.
 
