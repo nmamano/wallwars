@@ -5,8 +5,8 @@
 
 #include <array>
 #include <ostream>
-// #include <string>
 
+namespace wallwars {
 struct Move {
   // The difference {position after move} - {position before move}. For
   // instance, `token_change` is 0 if the move consists of deactivating two
@@ -55,5 +55,7 @@ struct ScoredMove {
 inline std::ostream& operator<<(std::ostream& os, const ScoredMove& m) {
   return os << m.move << ": " << m.score;
 }
+
+}  // namespace wallwars
 
 #endif  // MOVE_H_

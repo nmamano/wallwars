@@ -14,6 +14,8 @@
 #include "macro_utils.h"
 #include "move.h"
 
+namespace wallwars {
+
 // An upper bound on the number of legal moves.
 constexpr int MaxNumLegalMoves(int R, int C) {
   return 8 + 4 * NumRealEdges(R, C) + NumRealEdges(R, C) * NumRealEdges(R, C);
@@ -631,5 +633,7 @@ struct SituationHash {
            std::hash<std::bitset<NumRealAndFakeEdges(R, C)>>{}(sit.G.edges);
   }
 };
+
+}  // namespace wallwars
 
 #endif  // SITUATION_H_

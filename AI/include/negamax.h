@@ -14,6 +14,7 @@
 #include "move.h"
 #include "situation.h"
 
+namespace wallwars {
 template <int R, int C>
 class Negamax {
  public:
@@ -638,5 +639,7 @@ class Negamax {
   friend class Benchmark;
   friend class Tests;
 };
+
+}  // namespace wallwars
 
 #endif  // NEGAMAX_H_

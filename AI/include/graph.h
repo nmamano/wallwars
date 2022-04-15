@@ -10,7 +10,9 @@
 
 #include "benchmark_metrics.h"
 #include "macro_utils.h"
-#include "template_utils.h"
+#include "utils.h"
+
+namespace wallwars {
 
 // R (rows) and C (columns) represent the board dimensions.
 constexpr int NumNodes(int R, int C) { return R * C; }
@@ -686,5 +688,7 @@ template <int R, int C>
 inline std::ostream& operator<<(std::ostream& os, const Graph<R, C>& G) {
   return os << G.AsPrettyString(-1, -1, '-', '-');
 }
+
+}  // namespace wallwars
 
 #endif  // GRAPH_H_

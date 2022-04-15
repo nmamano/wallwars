@@ -1,6 +1,8 @@
 #ifndef CONSTANTS_H_
 #define CONSTANTS_H_
 
+namespace wallwars {
+
 // Search depth of the Negamax AI.
 constexpr int kMaxDepth = 2;
 
@@ -16,5 +18,7 @@ constexpr int kInteractiveGameC = 4;
 
 // Uncomment to avoid compiling the tests. This can speed up compilation.
 // #define NTEST
+
+}  // namespace wallwars
 
 #endif  // CONSTANTS_H_

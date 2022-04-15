@@ -16,15 +16,19 @@ int main() {
     std::cin >> menu_option;
     switch (menu_option) {
       case '1':
-        InteractiveGame::PlayGame();
+        wallwars::InteractiveGame::PlayGame();
         break;
       case '2':
-        Tests::RunTests();
+        wallwars::Tests::RunTests();
         break;
-      case '3':
-        Tests::RunTests();
-        Benchmark::RunBenchmark();
+      case '3': {
+        if (!wallwars::Tests::RunTests()) {
+          std::cout << "Benchmark did not start due to failing tests."
+                    << std::endl;
+        }
+        wallwars::RunBenchmark();
         return 0;
+      }
       default:
         return 0;
     }

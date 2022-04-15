@@ -15,7 +15,9 @@
 #include "macro_utils.h"
 #include "negamax.h"
 #include "situation.h"
-#include "template_utils.h"
+#include "utils.h"
+
+namespace wallwars {
 
 // Compares an `actual` and an `expected` value. Does nothing if they match.
 // Otherwise, returns false (from the function using the macro) and prints a
@@ -49,20 +51,25 @@
 
 class Tests {
  public:
-  static void RunTests() { std::cout << "Tests disabled." << std::endl; }
+  static bool RunTests() {
+    std::cout << "Tests disabled." << std::endl;
+    return false;
+  }
 };
 
 #else
 
 class Tests {
  public:
-  static void RunTests() {
+  // Returns whether all tests passed.
+  static bool RunTests() {
     Tests tests;
-    tests.Run();
+    return tests.Run();
   }
 
  private:
-  void Run() {
+  // Returns whether all tests passed.
+  bool Run() {
     int num_failed_tests = 0;
     int num_executed_tests = 0;
 
@@ -90,6 +97,7 @@ class Tests {
               << "/" << num_executed_tests << std::endl
               << "===============================================" << std::endl
               << std::endl;
+    return num_failed_tests == 0;
   }
 
   // Helper functions to make tests more succinct.
@@ -1143,5 +1151,7 @@ class Tests {
 };
 
 #endif
+
+}  // namespace wallwars
 
 #endif  // TESTS_H_

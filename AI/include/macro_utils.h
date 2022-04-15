@@ -3,6 +3,8 @@
 
 #include <iostream>
 
+namespace wallwars {
+
 // Each macro has two versions LOGx and DBGx. They do the same thing, except
 // that DBGx macros do nothing when the program is compiled with the -NDEBUG
 // flag.
@@ -140,5 +142,7 @@
     { x; }      \
   } while (0)
 #endif
+
+}  // namespace wallwars
 
 #endif  // MACRO_UTILS_H_

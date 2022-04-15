@@ -20,7 +20,7 @@ add_executable(wallwars_ai
     "include/move.h"
     "include/negamax.h"
     "include/situation.h"
-    "include/template_utils.h"
+    "include/utils.h"
     "include/interactive_game.h"
     "include/tests.h"
 

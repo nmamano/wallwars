@@ -16,6 +16,8 @@
 #include "negamax.h"
 #include "situation.h"
 
+namespace wallwars {
+
 class InteractiveGame {
  public:
   static constexpr int R = kInteractiveGameR;
@@ -169,5 +171,7 @@ class InteractiveGame {
     PrintWinner(sit);
   }
 };
+
+}  // namespace wallwars
 
 #endif  // INTERACTIVE_GAME_H_

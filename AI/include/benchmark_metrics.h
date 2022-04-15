@@ -5,6 +5,8 @@
 
 #include "constants.h"
 
+namespace wallwars {
+
 constexpr int kNumExitTypes = 5;
 constexpr int NORMAL_EXIT = 0;
 constexpr int LEAF_EVAL_EXIT = 1;
@@ -52,5 +54,7 @@ BenchmarkMetrics benchmark_metrics;
   if (kBenchmark) {             \
     ++benchmark_metrics.metric; \
   }
+
+}  // namespace wallwars
 
 #endif  // BENCHMARK_METRICS_H_
