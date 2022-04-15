@@ -9,30 +9,20 @@ include_directories(SYSTEM "external")
 
 add_executable(wallwars_ai
     # Sources (yes you can detect these automatically but you're supposed not to for reasons...)
-    "source/benchmark.cc"
-    "source/board_io.cc"
-    "source/graph.cc"
-    "source/human.cc"
     "source/main.cc"
-    "source/negamaxer.cc"
-    "source/situation.cc"
-    "source/tests.cc"
-    "source/walker.cc"
 
     # Headers (not necessary, but helpful for IDEs like VS)
+    "include/benchmark_metrics.h"
     "include/benchmark.h"
-    "include/board_io.h"
     "include/constants.h"
     "include/graph.h"
-    "include/human.h"
-    "include/macros.h"
+    "include/macro_utils.h"
     "include/move.h"
-    "include/mover.h"
-    "include/negamaxer.h"
+    "include/negamax.h"
     "include/situation.h"
     "include/template_utils.h"
+    "include/interactive_game.h"
     "include/tests.h"
-    "include/walker.h"
 
     # External headers (see above)
     "include/external/span.h"

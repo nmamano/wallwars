@@ -5,7 +5,7 @@
 
 #include <array>
 #include <ostream>
-#include <string>
+// #include <string>
 
 struct Move {
   // The difference {position after move} - {position before move}. For

@@ -5,11 +5,6 @@
 
 #include "constants.h"
 
-/* Terminology:
- "Explored" means that there was some recursive call to at least one
-child. "Evaluated" means that we calculated the value of the situation directly,
-without recursion. It applies to leaves.
-*/
 constexpr int kNumExitTypes = 5;
 constexpr int NORMAL_EXIT = 0;
 constexpr int LEAF_EVAL_EXIT = 1;
@@ -18,12 +13,12 @@ constexpr int TABLE_CUTOFF_EXIT = 3;
 constexpr int GAME_OVER_EXIT = 4;
 
 struct BenchmarkMetrics {
-  long long wall_clock_time_ms;
+  long long wall_clock_time_ms = 0;
 
   // A metric to measure the efficiency of the AI in terms of graph traversals.
   // By graph traversal, we mean an operation that takes linear time on the size
   // of the graph, such as computing the distance between two nodes.
-  long long num_graph_primitives;
+  long long num_graph_primitives = 0;
 
   // Keep a counter for each possible exit out of the searsch function.
   // The first dimension is the depth. The second dimension is the type of exit.
@@ -50,7 +45,8 @@ struct BenchmarkMetrics {
   // std::array<double, kMaxDepth + 1> wall_clock_time_by_ID_iteration;
 };
 
-extern BenchmarkMetrics benchmark_metrics;
+// Global object.
+BenchmarkMetrics benchmark_metrics;
 
 #define METRIC_INC(metric)      \
   if (kBenchmark) {             \

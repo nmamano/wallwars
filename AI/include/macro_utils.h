@@ -1,5 +1,5 @@
-#ifndef MACROS_H_
-#define MACROS_H_
+#ifndef MACRO_UTILS_H_
+#define MACRO_UTILS_H_
 
 #include <iostream>
 
@@ -141,4 +141,4 @@
   } while (0)
 #endif
 
-#endif  // MACROS_H_
+#endif  // MACRO_UTILS_H_

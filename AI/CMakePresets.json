@@ -19,7 +19,7 @@
         "generator": "Unix Makefiles",
         "cacheVariables": {
             "CMAKE_BUILD_TYPE": "Release",
-            "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic -Ofast -march=haswell -flto=full"
+            "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic -Ofast -march=haswell"
         }
     },
     {
@@ -44,7 +44,7 @@
           "generator": "Unix Makefiles",
           "cacheVariables": {
               "CMAKE_BUILD_TYPE": "Release",
-              "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic -Ofast -march=haswell -flto=full"
+              "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic -Ofast -march=haswell"
           },
           "environment": {
               "CC": "clang",

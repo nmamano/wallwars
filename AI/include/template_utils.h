@@ -3,7 +3,7 @@
 
 #include <array>
 #include <iostream>
-#include <iterator>
+// #include <iterator>
 #include <map>
 #include <ostream>
 #include <vector>
@@ -78,13 +78,11 @@ bool span_vec_eq(const nonstd::span<const T>& span, const std::vector<T>& vec) {
 // Overload with swapped argument order.
 template <class T>
 bool span_vec_eq(const std::vector<T>& vec, const nonstd::span<const T>& span) {
-  return span_vec_eq(span, vec);
-}
-
-// Printer helper for failed tests.
-template <class T>
-void PrintDiscrepancy(const T& actual, const T& expected) {
-  std::cerr << "Actual:   " << actual << "\nExpected: " << expected << '\n';
+  if (span.size() != vec.size()) return false;
+  for (size_t i = 0; i < span.size(); ++i) {
+    if (span[i] != vec[i]) return false;
+  }
+  return true;
 }
 
 #endif  // TEMPLATE_UTILS_H_
