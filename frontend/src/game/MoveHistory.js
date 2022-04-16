@@ -1,6 +1,8 @@
 import React from "react";
 import { Table } from "react-materialize";
 import { useMediaQuery } from "react-responsive";
+import { CopyToClipboard } from "react-copy-to-clipboard";
+import showToastNotification from "../shared/showToastNotification";
 
 import { moveNotation } from "../shared/gameLogicUtils";
 import { getColor } from "../shared/colorThemes";
@@ -50,6 +52,16 @@ const MoveHistory = ({
     backgroundColor: colBg,
   };
 
+  const getStandardNotation = () => {
+    let res = "";
+    for (let i = 1; i < moveHistory.length; ++i) {
+      if (i > 1) res += " ";
+      res += i;
+      res += ". " + moveNotation(moveHistory[i].actions);
+    }
+    return res;
+  };
+
   return (
     <div
       id={"movehistory"}
@@ -68,7 +80,17 @@ const MoveHistory = ({
         <thead>
           <tr>
             <th style={headEntryStyle}>#</th>
-            <th style={headEntryStyle}>Move</th>
+            <th style={headEntryStyle}>
+              <CopyToClipboard
+                style={{ cursor: "pointer" }}
+                text={getStandardNotation()}
+                onCopy={() =>
+                  showToastNotification("Game copied to clipboard!")
+                }
+              >
+                <span>Moves</span>
+              </CopyToClipboard>
+            </th>
             <th style={headEntryStyle}>Distance</th>
             <th style={headEntryStyle}># Walls</th>
           </tr>
