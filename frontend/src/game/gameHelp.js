@@ -16,7 +16,7 @@ const gameHelp = (
     </h6>
     <h6>
       Players move by clicking cells on the board. There are two types of cells:
-      ground cells (the big squares) and walls (the thin rectangles in between
+      ground cells (the big squares) and walls (the thin rectangles between
       ground cells). Each move consists of a total of two actions. One action
       can be building one wall or moving to an adjacent cell. A diagonal move
       counts as two actions.
@@ -43,8 +43,9 @@ const gameHelp = (
       move that will be applied instantaneously when it is your turn.
     </h6>
     <h6>
-      Starter handicap rule: If the player who moved first reaches the goal first but the other
-      player is at distance 1 or 2 from their goal, the game ends in a draw.
+      Starter handicap rule: If the player who moved first reaches the goal
+      first but the other player is at distance 1 or 2 from their goal, the game
+      ends in a draw.
     </h6>
     <h6>
       If you leave the game, you will be able to reenter this game as long as
