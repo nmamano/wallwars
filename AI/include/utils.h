@@ -1,7 +1,9 @@
-#ifndef TEMPLATE_UTILS_H_
-#define TEMPLATE_UTILS_H_
+#ifndef UTILS_H_
+#define UTILS_H_
 
 #include <array>
+#include <chrono>
+#include <ctime>
 #include <iostream>
 #include <map>
 #include <ostream>
@@ -134,6 +136,28 @@ struct StrTable {
   }
 };
 
+// Returns the current time in format "2022-04-17_01h17m38s".
+std::string CurrentTimestamp() {
+  std::map<std::string, std::string> month_to_num = {
+      {"Jan", "01"}, {"Feb", "02"}, {"Mar", "03"}, {"Apr", "04"},
+      {"May", "05"}, {"Jun", "06"}, {"Jul", "07"}, {"Aug", "08"},
+      {"Sep", "09"}, {"Oct", "10"}, {"Nov", "11"}, {"Dec", "12"},
+  };
+  const auto now = std::chrono::system_clock::now();
+  const std::time_t t_c = std::chrono::system_clock::to_time_t(now);
+
+  // Format: "Mon Apr 16 11:07:28 2022\n"
+  std::string t = std::ctime(&t_c);
+
+  std::string YYYY = t.substr(t.size() - 5, 4);
+  std::string MM = month_to_num[t.substr(4, 3)];
+  std::string DD = t.substr(8, 2);
+  std::string hh = t.substr(11, 2);
+  std::string mm = t.substr(14, 2);
+  std::string ss = t.substr(17, 2);
+  return YYYY + "-" + MM + "-" + DD + "_" + hh + "h" + mm + "m" + ss + "s";
+}
+
 }  // namespace wallwars
 
-#endif  // TEMPLATE_UTILS_H_
+#endif  // UTILS_H_

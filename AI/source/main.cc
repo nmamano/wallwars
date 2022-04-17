@@ -4,7 +4,20 @@
 #include "interactive_game.h"
 #include "tests.h"
 
-int main() {
+int main(int argc, char* argv[]) {
+  if (argc > 1) {
+    std::string menu_option = argv[1];
+    if (menu_option == "play") {
+      wallwars::InteractiveGame::PlayGame();
+    } else if (menu_option == "test") {
+      wallwars::Tests::RunTests();
+    } else if (menu_option == "benchmark") {
+      wallwars::RunBenchmark("placeholder-for-description");
+    } else {
+      std::cout << "Unknown option: " << menu_option << std::endl;
+    }
+    return 0;
+  }
   while (true) {
     std::cout << "Enter a number to choose:" << std::endl
               << "(1) Play." << std::endl
@@ -22,11 +35,7 @@ int main() {
         wallwars::Tests::RunTests();
         break;
       case '3': {
-        if (!wallwars::Tests::RunTests()) {
-          std::cout << "Benchmark did not start due to failing tests."
-                    << std::endl;
-        }
-        wallwars::RunBenchmark();
+        wallwars::RunBenchmark("placeholder-for-description");
         return 0;
       }
       default:
