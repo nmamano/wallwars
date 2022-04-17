@@ -150,7 +150,7 @@ class InteractiveGame {
       sit.PrintBoardWithEdgeIndices();
       std::cout << "Move " << ply << " by " << player_str
                 << (auto_moves[sit.turn] ? " (auto)" : "") << std::endl;
-
+      global_metrics = {};
       auto start_time = high_resolution_clock::now();
       Move move = auto_moves[sit.turn]
                       ? negamaxers[sit.turn].GetMove(sit)
@@ -163,8 +163,10 @@ class InteractiveGame {
       } else {
         std::cout << player_str << " played " << sit.MoveToString(move)
                   << " in " << duration_s.count() << "s." << std::endl;
-        std::cout << "Graph traversal count = "
-                  << benchmark_metrics.num_graph_primitives << std::endl;
+        if (kBenchmark) {
+          std::cout << "Graph traversal count = "
+                    << global_metrics.num_graph_primitives << std::endl;
+        }
       }
       sit.ApplyMove(move);
     }

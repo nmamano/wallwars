@@ -47,12 +47,17 @@ struct BenchmarkMetrics {
   // std::array<double, kMaxDepth + 1> wall_clock_time_by_ID_iteration;
 };
 
-// Global object.
-BenchmarkMetrics benchmark_metrics;
+// Global object updated during the Negamax search.
+BenchmarkMetrics global_metrics;
 
-#define METRIC_INC(metric)      \
-  if (kBenchmark) {             \
-    ++benchmark_metrics.metric; \
+#define METRIC_INC(metric)   \
+  if (kBenchmark) {          \
+    ++global_metrics.metric; \
+  }
+
+#define METRIC_ADD(metric, val)   \
+  if (kBenchmark) {               \
+    global_metrics.metric += val; \
   }
 
 }  // namespace wallwars

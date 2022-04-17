@@ -2,6 +2,7 @@
 #define BENCHMARK_H_
 
 #include <array>
+#include <chrono>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -22,6 +23,110 @@ namespace wallwars {
 
 namespace benchmark_internal {
 
+long long TotalExitsAtDepth(const BenchmarkMetrics& metrics, int depth) {
+  long long res = 0;
+  for (int exit_type = 0; exit_type < kNumExitTypes; ++exit_type) {
+    res += metrics.num_exits[depth][exit_type];
+  }
+  return res;
+}
+
+long long TotalExitsOfType(const BenchmarkMetrics& metrics, int type) {
+  long long res = 0;
+  for (int depth = 0; depth <= kMaxDepth; ++depth) {
+    res += metrics.num_exits[depth][type];
+  }
+  return res;
+}
+
+long long TotalExits(const BenchmarkMetrics& metrics) {
+  long long res = 0;
+  for (int depth = kMaxDepth; depth >= 0; --depth) {
+    res += TotalExitsAtDepth(metrics, depth);
+  }
+  return res;
+}
+
+long long TotalTableBoundImprovements(const BenchmarkMetrics& metrics) {
+  long long res = 0;
+  for (int depth = 0; depth <= kMaxDepth; ++depth) {
+    res += metrics.table_bound_improvement[depth];
+  }
+  return res;
+}
+
+long long TotalTableUselessHits(const BenchmarkMetrics& metrics) {
+  long long res = 0;
+  for (int depth = 0; depth <= kMaxDepth; ++depth) {
+    res += metrics.table_useless_hit[depth];
+  }
+  return res;
+}
+
+long long TotalTableInsertions(const BenchmarkMetrics& metrics) {
+  long long res = 0;
+  for (int depth = 0; depth <= kMaxDepth; ++depth) {
+    res += metrics.transposition_table_insertions[depth];
+  }
+  return res;
+}
+
+long long TotalTableDisplacements(const BenchmarkMetrics& metrics) {
+  long long res = 0;
+  for (int depth = 0; depth <= kMaxDepth; ++depth) {
+    res += metrics.transposition_table_displacements[depth];
+  }
+  return res;
+}
+
+long long NumChildrenVisitsAsDepth(const BenchmarkMetrics& metrics, int depth) {
+  if (depth == 0) return 0;
+  return TotalExitsAtDepth(metrics, depth - 1);
+}
+
+long long TotalNumChildrenGenerated(const BenchmarkMetrics& metrics) {
+  long long res = 0;
+  for (int depth = 0; depth <= kMaxDepth; ++depth) {
+    res += metrics.num_generated_children[depth];
+  }
+  return res;
+}
+
+BenchmarkMetrics AverageMetrics(const std::vector<BenchmarkMetrics>& samples) {
+  BenchmarkMetrics avg = {};
+  for (const auto& sample : samples) {
+    avg.wall_clock_time_ms += sample.wall_clock_time_ms;
+    avg.num_graph_primitives += sample.num_graph_primitives;
+    for (int depth = 0; depth <= kMaxDepth; ++depth) {
+      for (int exit_type = 0; exit_type < kNumExitTypes; ++exit_type) {
+        avg.num_exits[depth][exit_type] += sample.num_exits[depth][exit_type];
+      }
+      avg.table_bound_improvement[depth] +=
+          sample.table_bound_improvement[depth];
+      avg.table_useless_hit[depth] += sample.table_useless_hit[depth];
+      avg.transposition_table_insertions[depth] +=
+          sample.transposition_table_insertions[depth];
+      avg.transposition_table_displacements[depth] +=
+          sample.transposition_table_displacements[depth];
+      avg.num_generated_children[depth] += sample.num_generated_children[depth];
+    }
+  }
+  int n = samples.size();
+  avg.wall_clock_time_ms /= n;
+  avg.num_graph_primitives /= n;
+  for (int depth = 0; depth <= kMaxDepth; ++depth) {
+    for (int exit_type = 0; exit_type < kNumExitTypes; ++exit_type) {
+      avg.num_exits[depth][exit_type] /= n;
+    }
+    avg.table_bound_improvement[depth] /= n;
+    avg.table_useless_hit[depth] /= n;
+    avg.transposition_table_insertions[depth] /= n;
+    avg.transposition_table_displacements[depth] /= n;
+    avg.num_generated_children[depth] /= n;
+  }
+  return avg;
+}
+
 // Prints relevant settings about the environment (program constants, program
 // flags, compiler, OS, hardware, etc.) that provide context about the
 // benchmark results.
@@ -29,6 +134,7 @@ std::string BenchmarkSettings(std::string description, std::string timestamp) {
   std::ostringstream sout;
   sout << "Description: " << description << "\n"
        << "Time: " << timestamp << "\n\n"
+       << "Num benchmark samples: " << kNumBenchmarkSamples << "\n"
        << "Negamax depth: " << kMaxDepth << '\n'
        << "Sizes (bytes): int: " << sizeof(int) << " Move: " << sizeof(Move)
        << '\n';
@@ -47,33 +153,9 @@ std::string DimensionsSettings() {
   return sout.str();
 }
 
-long long TotalExitsAtDepth(int depth) {
-  long long res = 0;
-  for (int exit_type = 0; exit_type < kNumExitTypes; ++exit_type) {
-    res += benchmark_metrics.num_exits[depth][exit_type];
-  }
-  return res;
-}
-
-long long TotalExitsOfType(int type) {
-  long long res = 0;
-  for (int depth = 0; depth <= kMaxDepth; ++depth) {
-    res += benchmark_metrics.num_exits[depth][type];
-  }
-  return res;
-}
-
-long long TotalExits() {
-  long long res = 0;
-  for (int depth = kMaxDepth; depth >= 0; --depth) {
-    res += TotalExitsAtDepth(depth);
-  }
-  return res;
-}
-
 /* We are interested in both the break down by depth and by "exit type". Exit
  * type refers on how we exit the search function when we visit a node. */
-std::string ExitTypeTable() {
+std::string ExitTypeTable(const BenchmarkMetrics& metrics) {
   std::vector<std::string> kExitTypes{"normal", "leaf-eval", "table-hit",
                                       "table-cutoff", "game-over"};
   StrTable table;
@@ -83,65 +165,33 @@ std::string ExitTypeTable() {
   }
   for (int depth = kMaxDepth; depth >= 0; --depth) {
     table.AddToNewRow(depth);
-    long long total_row = TotalExitsAtDepth(depth);
+    long long total_row = TotalExitsAtDepth(metrics, depth);
     table.AddToLastRow(total_row);
-    table.AddToLastRow((100.0 * total_row) / TotalExits(), 1);
+    table.AddToLastRow((100.0 * total_row) / TotalExits(metrics), 1);
     table.AddToLastRow("|");
     for (int exit_type = 0; exit_type < kNumExitTypes; ++exit_type) {
-      table.AddToLastRow(benchmark_metrics.num_exits[depth][exit_type]);
+      table.AddToLastRow(metrics.num_exits[depth][exit_type]);
       table.AddToLastRow(
-          (100.0 * benchmark_metrics.num_exits[depth][exit_type]) / total_row,
-          1);
+          (100.0 * metrics.num_exits[depth][exit_type]) / total_row, 1);
     }
   }
   {
     table.AddToNewRow("Sum");
-    long long total = TotalExits();
+    long long total = TotalExits(metrics);
     table.AddToLastRow(total);
     table.AddToLastRow(100.0, 1);
     table.AddToLastRow("|");
     for (int exit_type = 0; exit_type < kNumExitTypes; ++exit_type) {
-      table.AddToLastRow(TotalExitsOfType(exit_type));
-      table.AddToLastRow((100.0 * TotalExitsOfType(exit_type)) / TotalExits(),
-                         1);
+      table.AddToLastRow(TotalExitsOfType(metrics, exit_type));
+      table.AddToLastRow(
+          (100.0 * TotalExitsOfType(metrics, exit_type)) / TotalExits(metrics),
+          1);
     }
   }
   std::ostringstream sout;
   sout << "Visit distribution by depth:\n";
   table.Print(sout);
   return sout.str();
-}
-
-long long TotalTableBoundImprovements() {
-  long long res = 0;
-  for (int depth = 0; depth <= kMaxDepth; ++depth) {
-    res += benchmark_metrics.table_bound_improvement[depth];
-  }
-  return res;
-}
-
-long long TotalTableUselessHits() {
-  long long res = 0;
-  for (int depth = 0; depth <= kMaxDepth; ++depth) {
-    res += benchmark_metrics.table_useless_hit[depth];
-  }
-  return res;
-}
-
-long long TotalTableInsertions() {
-  long long res = 0;
-  for (int depth = 0; depth <= kMaxDepth; ++depth) {
-    res += benchmark_metrics.transposition_table_insertions[depth];
-  }
-  return res;
-}
-
-long long TotalTableDisplacements() {
-  long long res = 0;
-  for (int depth = 0; depth <= kMaxDepth; ++depth) {
-    res += benchmark_metrics.transposition_table_displacements[depth];
-  }
-  return res;
 }
 
 /* The transposition table is read at the beginning of a visit and written at
@@ -156,7 +206,7 @@ long long TotalTableDisplacements() {
  * evaluation. This can be an exact evaluation, an upper bound, or a lower
  * bound. If the situation was not in the table, we add it. The two subcases
  * are whether we kick out a pre-existing entry or not.  */
-std::string TranspositionTableTable() {
+std::string TranspositionTableTable(const BenchmarkMetrics& metrics) {
   StrTable table1, table2;
   std::vector<std::string> header_row = {
       "Depth",    "Visits", "|",      "Exact", "Improv",  "Useless", "Miss",
@@ -166,19 +216,18 @@ std::string TranspositionTableTable() {
   for (int depth = kMaxDepth; depth >= 0; --depth) {
     table1.AddToNewRow(depth);
     table2.AddToNewRow(depth);
-    long long total_visits = TotalExitsAtDepth(depth);
+    long long total_visits = TotalExitsAtDepth(metrics, depth);
     table1.AddToLastRow(total_visits);
     table2.AddToLastRow(100.0, 1);
     table1.AddToLastRow("|");
     table2.AddToLastRow("|");
     {
-      long long exact_hits = benchmark_metrics.num_exits[depth][TABLE_HIT_EXIT];
-      long long bound_improvement_hits =
-          benchmark_metrics.table_bound_improvement[depth];
-      long long useless_hits = benchmark_metrics.table_useless_hit[depth];
+      long long exact_hits = metrics.num_exits[depth][TABLE_HIT_EXIT];
+      long long bound_improvement_hits = metrics.table_bound_improvement[depth];
+      long long useless_hits = metrics.table_useless_hit[depth];
       long long total_hits = exact_hits + bound_improvement_hits + useless_hits;
-      long long no_checks = benchmark_metrics.num_exits[depth][GAME_OVER_EXIT] +
-                            benchmark_metrics.num_exits[depth][LEAF_EVAL_EXIT];
+      long long no_checks = metrics.num_exits[depth][GAME_OVER_EXIT] +
+                            metrics.num_exits[depth][LEAF_EVAL_EXIT];
       long long misses = total_visits - total_hits - no_checks;
       table1.AddToLastRow(exact_hits);
       table2.AddToLastRow((100.0 * exact_hits) / total_visits, 2);
@@ -194,12 +243,11 @@ std::string TranspositionTableTable() {
       table2.AddToLastRow("|");
     }
     {
-      long long insertions =
-          benchmark_metrics.transposition_table_insertions[depth];
+      long long insertions = metrics.transposition_table_insertions[depth];
       long long displacements =
-          benchmark_metrics.transposition_table_displacements[depth];
-      long long updates = benchmark_metrics.num_exits[depth][NORMAL_EXIT] -
-                          insertions - displacements;
+          metrics.transposition_table_displacements[depth];
+      long long updates =
+          metrics.num_exits[depth][NORMAL_EXIT] - insertions - displacements;
       long long no_writes = total_visits - insertions - displacements - updates;
       table1.AddToLastRow(updates);
       table2.AddToLastRow((100.0 * updates) / total_visits, 2);
@@ -214,18 +262,18 @@ std::string TranspositionTableTable() {
   {
     table1.AddToNewRow("Sum");
     table2.AddToNewRow("Sum");
-    long long total_visits = TotalExits();
+    long long total_visits = TotalExits(metrics);
     table1.AddToLastRow(total_visits);
     table2.AddToLastRow(100.0, 1);
     table1.AddToLastRow("|");
     table2.AddToLastRow("|");
     {
-      long long exact_hits = TotalExitsOfType(TABLE_HIT_EXIT);
-      long long bound_improvement_hits = TotalTableBoundImprovements();
-      long long useless_hits = TotalTableUselessHits();
+      long long exact_hits = TotalExitsOfType(metrics, TABLE_HIT_EXIT);
+      long long bound_improvement_hits = TotalTableBoundImprovements(metrics);
+      long long useless_hits = TotalTableUselessHits(metrics);
       long long total_hits = exact_hits + bound_improvement_hits + useless_hits;
-      long long no_checks =
-          TotalExitsOfType(GAME_OVER_EXIT) + TotalExitsOfType(LEAF_EVAL_EXIT);
+      long long no_checks = TotalExitsOfType(metrics, GAME_OVER_EXIT) +
+                            TotalExitsOfType(metrics, LEAF_EVAL_EXIT);
       long long misses = total_visits - total_hits - no_checks;
       table1.AddToLastRow(exact_hits);
       table2.AddToLastRow((100.0 * exact_hits) / total_visits, 2);
@@ -241,10 +289,10 @@ std::string TranspositionTableTable() {
       table2.AddToLastRow("|");
     }
     {
-      long long insertions = TotalTableInsertions();
-      long long displacements = TotalTableDisplacements();
+      long long insertions = TotalTableInsertions(metrics);
+      long long displacements = TotalTableDisplacements(metrics);
       long long updates =
-          TotalExitsOfType(NORMAL_EXIT) - insertions - displacements;
+          TotalExitsOfType(metrics, NORMAL_EXIT) - insertions - displacements;
       long long no_writes = total_visits - insertions - displacements - updates;
       table1.AddToLastRow(updates);
       table2.AddToLastRow((100.0 * updates) / total_visits, 2);
@@ -264,25 +312,12 @@ std::string TranspositionTableTable() {
   return sout.str();
 }
 
-long long NumChildrenVisitsAsDepth(int depth) {
-  if (depth == 0) return 0;
-  return TotalExitsAtDepth(depth - 1);
-}
-
-long long TotalNumChildrenGenerated() {
-  long long res = 0;
-  for (int depth = 0; depth <= kMaxDepth; ++depth) {
-    res += benchmark_metrics.num_generated_children[depth];
-  }
-  return res;
-}
-
-std::string ChildGenerationTable() {
+std::string ChildGenerationTable(const BenchmarkMetrics& metrics) {
   StrTable table;
   table.AddToNewRow({"Depth", "Generated", "Visited", "%", "Pruned", "%"});
   for (int depth = kMaxDepth; depth >= 0; --depth) {
-    long long generated = benchmark_metrics.num_generated_children[depth];
-    long long visited = NumChildrenVisitsAsDepth(depth);
+    long long generated = metrics.num_generated_children[depth];
+    long long visited = NumChildrenVisitsAsDepth(metrics, depth);
     long long pruned = generated - visited;
     table.AddToNewRow(depth);
     table.AddToLastRow(generated);
@@ -293,8 +328,8 @@ std::string ChildGenerationTable() {
   }
   {
     table.AddToNewRow("Sum");
-    long long generated = TotalNumChildrenGenerated();
-    long long visited = TotalExits();
+    long long generated = TotalNumChildrenGenerated(metrics);
+    long long visited = TotalExits(metrics);
     long long pruned = generated - visited;
     table.AddToLastRow(generated);
     table.AddToLastRow(visited);
@@ -310,16 +345,16 @@ std::string ChildGenerationTable() {
 
 // `benchmark_metrics` is a global variable. This function assumes that it has
 // been set as a result of the AI finding a move in a situation.
-std::string BenchmarkMetricsReport() {
+std::string BenchmarkMetricsReport(const BenchmarkMetrics& metrics) {
   std::ostringstream sout;
-  long long ms = benchmark_metrics.wall_clock_time_ms;
-  long long gp = benchmark_metrics.num_graph_primitives;
+  long long ms = metrics.wall_clock_time_ms;
+  long long gp = metrics.num_graph_primitives;
   sout << "Duration (ms): " << ms << '\n' << "Graph primitives: " << gp;
   if (ms > 0) sout << " (" << gp / ms << "/ms)";
   sout << "\n\n"
-       << ExitTypeTable() << '\n'
-       << TranspositionTableTable() << '\n'
-       << ChildGenerationTable();
+       << ExitTypeTable(metrics) << '\n'
+       << TranspositionTableTable(metrics) << '\n'
+       << ChildGenerationTable(metrics);
   return sout.str();
 }
 
@@ -354,17 +389,17 @@ void FileAndStdOutEmptyLine(std::ofstream& fout) {
 template <int R, int C>
 void BenchmarkSituation(std::ofstream& fout, std::string sit_name,
                         std::string standard_notation) {
-  using namespace std::chrono;
   Situation<R, C> sit = ParseSituationOrCrash<R, C>(standard_notation);
-  Negamax<R, C> negamaxer;
-  auto start = high_resolution_clock::now();
-  Move move = negamaxer.GetMove(sit);
-  auto stop = high_resolution_clock::now();
-  benchmark_metrics.wall_clock_time_ms =
-      duration_cast<milliseconds>(stop - start).count();
+  std::vector<BenchmarkMetrics> samples;
   FileAndStdOutLine(fout, "Situation: " + sit_name);
-  FileAndStdOutLine(fout, "Chosen move: " + sit.MoveToString(move));
-  FileAndStdOut(fout, BenchmarkMetricsReport());
+  for (int i = 0; i < kNumBenchmarkSamples; ++i) {
+    Negamax<R, C> negamaxer;
+    auto move_metrics = negamaxer.GetMoveWithMetrics(sit);
+    FileAndStdOutLine(fout, "Chosen move " + std::to_string(i + 1) + ": " +
+                                sit.MoveToString(move_metrics.first));
+    samples.push_back(move_metrics.second);
+  }
+  FileAndStdOutLine(fout, BenchmarkMetricsReport(AverageMetrics(samples)));
 }
 
 }  // namespace benchmark_internal
@@ -386,25 +421,22 @@ void RunBenchmark(const std::string& description) {
   std::string benchmark_dir = "../benchmark_out/";
   std::string timestamp = CurrentTimestamp();
   std::string report_file_name = benchmark_dir + timestamp + ".txt";
-  std::string csv_file_name = benchmark_dir + timestamp + ".csv";
+  // std::string csv_file_name = benchmark_dir + timestamp + ".csv";
   std::ofstream fout(report_file_name);
 
   using namespace benchmark_internal;
   FileAndStdOutLine(fout, BenchmarkSettings(description, timestamp));
-  FileAndStdOutEmptyLine(fout);
 
+  FileAndStdOutEmptyLine(fout);
   FileAndStdOutLine(fout, DimensionsSettings<10, 12>());
   BenchmarkSituation<10, 12>(fout, "Start-position", "");
-  FileAndStdOutEmptyLine(fout);
   BenchmarkSituation<10, 12>(fout, "Trident-opening", "1. b2 2. b3v c2>");
-  FileAndStdOutEmptyLine(fout);
-  FileAndStdOutEmptyLine(fout);
 
+  FileAndStdOutEmptyLine(fout);
   FileAndStdOutLine(fout, DimensionsSettings<4, 4>());
   BenchmarkSituation<4, 4>(fout, "Empty-4x4", "");
-  FileAndStdOutEmptyLine(fout);
-  FileAndStdOutEmptyLine(fout);
 
+  FileAndStdOutEmptyLine(fout);
   FileAndStdOutLine(fout, DimensionsSettings<6, 9>());
   BenchmarkSituation<6, 9>(
       fout, "Tim-puzzle",

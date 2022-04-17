@@ -19,6 +19,8 @@ constexpr int kInteractiveGameC = 4;
 // Uncomment to avoid compiling the tests. This can speed up compilation.
 // #define NTEST
 
+constexpr int kNumBenchmarkSamples = 2;
+
 }  // namespace wallwars
 
 #endif  // CONSTANTS_H_

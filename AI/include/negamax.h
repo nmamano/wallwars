@@ -3,6 +3,7 @@
 
 #include <array>
 #include <bitset>
+#include <chrono>
 #include <iostream>
 #include <unordered_map>
 
@@ -23,8 +24,18 @@ class Negamax {
     sit_ = sit;
     int alpha = -2 * kInfinity;
     int beta = 2 * kInfinity;
-    benchmark_metrics = {};
     return NegamaxEvalReturnMove(kMaxDepth, alpha, beta);
+  }
+
+  std::pair<Move, BenchmarkMetrics> GetMoveWithMetrics(Situation<R, C> sit) {
+    global_metrics = {};
+    auto start = std::chrono::high_resolution_clock::now();
+    Move move = GetMove(sit);
+    auto stop = std::chrono::high_resolution_clock::now();
+    global_metrics.wall_clock_time_ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(stop - start)
+            .count();
+    return {move, global_metrics};
   }
 
  private:
@@ -89,7 +100,7 @@ class Negamax {
 
     const auto& ordered_moves = OrderedMoves(depth - 1);
     if (kBenchmark) {
-      benchmark_metrics.num_generated_children[depth] += ordered_moves.size();
+      METRIC_ADD(num_generated_children[depth], ordered_moves.size());
     }
     for (const ScoredMove& scored_move : ordered_moves) {
       const Move& move = scored_move.move;
@@ -143,7 +154,7 @@ class Negamax {
     int eval = best_move_eval;
     const auto& ordered_moves = OrderedMoves(depth - 1);
     if (kBenchmark) {
-      benchmark_metrics.num_generated_children[depth] += ordered_moves.size();
+      METRIC_ADD(num_generated_children[depth], ordered_moves.size());
     }
     for (const ScoredMove& scored_move : ordered_moves) {
       const Move& move = scored_move.move;
