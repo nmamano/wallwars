@@ -63,6 +63,37 @@ long long TotalTableUselessHits(const BenchmarkMetrics& metrics) {
   return res;
 }
 
+long long TableNoChecksAtDepth(const BenchmarkMetrics& metrics, int depth) {
+  return metrics.num_exits[depth][GAME_OVER_EXIT] +
+         metrics.num_exits[depth][LEAF_EVAL_EXIT];
+}
+
+long long TotalTableNoChecks(const BenchmarkMetrics& metrics) {
+  return TotalExitsOfType(metrics, GAME_OVER_EXIT) +
+         TotalExitsOfType(metrics, LEAF_EVAL_EXIT);
+}
+
+long long TableHitsAtDepth(const BenchmarkMetrics& metrics, int depth) {
+  return metrics.num_exits[depth][TABLE_HIT_EXIT] +
+         metrics.table_bound_improvement[depth] +
+         metrics.table_useless_hit[depth];
+}
+
+long long TotalTableHits(const BenchmarkMetrics& metrics) {
+  return TotalExitsOfType(metrics, TABLE_HIT_EXIT) +
+         TotalTableBoundImprovements(metrics) + TotalTableUselessHits(metrics);
+}
+
+long long TableMissesAtDepth(const BenchmarkMetrics& metrics, int depth) {
+  return TotalExitsAtDepth(metrics, depth) - TableHitsAtDepth(metrics, depth) -
+         TableNoChecksAtDepth(metrics, depth);
+}
+
+long long TotalTableMisses(const BenchmarkMetrics& metrics) {
+  return TotalExits(metrics) - TotalTableHits(metrics) -
+         TotalTableNoChecks(metrics);
+}
+
 long long TotalTableInsertions(const BenchmarkMetrics& metrics) {
   long long res = 0;
   for (int depth = 0; depth <= kMaxDepth; ++depth) {
@@ -79,6 +110,29 @@ long long TotalTableDisplacements(const BenchmarkMetrics& metrics) {
   return res;
 }
 
+long long TableUpdatesByDepth(const BenchmarkMetrics& metrics, int depth) {
+  return metrics.num_exits[depth][NORMAL_EXIT] -
+         metrics.transposition_table_insertions[depth] -
+         metrics.transposition_table_displacements[depth];
+}
+
+long long TotalTableUpdates(const BenchmarkMetrics& metrics) {
+  return TotalExitsOfType(metrics, NORMAL_EXIT) -
+         TotalTableInsertions(metrics) - TotalTableDisplacements(metrics);
+}
+
+long long TableNoWritesByDepth(const BenchmarkMetrics& metrics, int depth) {
+  return TotalExitsAtDepth(metrics, depth) -
+         metrics.transposition_table_insertions[depth] -
+         metrics.transposition_table_displacements[depth] -
+         TableUpdatesByDepth(metrics, depth);
+}
+
+long long TotalTableNoWrites(const BenchmarkMetrics& metrics) {
+  return TotalExits(metrics) - TotalTableInsertions(metrics) -
+         TotalTableDisplacements(metrics) - TotalTableUpdates(metrics);
+}
+
 long long NumChildrenVisitsAsDepth(const BenchmarkMetrics& metrics, int depth) {
   if (depth == 0) return 0;
   return TotalExitsAtDepth(metrics, depth - 1);
@@ -90,6 +144,15 @@ long long TotalNumChildrenGenerated(const BenchmarkMetrics& metrics) {
     res += metrics.num_generated_children[depth];
   }
   return res;
+}
+
+long long PrunedChildrenAtDepth(const BenchmarkMetrics& metrics, int depth) {
+  return metrics.num_generated_children[depth] -
+         NumChildrenVisitsAsDepth(metrics, depth);
+}
+
+long long TotalPrunedChildren(const BenchmarkMetrics& metrics) {
+  return TotalNumChildrenGenerated(metrics) - TotalExits(metrics);
 }
 
 BenchmarkMetrics AverageMetrics(const std::vector<BenchmarkMetrics>& samples) {
@@ -225,10 +288,8 @@ std::string TranspositionTableTable(const BenchmarkMetrics& metrics) {
       long long exact_hits = metrics.num_exits[depth][TABLE_HIT_EXIT];
       long long bound_improvement_hits = metrics.table_bound_improvement[depth];
       long long useless_hits = metrics.table_useless_hit[depth];
-      long long total_hits = exact_hits + bound_improvement_hits + useless_hits;
-      long long no_checks = metrics.num_exits[depth][GAME_OVER_EXIT] +
-                            metrics.num_exits[depth][LEAF_EVAL_EXIT];
-      long long misses = total_visits - total_hits - no_checks;
+      long long misses = TableMissesAtDepth(metrics, depth);
+      long long no_checks = TableNoChecksAtDepth(metrics, depth);
       table1.AddToLastRow(exact_hits);
       table2.AddToLastRow((100.0 * exact_hits) / total_visits, 2);
       table1.AddToLastRow(bound_improvement_hits);
@@ -243,12 +304,11 @@ std::string TranspositionTableTable(const BenchmarkMetrics& metrics) {
       table2.AddToLastRow("|");
     }
     {
+      long long updates = TableUpdatesByDepth(metrics, depth);
       long long insertions = metrics.transposition_table_insertions[depth];
       long long displacements =
           metrics.transposition_table_displacements[depth];
-      long long updates =
-          metrics.num_exits[depth][NORMAL_EXIT] - insertions - displacements;
-      long long no_writes = total_visits - insertions - displacements - updates;
+      long long no_writes = TableNoWritesByDepth(metrics, depth);
       table1.AddToLastRow(updates);
       table2.AddToLastRow((100.0 * updates) / total_visits, 2);
       table1.AddToLastRow(insertions);
@@ -271,10 +331,8 @@ std::string TranspositionTableTable(const BenchmarkMetrics& metrics) {
       long long exact_hits = TotalExitsOfType(metrics, TABLE_HIT_EXIT);
       long long bound_improvement_hits = TotalTableBoundImprovements(metrics);
       long long useless_hits = TotalTableUselessHits(metrics);
-      long long total_hits = exact_hits + bound_improvement_hits + useless_hits;
-      long long no_checks = TotalExitsOfType(metrics, GAME_OVER_EXIT) +
-                            TotalExitsOfType(metrics, LEAF_EVAL_EXIT);
-      long long misses = total_visits - total_hits - no_checks;
+      long long misses = TotalTableMisses(metrics);
+      long long no_checks = TotalTableNoChecks(metrics);
       table1.AddToLastRow(exact_hits);
       table2.AddToLastRow((100.0 * exact_hits) / total_visits, 2);
       table1.AddToLastRow(bound_improvement_hits);
@@ -289,11 +347,10 @@ std::string TranspositionTableTable(const BenchmarkMetrics& metrics) {
       table2.AddToLastRow("|");
     }
     {
+      long long updates = TotalTableUpdates(metrics);
       long long insertions = TotalTableInsertions(metrics);
       long long displacements = TotalTableDisplacements(metrics);
-      long long updates =
-          TotalExitsOfType(metrics, NORMAL_EXIT) - insertions - displacements;
-      long long no_writes = total_visits - insertions - displacements - updates;
+      long long no_writes = TotalTableNoWrites(metrics);
       table1.AddToLastRow(updates);
       table2.AddToLastRow((100.0 * updates) / total_visits, 2);
       table1.AddToLastRow(insertions);
@@ -318,7 +375,7 @@ std::string ChildGenerationTable(const BenchmarkMetrics& metrics) {
   for (int depth = kMaxDepth; depth >= 0; --depth) {
     long long generated = metrics.num_generated_children[depth];
     long long visited = NumChildrenVisitsAsDepth(metrics, depth);
-    long long pruned = generated - visited;
+    long long pruned = PrunedChildrenAtDepth(metrics, depth);
     table.AddToNewRow(depth);
     table.AddToLastRow(generated);
     table.AddToLastRow(visited);
@@ -330,7 +387,7 @@ std::string ChildGenerationTable(const BenchmarkMetrics& metrics) {
     table.AddToNewRow("Sum");
     long long generated = TotalNumChildrenGenerated(metrics);
     long long visited = TotalExits(metrics);
-    long long pruned = generated - visited;
+    long long pruned = TotalPrunedChildren(metrics);
     table.AddToLastRow(generated);
     table.AddToLastRow(visited);
     table.AddToLastRow((100.0 * visited) / generated, 1);
@@ -368,38 +425,68 @@ Situation<R, C> ParseSituationOrCrash(std::string standard_notation) {
   return sit;
 }
 
-void FileAndStdOut(std::ofstream& fout, std::string s) {
-  std::cout << s;
-  fout << s;
-}
-
-void FileAndStdOutLine(std::ofstream& fout, std::string s) {
+void StreamAndStdOut(std::ostream& out, std::string s) {
   std::cout << s << std::endl;
-  fout << s << std::endl;
+  out << s << std::endl;
 }
 
-void FileAndStdOutEmptyLine(std::ofstream& fout) {
+void StreamAndStdOutEmptyLine(std::ostream& out) {
   std::cout << std::endl;
-  fout << std::endl;
+  out << std::endl;
+}
+
+void AddCsvHeaderRow(std::ostream& out) {
+  std::vector<std::string> csv_columns{
+      "situation",           "runtime-ms",       "graph-primitives",
+      "normal-visits",       "leaf-eval-visits", "table-hit-visits",
+      "table-cutoff-visits", "game-over-visits", "tt-exact",
+      "tt-improv",           "tt-useless",       "tt-miss",
+      "tt-no-check",         "tt-update",        "tt-add",
+      "tt-replace",          "tt-no-write",      "visited-children",
+      "generated-children"};
+  for (size_t i = 0; i < csv_columns.size(); ++i) {
+    if (i > 0) out << ",";
+    out << csv_columns[i];
+  }
+  out << std::endl;
+}
+
+void AddCsvRow(std::ostream& out, std::string sit_name,
+               const BenchmarkMetrics& metrics) {
+  out << sit_name << "," << metrics.wall_clock_time_ms << ","
+      << metrics.num_graph_primitives;
+  for (int exit_type = 0; exit_type < kNumExitTypes; ++exit_type) {
+    out << "," << TotalExitsOfType(metrics, exit_type);
+  }
+  out << "," << TotalExitsOfType(metrics, TABLE_HIT_EXIT) << ","
+      << TotalTableBoundImprovements(metrics) << ","
+      << TotalTableUselessHits(metrics) << "," << TotalTableMisses(metrics)
+      << "," << TotalTableNoChecks(metrics) << "," << TotalTableUpdates(metrics)
+      << "," << TotalTableInsertions(metrics) << ","
+      << TotalTableDisplacements(metrics) << "," << TotalTableNoWrites(metrics)
+      << "," << TotalExits(metrics) << "," << TotalPrunedChildren(metrics)
+      << std::endl;
 }
 
 // Runs the AI to find a move in an RxC board after playing some moves
 // specified in standard notation, setting `benchmark_metrics` in the process.
 // Then, uses `benchmark_metrics` to generate benchmarking reports.
 template <int R, int C>
-void BenchmarkSituation(std::ofstream& fout, std::string sit_name,
-                        std::string standard_notation) {
+void BenchmarkSituation(std::ostream& report_out, std::ostream& csv_out,
+                        std::string sit_name, std::string standard_notation) {
   Situation<R, C> sit = ParseSituationOrCrash<R, C>(standard_notation);
   std::vector<BenchmarkMetrics> samples;
-  FileAndStdOutLine(fout, "Situation: " + sit_name);
+  StreamAndStdOut(report_out, "Situation: " + sit_name);
   for (int i = 0; i < kNumBenchmarkSamples; ++i) {
     Negamax<R, C> negamaxer;
     auto move_metrics = negamaxer.GetMoveWithMetrics(sit);
-    FileAndStdOutLine(fout, "Chosen move " + std::to_string(i + 1) + ": " +
-                                sit.MoveToString(move_metrics.first));
+    StreamAndStdOut(report_out, "Chosen move " + std::to_string(i + 1) + ": " +
+                                    sit.MoveToString(move_metrics.first));
     samples.push_back(move_metrics.second);
   }
-  FileAndStdOutLine(fout, BenchmarkMetricsReport(AverageMetrics(samples)));
+  BenchmarkMetrics avg_metrics = AverageMetrics(samples);
+  StreamAndStdOut(report_out, BenchmarkMetricsReport(avg_metrics));
+  AddCsvRow(csv_out, sit_name, avg_metrics);
 }
 
 }  // namespace benchmark_internal
@@ -413,37 +500,46 @@ void BenchmarkSituation(std::ofstream& fout, std::string sit_name,
 // the name of a newly implemented optimization). It is included in the
 // human-readable report.
 void RunBenchmark(const std::string& description) {
+  using namespace benchmark_internal;
+
   if (!wallwars::Tests::RunTests()) {
     std::cout << "Benchmark did not start due to failing tests." << std::endl;
   }
 
-  // Put the benchmark results are outside the BUILD directory
-  std::string benchmark_dir = "../benchmark_out/";
+  std::ostringstream report_out;
+  std::ostringstream csv_out;
+  AddCsvHeaderRow(csv_out);
+
   std::string timestamp = CurrentTimestamp();
-  std::string report_file_name = benchmark_dir + timestamp + ".txt";
-  // std::string csv_file_name = benchmark_dir + timestamp + ".csv";
-  std::ofstream fout(report_file_name);
+  StreamAndStdOut(report_out, BenchmarkSettings(description, timestamp));
 
-  using namespace benchmark_internal;
-  FileAndStdOutLine(fout, BenchmarkSettings(description, timestamp));
+  StreamAndStdOutEmptyLine(report_out);
+  StreamAndStdOut(report_out, DimensionsSettings<10, 12>());
+  BenchmarkSituation<10, 12>(report_out, csv_out, "Start-position", "");
+  BenchmarkSituation<10, 12>(report_out, csv_out, "Trident-opening",
+                             "1. b2 2. b3v c2>");
 
-  FileAndStdOutEmptyLine(fout);
-  FileAndStdOutLine(fout, DimensionsSettings<10, 12>());
-  BenchmarkSituation<10, 12>(fout, "Start-position", "");
-  BenchmarkSituation<10, 12>(fout, "Trident-opening", "1. b2 2. b3v c2>");
+  StreamAndStdOutEmptyLine(report_out);
+  StreamAndStdOut(report_out, DimensionsSettings<4, 4>());
+  BenchmarkSituation<4, 4>(report_out, csv_out, "Empty-4x4", "");
 
-  FileAndStdOutEmptyLine(fout);
-  FileAndStdOutLine(fout, DimensionsSettings<4, 4>());
-  BenchmarkSituation<4, 4>(fout, "Empty-4x4", "");
-
-  FileAndStdOutEmptyLine(fout);
-  FileAndStdOutLine(fout, DimensionsSettings<6, 9>());
+  StreamAndStdOutEmptyLine(report_out);
+  StreamAndStdOut(report_out, DimensionsSettings<6, 9>());
   BenchmarkSituation<6, 9>(
-      fout, "Tim-puzzle",
+      report_out, csv_out, "Tim-puzzle",
       "1. g3v h3v 2. b3v c3v 3. e3v f3v 4. c4> d3v 5. f4> f5> 6. c5> c6> 7. "
       "f1> f6> 8. c1> c2> 9. a2 f2> 10. h2> h3>");
 
-  fout.close();
+  // Put the benchmark results in `benchmark_dir`.
+  std::string benchmark_dir = "../benchmark_out/";
+  std::string report_file_name = benchmark_dir + timestamp + ".txt";
+  std::string csv_file_name = benchmark_dir + timestamp + ".csv";
+  std::ofstream report_fout(report_file_name);
+  std::ofstream csv_fout(csv_file_name);
+  report_fout << report_out.str();
+  csv_fout << csv_out.str();
+  report_fout.close();
+  csv_fout.close();
 }
 
 }  // namespace wallwars
