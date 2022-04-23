@@ -18,7 +18,8 @@ namespace wallwars {
 
 // An upper bound on the number of legal moves.
 constexpr int MaxNumLegalMoves(int R, int C) {
-  return 8 + 4 * NumRealEdges(R, C) + NumRealEdges(R, C) * NumRealEdges(R, C);
+  return 8 + 4 * NumRealEdges(R, C) +
+         NumRealEdges(R, C) * (NumRealEdges(R, C) - 1) / 2;
 }
 
 // Start and goals of the players.
