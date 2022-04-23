@@ -313,7 +313,7 @@ struct Graph {
 
   // Returns the nodes that are endpoints of an active edge.
   std::array<bool, NumNodes(R, C)> ActiveNodes() const {
-    METRIC_INC(num_graph_primitives);
+    METRIC_INC(graph_primitives);
     std::array<bool, NumNodes(R, C)> active_nodes;
     active_nodes.fill(false);
     for (int edge = 0; edge < NumRealAndFakeEdges(R, C); ++edge) {
@@ -328,7 +328,7 @@ struct Graph {
   // Returns the distance between `s` and `t`, or -1 if they are in separate
   // connected components.
   int Distance(int s, int t) const {
-    METRIC_INC(num_graph_primitives);
+    METRIC_INC(graph_primitives);
     thread_local std::array<int, NumNodes(R, C)> BFS_queue;
     thread_local std::array<int, NumNodes(R, C)> dist;
     if (s == t) return 0;
@@ -356,7 +356,7 @@ struct Graph {
   // Returns the distance between `s` and every node, or -1 if they are in
   // separate connected components.
   std::array<int, NumNodes(R, C)> Distances(int s) const {
-    METRIC_INC(num_graph_primitives);
+    METRIC_INC(graph_primitives);
     thread_local std::array<int, NumNodes(R, C)> BFS_queue;
     std::array<int, NumNodes(R, C)> dist;
     dist.fill(-1);
@@ -409,7 +409,7 @@ struct Graph {
   // included. If the path is shorter than `kNumNodes` nodes, the output array
   // contains -1's after `t`. Assumes that `t` is reachable from `s`.
   std::array<int, NumNodes(R, C)> ShortestPath(int s, int t) const {
-    METRIC_INC(num_graph_primitives);
+    METRIC_INC(graph_primitives);
     thread_local std::array<int, NumNodes(R, C)> BFS_queue;
     thread_local std::array<int, NumNodes(R, C)> dist;
     thread_local std::array<int, NumNodes(R, C)> predecessor;
@@ -458,7 +458,7 @@ struct Graph {
   std::array<int, NumNodes(R, C)> ShortestPathWithOrientations(
       int s, int t,
       const std::array<int, NumRealAndFakeEdges(R, C)>& orientations) const {
-    METRIC_INC(num_graph_primitives);
+    METRIC_INC(graph_primitives);
     thread_local std::array<int, NumNodes(R, C)> BFS_queue;
     thread_local std::array<int, NumNodes(R, C)> dist;
     thread_local std::array<int, NumNodes(R, C)> predecessor;
@@ -503,7 +503,7 @@ struct Graph {
   // Returns a label for each node such that nodes in the same connected
   // component have the same label.
   std::array<int, NumNodes(R, C)> ConnectedComponents() const {
-    METRIC_INC(num_graph_primitives);
+    METRIC_INC(graph_primitives);
     thread_local std::array<int, NumNodes(R, C)> BFS_queue;
     std::array<int, NumNodes(R, C)> connected_components;
     connected_components.fill(-1);
@@ -530,7 +530,7 @@ struct Graph {
 
   // Returns the set of edges which are bridges.
   std::bitset<NumRealAndFakeEdges(R, C)> Bridges() const {
-    METRIC_INC(num_graph_primitives);
+    METRIC_INC(graph_primitives);
     static BridgesState state;
     state.rank.fill(-1);
     state.next_rank = 0;

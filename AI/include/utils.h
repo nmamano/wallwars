@@ -4,9 +4,11 @@
 #include <array>
 #include <chrono>
 #include <ctime>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <ostream>
+#include <sstream>
 #include <vector>
 
 #include "external/span.h"
@@ -101,7 +103,12 @@ static std::string ToStringWithPrecision(double val, const int n) {
 
 struct StrTable {
   std::vector<std::vector<std::string>> table;
-  void AddRow() { table.push_back({}); }
+
+  // An arbitrary unique-looking symbol to identify lines that should be turned
+  // into horizontal lines.
+  const std::string horizontal_line_marker = "@#@";
+
+  void AddNewRow() { table.push_back({}); }
   void AddToNewRow(std::string s) { table.push_back({s}); }
   void AddToNewRow(std::vector<std::string> vs) { table.push_back(vs); }
   void AddToNewRow(long long i) { AddToNewRow(std::to_string(i)); }
@@ -113,23 +120,36 @@ struct StrTable {
   void AddToLastRow(double d, int precision) {
     AddToLastRow(ToStringWithPrecision(d, precision));
   }
+  void AddHorizontalLineRow() { table.push_back({horizontal_line_marker}); }
 
   void Print(std::ostream& os, int col_separation = 1) {
     int rows = table.size();
     int cols = table[0].size();
     std::vector<int> colWidths(cols, 0);
-    for (int i = 0; i < rows; i++) {
-      for (int j = 0; j < cols; j++) {
+    for (int i = 0; i < rows; ++i) {
+      if (table[i][0] == horizontal_line_marker) continue;
+      for (int j = 0; j < cols; ++j) {
         std::string entry = j < (int)table[i].size() ? table[i][j] : "";
         colWidths[j] = std::max(colWidths[j], (int)entry.size());
       }
     }
-    for (int i = 0; i < rows; i++) {
-      for (int j = 0; j < cols; j++) {
+    int total_width = col_separation * (cols - 1);
+    for (int j = 0; j < cols; ++j) {
+      total_width += colWidths[j];
+    }
+    for (int i = 0; i < rows; ++i) {
+      if (table[i][0] == horizontal_line_marker) {
+        for (int k = 0; k < total_width; ++k) {
+          os << '-';
+        }
+        os << std::endl;
+        continue;
+      }
+      for (int j = 0; j < cols; ++j) {
         std::string entry = j < (int)table[i].size() ? table[i][j] : "";
         os << entry;
         int tab = colWidths[j] - entry.size() + col_separation;
-        for (int k = 0; k < tab; k++) os << " ";
+        for (int k = 0; k < tab; ++k) os << " ";
       }
       os << std::endl;
     }
@@ -156,6 +176,33 @@ std::string CurrentTimestamp() {
   std::string mm = t.substr(14, 2);
   std::string ss = t.substr(17, 2);
   return YYYY + "-" + MM + "-" + DD + "_" + hh + "h" + mm + "m" + ss + "s";
+}
+
+std::vector<std::vector<std::string>> ParseCsv(const std::string& s) {
+  std::vector<std::vector<std::string>> res;
+  std::stringstream ss(s);
+  std::string line;
+  while (std::getline(ss, line, '\n')) {
+    res.push_back({});
+    std::stringstream ss2(line);
+    std::string val;
+    while (std::getline(ss2, val, ',')) {
+      res[res.size() - 1].push_back(val);
+    }
+    res[res.size() - 1].push_back(ss2.str());
+  }
+  return res;
+}
+
+std::string FileToStr(const std::string& file_name) {
+  std::ifstream fin(file_name);
+  std::string s;
+  std::string res;
+  while (std::getline(fin, s)) {
+    res += s;
+    res.push_back('\n');
+  }
+  return res;
 }
 
 }  // namespace wallwars

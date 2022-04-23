@@ -29,6 +29,7 @@ class Negamax {
 
   std::pair<Move, BenchmarkMetrics> GetMoveWithMetrics(Situation<R, C> sit) {
     global_metrics = {};
+
     auto start = std::chrono::high_resolution_clock::now();
     Move move = GetMove(sit);
     auto stop = std::chrono::high_resolution_clock::now();
@@ -72,25 +73,25 @@ class Negamax {
         int memo_alpha_beta_flag = memo_entry->second.alpha_beta_flag;
         int memo_eval = memo_entry->second.eval;
         if (memo_alpha_beta_flag == kExactFlag) {
-          METRIC_INC(num_exits[depth][TABLE_HIT_EXIT]);
+          METRIC_INC(num_exits[depth][TT_HIT_EXIT]);
           return memo_eval;
         } else if (memo_alpha_beta_flag == kLowerboundFlag) {
           if (memo_eval > alpha) {
-            METRIC_INC(table_bound_improvement[depth]);
+            METRIC_INC(tt_improvement_reads[depth]);
             alpha = memo_eval;
           } else {
-            METRIC_INC(table_useless_hit[depth]);
+            METRIC_INC(tt_useless_reads[depth]);
           }
         } else /*(memo_alpha_beta_flag == kUpperboundFlag)*/ {
           if (memo_eval < beta) {
-            METRIC_INC(table_bound_improvement[depth]);
+            METRIC_INC(tt_improvement_reads[depth]);
             beta = memo_eval;
           } else {
-            METRIC_INC(table_useless_hit[depth]);
+            METRIC_INC(tt_useless_reads[depth]);
           }
         }
         if (alpha >= beta) {
-          METRIC_INC(num_exits[depth][TABLE_CUTOFF_EXIT]);
+          METRIC_INC(num_exits[depth][TT_CUTOFF_EXIT]);
           return memo_eval;
         }
       }
@@ -99,9 +100,7 @@ class Negamax {
     int eval = -2 * kInfinity;
 
     const auto& ordered_moves = OrderedMoves(depth - 1);
-    if (kBenchmark) {
-      METRIC_ADD(num_generated_children[depth], ordered_moves.size());
-    }
+    METRIC_ADD(generated_children[depth], ordered_moves.size());
     for (const ScoredMove& scored_move : ordered_moves) {
       const Move& move = scored_move.move;
 
@@ -129,12 +128,12 @@ class Negamax {
       memo_entry->second.depth = static_cast<int8_t>(depth);
       memo_entry->second.eval = static_cast<int16_t>(eval);
     } else {
-      METRIC_INC(transposition_table_insertions[depth]);
+      METRIC_INC(tt_add_writes[depth]);
       memoized_evals_.insert({sit_,
                               {alpha_beta_flag, static_cast<int8_t>(depth),
                                static_cast<int16_t>(eval)}});
     }
-    METRIC_INC(num_exits[depth][NORMAL_EXIT]);
+    METRIC_INC(num_exits[depth][REC_EVAL_EXIT]);
     return eval;
   }
 
@@ -153,9 +152,7 @@ class Negamax {
 
     int eval = best_move_eval;
     const auto& ordered_moves = OrderedMoves(depth - 1);
-    if (kBenchmark) {
-      METRIC_ADD(num_generated_children[depth], ordered_moves.size());
-    }
+    METRIC_ADD(generated_children[depth], ordered_moves.size());
     for (const ScoredMove& scored_move : ordered_moves) {
       const Move& move = scored_move.move;
 
@@ -186,7 +183,7 @@ class Negamax {
       // e.g., to find all the optimal moves.
       if (alpha >= beta) break;
     }
-    METRIC_INC(num_exits[depth][NORMAL_EXIT]);
+    METRIC_INC(num_exits[depth][REC_EVAL_EXIT]);
     return best_move;
   }
 

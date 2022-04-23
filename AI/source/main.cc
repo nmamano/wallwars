@@ -12,7 +12,9 @@ int main(int argc, char* argv[]) {
     } else if (menu_option == "test") {
       wallwars::Tests::RunTests();
     } else if (menu_option == "benchmark") {
-      wallwars::RunBenchmark("placeholder-for-description");
+      std::string comparison_file = "";
+      if (argc > 2) comparison_file = argv[2];
+      wallwars::RunBenchmark("placeholder-for-description", comparison_file);
     } else {
       std::cout << "Unknown option: " << menu_option << std::endl;
     }
@@ -35,7 +37,7 @@ int main(int argc, char* argv[]) {
         wallwars::Tests::RunTests();
         break;
       case '3': {
-        wallwars::RunBenchmark("placeholder-for-description");
+        wallwars::RunBenchmark("placeholder-for-description", "");
         return 0;
       }
       default:

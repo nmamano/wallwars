@@ -165,7 +165,7 @@ class InteractiveGame {
                   << " in " << duration_s.count() << "s." << std::endl;
         if (kBenchmark) {
           std::cout << "Graph traversal count = "
-                    << global_metrics.num_graph_primitives << std::endl;
+                    << global_metrics.graph_primitives << std::endl;
         }
       }
       sit.ApplyMove(move);
