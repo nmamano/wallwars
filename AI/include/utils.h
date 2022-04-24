@@ -196,6 +196,10 @@ std::vector<std::vector<std::string>> ParseCsv(const std::string& s) {
 
 std::string FileToStr(const std::string& file_name) {
   std::ifstream fin(file_name);
+  if (!fin.is_open()) {
+    std::cerr << "Could not open " << file_name << std::endl;
+    std::exit(EXIT_FAILURE);
+  }
   std::string s;
   std::string res;
   while (std::getline(fin, s)) {

@@ -39,9 +39,6 @@ BenchmarkMetrics AverageMetrics(const std::vector<BenchmarkMetrics>& samples) {
       avg.tt_replace_writes[depth] += sample.tt_replace_writes[depth];
       avg.generated_children[depth] += sample.generated_children[depth];
     }
-    for (int i = 0; i < MaxNumLegalMoves(10, 12); ++i) {
-      avg.cutoff_distr[i] += sample.cutoff_distr[i];
-    }
   }
   int n = samples.size();
   avg.wall_clock_time_ms /= n;
@@ -55,9 +52,6 @@ BenchmarkMetrics AverageMetrics(const std::vector<BenchmarkMetrics>& samples) {
     avg.tt_add_writes[depth] /= n;
     avg.tt_replace_writes[depth] /= n;
     avg.generated_children[depth] /= n;
-  }
-  for (int i = 0; i < MaxNumLegalMoves(10, 12); ++i) {
-    avg.cutoff_distr[i] /= n;
   }
   return avg;
 }
@@ -364,6 +358,7 @@ std::string ComparisonTable(
 
   std::vector<std::string> sits =
       ColumnUnion(prev_csv_table, curr_csv_table, 0);
+  bool diff_move = false;
   for (const auto& sit : sits) {
     std::map<std::string, std::string> prev_map = prev_csv_map[sit],
                                        curr_map = curr_csv_map[sit];
@@ -373,18 +368,23 @@ std::string ComparisonTable(
          prev_map["graph_primitives"], curr_map["graph_primitives"], "|",
          prev_map["visited_children"], curr_map["visited_children"], "|",
          prev_map["pruned_children"], curr_map["pruned_children"]});
+    if (prev_map["move"] != curr_map["move"]) diff_move = true;
   }
 
   std::ostringstream sout;
   sout << "Before (" << prev_name << ") vs now:\n";
   table.Print(sout, 2);
+  if (diff_move) {
+    sout << "Warning: the AI played a different move\n";
+  }
   return sout.str();
 }
 
 // `benchmark_metrics` is a global variable. This function assumes that it has
 // been set as a result of the AI finding a move in a situation.
-std::string BenchmarkMetricsReport(std::map<std::string, std::string> prev_csv,
-                                   const BenchmarkMetrics& m) {
+std::string BenchmarkMetricsReport(
+    const std::map<std::string, std::string>& prev_csv,
+    const BenchmarkMetrics& m) {
   std::ostringstream sout;
   long long ms = m.wall_clock_time_ms;
   long long gp = m.graph_primitives;
@@ -415,59 +415,6 @@ void StreamAndStdOut(std::ostream& out, std::string s) {
 void StreamAndStdOutEmptyLine(std::ostream& out) {
   std::cout << std::endl;
   out << std::endl;
-}
-
-// Runs the AI to find a move in an RxC board after playing some moves
-// specified in standard notation, setting `benchmark_metrics` in the process.
-// Then, uses `benchmark_metrics` to generate benchmarking reports.
-template <int R, int C>
-void BenchmarkSituation(
-    std::ostream& report_out, std::ostream& csv_out,
-    std::map<std::string, std::map<std::string, std::string>> prev_csv_map,
-    std::string sit_name, std::string standard_notation) {
-  Situation<R, C> sit = ParseSituationOrCrash<R, C>(standard_notation);
-  std::vector<BenchmarkMetrics> samples;
-  std::string move = "";
-  StreamAndStdOut(report_out, "Situation: " + sit_name);
-  for (int i = 0; i < kNumBenchmarkSamples; ++i) {
-    Negamax<R, C> negamaxer;
-    auto move_metrics = negamaxer.GetMoveWithMetrics(sit);
-    std::string m = sit.MoveToString(move_metrics.first);
-    if (move == "")
-      move = m;
-    else if (move != m) {
-      std::cerr << "Warning: changed move " << move << " -> " << m << std::endl;
-    }
-    StreamAndStdOut(report_out, "Chosen move " + std::to_string(i + 1) + ": " +
-                                    sit.MoveToString(move_metrics.first));
-    samples.push_back(move_metrics.second);
-  }
-  BenchmarkMetrics avg_metrics = AverageMetrics(samples);
-  StreamAndStdOut(report_out,
-                  BenchmarkMetricsReport(prev_csv_map[sit_name], avg_metrics));
-  csv_out << CsvRow(sit_name, move, avg_metrics);
-}
-
-void BenchmarkSituations(
-    std::ostringstream& report_out, std::ostringstream& csv_out,
-    std::map<std::string, std::map<std::string, std::string>> prev_csv_map) {
-  // StreamAndStdOutEmptyLine(report_out);
-  // StreamAndStdOut(report_out, DimensionsSettings<10, 12>());
-  // BenchmarkSituation<10, 12>(report_out, csv_out, prev_csv_map,
-  //                            "Start-position", "");
-  // BenchmarkSituation<10, 12>(report_out, csv_out, prev_csv_map,
-  //                            "Trident-opening", "1. b2 2. b3v c2>");
-
-  StreamAndStdOutEmptyLine(report_out);
-  StreamAndStdOut(report_out, DimensionsSettings<4, 4>());
-  BenchmarkSituation<4, 4>(report_out, csv_out, prev_csv_map, "Empty-4x4", "");
-
-  StreamAndStdOutEmptyLine(report_out);
-  // StreamAndStdOut(report_out, DimensionsSettings<6, 9>());
-  // BenchmarkSituation<6, 9>(
-  //     report_out, csv_out, prev_csv_map, "Tim-puzzle",
-  //     "1. g3v h3v 2. b3v c3v 3. e3v f3v 4. c4> d3v 5. f4> f5> 6. c5> c6> 7. "
-  //     "f1> f6> 8. c1> c2> 9. a2 f2> 10. h2> h3>");
 }
 
 // Returns a map from the values in a column to the row index. Assumes that the
@@ -503,6 +450,72 @@ std::map<std::string, std::map<std::string, std::string>> CsvMap(
     res[p.first] = ColumnNameToRowValues(csv_table, p.second);
   }
   return res;
+}
+
+struct BenchmarkContext {
+  std::ostream& report_out;
+  std::ostream& csv_out;
+  std::map<std::string, std::map<std::string, std::string>>& prev_csv_map;
+};
+
+struct BenchmarkSituationInput {
+  std::string sit_name;
+  std::string standard_notation;
+  std::string expected_move;
+};
+
+// Runs the AI to find a move in an RxC board after playing some moves
+// specified in standard notation.
+template <int R, int C>
+void BenchmarkSituation(BenchmarkContext& context,
+                        const BenchmarkSituationInput& input) {
+  Situation<R, C> sit = ParseSituationOrCrash<R, C>(input.standard_notation);
+  std::vector<BenchmarkMetrics> samples;
+  std::string first_move = "";
+  StreamAndStdOut(context.report_out, "Situation: " + input.sit_name);
+  for (int i = 0; i < kNumBenchmarkSamples; ++i) {
+    Negamax<R, C> negamaxer;
+    auto move_metrics = negamaxer.GetMoveWithMetrics(sit);
+    std::string move = sit.MoveToString(move_metrics.first);
+    if (i == 0) first_move = move;
+    StreamAndStdOut(context.report_out,
+                    "Chosen move " + std::to_string(i + 1) + ": " +
+                        sit.MoveToString(move_metrics.first));
+    if (move != input.expected_move) {
+      StreamAndStdOut(context.report_out, "NOTE: did not play expected move " +
+                                              input.expected_move);
+    }
+    samples.push_back(move_metrics.second);
+  }
+  BenchmarkMetrics avg_metrics = AverageMetrics(samples);
+  std::string report =
+      BenchmarkMetricsReport(context.prev_csv_map[input.sit_name], avg_metrics);
+  StreamAndStdOut(context.report_out, report);
+  context.csv_out << CsvRow(input.sit_name, first_move, avg_metrics);
+}
+
+void BenchmarkSituations(BenchmarkContext& context) {
+  BenchmarkSituationInput input;
+
+  StreamAndStdOutEmptyLine(context.report_out);
+  StreamAndStdOut(context.report_out, DimensionsSettings<10, 12>());
+  input = {"Start-position", "", "(SE)"};
+  BenchmarkSituation<10, 12>(context, input);
+  input = {"Trident-opening", "1. b2 2. b3v c2>", "(SE)"};
+  BenchmarkSituation<10, 12>(context, input);
+
+  StreamAndStdOutEmptyLine(context.report_out);
+  StreamAndStdOut(context.report_out, DimensionsSettings<4, 4>());
+  input = {"Empty-4x4", "", "(SE)"};
+  BenchmarkSituation<4, 4>(context, input);
+
+  StreamAndStdOutEmptyLine(context.report_out);
+  StreamAndStdOut(context.report_out, DimensionsSettings<6, 9>());
+  input = {"Tim-puzzle",
+           "1. g3v h3v 2. b3v c3v 3. e3v f3v 4. c4> d3v 5. f4> f5> 6. c5> c6> "
+           "7. f1> f6> 8. c1> c2> 9. a2 f2> 10. h2> h3>",
+           "(73 75)"};
+  BenchmarkSituation<6, 9>(context, input);
 }
 
 }  // namespace benchmark_internal
@@ -542,8 +555,9 @@ void RunBenchmark(const std::string& description,
   std::string timestamp = CurrentTimestamp();
   StreamAndStdOut(report_out, BenchmarkSettings(description, timestamp));
 
-  std::ostringstream sit_out;
-  BenchmarkSituations(sit_out, csv_out, prev_csv_map);
+  std::ostringstream situations_out;
+  BenchmarkContext context{situations_out, csv_out, prev_csv_map};
+  BenchmarkSituations(context);
 
   if (!prev_csv_file.empty()) {
     std::vector<std::vector<std::string>> curr_csv_table =
@@ -555,7 +569,7 @@ void RunBenchmark(const std::string& description,
                                                 curr_csv_map));
   }
 
-  report_out << sit_out.str();
+  report_out << situations_out.str();
 
   // Put the benchmark results in `benchmark_dir`.
   std::string report_file_name = benchmark_dir + timestamp + ".txt";
