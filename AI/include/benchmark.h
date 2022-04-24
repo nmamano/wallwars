@@ -75,7 +75,7 @@ std::string BenchmarkSettings(std::string description, std::string timestamp) {
 template <int R, int C>
 std::string DimensionsSettings() {
   std::ostringstream sout;
-  sout << "Board dimensions: " << R << " x " << C << '\n'
+  sout << "\nBoard dimensions: " << R << " x " << C << '\n'
        << "Branching factor: " << MaxNumLegalMoves(R, C) << '\n'
        << "Sizes (bytes): Graph: " << sizeof(Graph<R, C>)
        << " Situation: " << sizeof(Situation<R, C>) << '\n';
@@ -497,19 +497,39 @@ void BenchmarkSituation(BenchmarkContext& context,
 void BenchmarkSituations(BenchmarkContext& context) {
   BenchmarkSituationInput input;
 
-  StreamAndStdOutEmptyLine(context.report_out);
   StreamAndStdOut(context.report_out, DimensionsSettings<10, 12>());
   input = {"Start-position", "", "(SE)"};
   BenchmarkSituation<10, 12>(context, input);
   input = {"Trident-opening", "1. b2 2. b3v c2>", "(SE)"};
   BenchmarkSituation<10, 12>(context, input);
 
-  StreamAndStdOutEmptyLine(context.report_out);
   StreamAndStdOut(context.report_out, DimensionsSettings<4, 4>());
   input = {"Empty-4x4", "", "(SE)"};
   BenchmarkSituation<4, 4>(context, input);
 
-  StreamAndStdOutEmptyLine(context.report_out);
+  StreamAndStdOut(context.report_out, DimensionsSettings<3, 7>());
+  input = {"Puzzle2",
+           "1. c1 2. e1 3. a1> a2> 4. f1> f2> 5. c1v d1v 6. c2v e1v 7. d2v e2v",
+           "(3 25)"};
+  BenchmarkSituation<3, 7>(context, input);
+  input = {"Puzzle9",
+           "1. b2 2. f2 3. d2 4. d2 5. f2 6. b2 7. a2> b2v 8. f2v f2>",
+           "(3 19)"};
+  BenchmarkSituation<3, 7>(context, input);
+
+  StreamAndStdOut(context.report_out, DimensionsSettings<5, 5>());
+  input = {"Puzzle5",
+           "1. d2> d3> 2. d4v d4> 3. b4v c4v 4. a3> a4> 5. a2> b1v 6. b2> b3>",
+           "(4 9)"};
+  BenchmarkSituation<5, 5>(context, input);
+
+  StreamAndStdOut(context.report_out, DimensionsSettings<4, 5>());
+  input = {"Puzzle6",
+           "1. b2 2. d2 3. a4> b3v 4. b2v b2> 5. d3v d4> 6. d2v d2> 7. b4> c4> "
+           "8. a2> c2>",
+           "(4 22)"};
+  BenchmarkSituation<4, 5>(context, input);
+
   StreamAndStdOut(context.report_out, DimensionsSettings<6, 9>());
   input = {"Tim-puzzle",
            "1. g3v h3v 2. b3v c3v 3. e3v f3v 4. c4> d3v 5. f4> f5> 6. c5> c6> "
