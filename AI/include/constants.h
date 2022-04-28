@@ -4,7 +4,7 @@
 namespace wallwars {
 
 // Search depth of the Negamax AI.
-constexpr int kMaxDepth = 2;
+constexpr int kMaxDepth = 20;
 
 // Indicate whether the AI should indicate alternative moves that are as good as
 // the found move.
@@ -13,9 +13,9 @@ constexpr bool kShowMatchingMoves = false;
 // If set to false, the compiler can omit the code to track performance metrics.
 constexpr bool kBenchmark = true;
 
-constexpr int kInteractiveGameR = 4;
-constexpr int kInteractiveGameC = 4;
-
+constexpr int kInteractiveGameR = 8;
+constexpr int kInteractiveGameC = 8;
+constexpr int kInteractiveGameMillis = 20000;
 // Uncomment to avoid compiling the tests. This can speed up compilation.
 // #define NTEST
 

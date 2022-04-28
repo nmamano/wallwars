@@ -81,7 +81,7 @@ class InteractiveGame {
         std::string s;
         std::getline(std::cin, s);
         if (s == "x") {
-          return negamaxer.GetMove(sit);
+          return negamaxer.GetMove(sit, kInteractiveGameMillis);
         }
         if (direction_letter_to_index.count(s)) {
           int dir = direction_letter_to_index.at(s);
@@ -152,9 +152,10 @@ class InteractiveGame {
                 << (auto_moves[sit.turn] ? " (auto)" : "") << std::endl;
       global_metrics = {};
       auto start_time = high_resolution_clock::now();
-      Move move = auto_moves[sit.turn]
-                      ? negamaxers[sit.turn].GetMove(sit)
-                      : GetHumanMove(sit, negamaxers[sit.turn]);
+      Move move =
+          auto_moves[sit.turn]
+              ? negamaxers[sit.turn].GetMove(sit, kInteractiveGameMillis)
+              : GetHumanMove(sit, negamaxers[sit.turn]);
       auto stop_time = high_resolution_clock::now();
       seconds duration_s = duration_cast<seconds>(stop_time - start_time);
       if (move == Move{0, {-1, -1}}) {

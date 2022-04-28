@@ -1118,14 +1118,14 @@ class Tests {
           " +-+-+ "
           ". . . .");
       {
-        Move actual = negamaxer.GetMove(sit);
+        Move actual = negamaxer.GetMove(sit, 1000);
         Move expected = DoubleWalkMove(0, 8);
         ASSERT_EQ(actual, expected);
       }
       {
         // Test other player
         sit.turn = 1;
-        Move actual = negamaxer.GetMove(sit);
+        Move actual = negamaxer.GetMove(sit, 1000);
         Move expected = DoubleWalkMove(0, 8);
         ASSERT_EQ(actual, expected);
       }
@@ -1142,7 +1142,7 @@ class Tests {
           " +-+-+ "
           ". . . .");
       sit.tokens = {12, 13};
-      Move actual = negamaxer.GetMove(sit);
+      Move actual = negamaxer.GetMove(sit, 1000);
       Move expected = WalkAndBuildMove(12, 13, 24);
       ASSERT_EQ(actual, expected);
     }

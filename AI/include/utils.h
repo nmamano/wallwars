@@ -209,6 +209,13 @@ std::string FileToStr(const std::string& file_name) {
   return res;
 }
 
+long long MillisSince(
+    const std::chrono::high_resolution_clock::time_point& start) {
+  auto now = std::chrono::high_resolution_clock::now();
+  return std::chrono::duration_cast<std::chrono::milliseconds>(now - start)
+      .count();
+}
+
 }  // namespace wallwars
 
 #endif  // UTILS_H_

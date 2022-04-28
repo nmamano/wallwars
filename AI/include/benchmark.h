@@ -401,7 +401,7 @@ template <int R, int C>
 Situation<R, C> ParseSituationOrCrash(std::string standard_notation) {
   Situation<R, C> sit;
   if (!sit.BuildFromStandardNotationMoves(standard_notation)) {
-    std::cerr << "Failed to parse standard notation" << std::endl;
+    std::cerr << "Error: Failed to parse standard notation" << std::endl;
     std::exit(EXIT_FAILURE);
   }
   return sit;
@@ -452,6 +452,19 @@ std::map<std::string, std::map<std::string, std::string>> CsvMap(
   return res;
 }
 
+template <int R, int C>
+std::pair<Move, BenchmarkMetrics> GetMoveWithMetrics(Negamax<R, C>& negamax,
+                                                     Situation<R, C> sit) {
+  global_metrics = {};
+  auto start = std::chrono::high_resolution_clock::now();
+  Move move = negamax.GetMove(sit, 10000);
+  auto stop = std::chrono::high_resolution_clock::now();
+  global_metrics.wall_clock_time_ms =
+      std::chrono::duration_cast<std::chrono::milliseconds>(stop - start)
+          .count();
+  return {move, global_metrics};
+}
+
 struct BenchmarkContext {
   std::ostream& report_out;
   std::ostream& csv_out;
@@ -475,7 +488,7 @@ void BenchmarkSituation(BenchmarkContext& context,
   StreamAndStdOut(context.report_out, "Situation: " + input.sit_name);
   for (int i = 0; i < kNumBenchmarkSamples; ++i) {
     Negamax<R, C> negamaxer;
-    auto move_metrics = negamaxer.GetMoveWithMetrics(sit);
+    auto move_metrics = GetMoveWithMetrics<R, C>(negamaxer, sit);
     std::string move = sit.MoveToString(move_metrics.first);
     if (i == 0) first_move = move;
     StreamAndStdOut(context.report_out,
@@ -556,8 +569,14 @@ void RunBenchmark(const std::string& description,
   using namespace benchmark_internal;
   const std::string benchmark_dir = "../benchmark_out/";
 
+  if (!kBenchmark) {
+    std::cerr << "Error: not capturing metrics." << std::endl;
+    std::exit(EXIT_FAILURE);
+  }
+
   if (!wallwars::Tests::RunTests()) {
     std::cout << "Benchmark did not start due to failing tests." << std::endl;
+    std::exit(EXIT_FAILURE);
   }
 
   std::vector<std::vector<std::string>> prev_csv_table;

@@ -19,29 +19,43 @@ namespace wallwars {
 template <int R, int C>
 class Negamax {
  public:
-  Move GetMove(Situation<R, C> sit) {
-    // Reset data structures.
-    sit_ = sit;
-    int alpha = -2 * kInfinity;
-    int beta = 2 * kInfinity;
-    return NegamaxEvalReturnMove(kMaxDepth, alpha, beta);
-  }
-
-  std::pair<Move, BenchmarkMetrics> GetMoveWithMetrics(Situation<R, C> sit) {
-    global_metrics = {};
-
+  Move GetMove(Situation<R, C> sit, long long millis) {
+    Move move;
     auto start = std::chrono::high_resolution_clock::now();
-    Move move = GetMove(sit);
-    auto stop = std::chrono::high_resolution_clock::now();
-    global_metrics.wall_clock_time_ms =
-        std::chrono::duration_cast<std::chrono::milliseconds>(stop - start)
-            .count();
-    return {move, global_metrics};
+    for (int depth = 1; depth < kMaxDepth; ++depth) {
+      // Reset data structures.
+      sit_ = sit;
+      int alpha = -2 * kInfinity;
+      int beta = 2 * kInfinity;
+      long long millis_left = millis - MillisSince(start);
+      if (millis_left <= 0) break;
+      std::cerr << "Search depth " << depth << " with " << millis_left
+                << " millis left." << std::endl;
+      ScoredMove new_move =
+          NegamaxEvalReturnMove(depth, alpha, beta, millis_left);
+      if (new_move.score == kTimeoutScore) {
+        std::cerr << "Search at depth " << depth << " did not finish."
+                  << std::endl;
+        break;
+      }
+      move = new_move.move;
+      if (new_move.score == 1000) {
+        std::cerr << "Found winning move at depth " << depth << "."
+                  << std::endl;
+        break;
+      }
+    }
+    return move;
   }
 
  private:
   static constexpr int kInfinity = 999;  // Larger than any real evaluation.
   static constexpr int kPossiblyIllegalMoveScore = -500;
+  // Arbitrary invalid value to indicate that the search timed out.
+  static constexpr int kTimeoutScore = -123123;
+
+  // An arbitrary invalid move.
+  static constexpr Move TimeoutMove() { return {0, {-2, -2}}; }
 
   // Alpha-beta flags.
   static constexpr int8_t kExactFlag = 0;
@@ -143,14 +157,18 @@ class Negamax {
   // this is the shallowest search depth.
   // - Assumes it is not game over.
   // - Assumes depth > 0.
-  Move NegamaxEvalReturnMove(int depth, int alpha, int beta) {
-    Move best_move;
+  // - Keeps track of time spent and can return `kTimeoutScore` to indicate the
+  // search timed out.
+  ScoredMove NegamaxEvalReturnMove(int depth, int alpha, int beta,
+                                   int64_t millis_left) {
+    auto start = std::chrono::high_resolution_clock::now();
+    ScoredMove best_move;
     // `best_move_eval` is initialized to -2*kInfinity so that *some* move is
     // still chosen in the event that every move is losing, which are evaluated
     // to -kInfinity.
-    int best_move_eval = -2 * kInfinity;
+    best_move.score = -2 * kInfinity;
 
-    int eval = best_move_eval;
+    int eval = best_move.score;
     const auto& ordered_moves = OrderedMoves(depth - 1);
     METRIC_ADD(generated_children[depth], ordered_moves.size());
     for (const ScoredMove& scored_move : ordered_moves) {
@@ -169,12 +187,11 @@ class Negamax {
       sit_.UndoMove(move);
       alpha = std::max(alpha, eval);
 
-      if (move_eval > best_move_eval) {
-        best_move = move;
-        best_move_eval = move_eval;
+      if (move_eval > best_move.score) {
+        best_move = {move, move_eval};
         std::cerr << "Best move: " << sit_.MoveToString(move)
-                  << " (eval: " << best_move_eval << ")" << std::endl;
-      } else if (kShowMatchingMoves && move_eval == best_move_eval) {
+                  << " (eval: " << move_eval << ")" << std::endl;
+      } else if (kShowMatchingMoves && move_eval == best_move.score) {
         std::cerr << "Matching move: " << sit_.MoveToString(move)
                   << " (eval: " << move_eval << ")" << std::endl;
       }
@@ -182,6 +199,7 @@ class Negamax {
       // comment out the line below to evaluate all the moves
       // e.g., to find all the optimal moves.
       if (alpha >= beta) break;
+      if (MillisSince(start) > millis_left) return {{}, kTimeoutScore};
     }
     METRIC_INC(num_exits[depth][REC_EVAL_EXIT]);
     return best_move;
