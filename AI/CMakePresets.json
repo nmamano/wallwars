@@ -64,38 +64,6 @@
             "CC": "clang",
             "CXX": "clang++"
         }
-    },
-    {
-          "name": "debug-emcc",
-          "displayName": "Debug with EMCC",
-          "binaryDir": "${sourceDir}/build_debug_emcc",
-          "generator": "Unix Makefiles",
-          "cacheVariables": {
-              "CMAKE_BUILD_TYPE": "Debug",
-              "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic",
-              "CMAKE_EXECUTABLE_SUFFIX_CXX": ".html",
-              "CMAKE_EXE_LINKER_FLAGS": "--emrun -s TOTAL_MEMORY=1024MB"
-          },
-          "environment": {
-              "CC": "emcc",
-              "CXX": "em++"
-          }
-      },
-      {
-          "name": "release-emcc",
-          "displayName": "Release with EMCC",
-          "binaryDir": "${sourceDir}/build_release_emcc",
-          "generator": "Unix Makefiles",
-          "cacheVariables": {
-              "CMAKE_BUILD_TYPE": "Release",
-              "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic -O3 -march=haswell -flto=full",
-              "CMAKE_EXECUTABLE_SUFFIX_CXX": ".html",
-              "CMAKE_EXE_LINKER_FLAGS": "--emrun -s TOTAL_MEMORY=1024MB"
-          },
-          "environment": {
-              "CC": "emcc",
-              "CXX": "em++"
-          }
-      }
+    }
   ]
 }
