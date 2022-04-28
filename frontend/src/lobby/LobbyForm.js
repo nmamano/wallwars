@@ -150,154 +150,6 @@ const LobbyForm = ({
         <Col s={1} m={4}></Col>
       </Row>
       <Row className="valign-wrapper">
-        <Col className="center" s={4} m={4}>
-          <span style={{ fontSize: "23px" }}>ELO id:</span>
-        </Col>
-        <Col s={6} m={3}>
-          <TextInput
-            id="eloIdInput"
-            value={clientParams.eloId}
-            onChange={(props) => {
-              handleEloId(props.target.value);
-            }}
-          />
-        </Col>
-        <Col s={1} m={1}>
-          <Modal
-            style={{ color: "black", backgroundColor: "white" }}
-            bottomSheet={false}
-            fixedFooter={false}
-            header={"About ELO ids"}
-            open={false}
-            options={{
-              dismissible: true,
-              endingTop: "10%",
-              inDuration: 250,
-              opacity: 0.4,
-              outDuration: 250,
-              preventScrolling: true,
-              startingTop: "4%",
-            }}
-            trigger={
-              <Button
-                node="button"
-                waves="light"
-                small
-                floating
-                style={{
-                  color: "white",
-                  backgroundColor: getColor(menuTheme, "button", isDarkModeOn),
-                }}
-                icon={<Icon>info</Icon>}
-                onClick={handleRefreshName}
-                tooltip={"About ELO ids"}
-              />
-            }
-          >
-            {<div>{eloIdAboutText}</div>}
-          </Modal>
-        </Col>
-        <Col s={1} m={4}></Col>
-      </Row>
-      <Row className="valign-wrapper">
-        <Col className="center" s={4} m={4}>
-          <span style={{ fontSize: "23px" }}>
-            {isLargeScreen ? "Your token:" : "Token:"}
-          </span>
-        </Col>
-        <Col s={3} m={2} className="center">
-          {clientParams.token === "default" ? (
-            defaultToken
-          ) : (
-            <div className={"white-text"} style={{ fontSize: "30px" }}>
-              <i
-                className={`material-icons white-text`}
-                style={{ height: `100%` }}
-              >
-                {clientParams.token}
-              </i>
-            </div>
-          )}
-        </Col>
-        <Col s={4} m={4}>
-          <div>
-            <Dropdown
-              id="Dropdown_6"
-              options={{
-                alignment: "left",
-                autoTrigger: true,
-                closeOnClick: true,
-                constrainWidth: true,
-                container: null,
-                coverTrigger: true,
-                hover: false,
-                inDuration: 150,
-                onCloseEnd: null,
-                onCloseStart: null,
-                onOpenEnd: null,
-                onOpenStart: null,
-                outDuration: 250,
-              }}
-              trigger={
-                <Button
-                  node="button"
-                  style={{
-                    backgroundColor: getColor(
-                      menuTheme,
-                      "button",
-                      isDarkModeOn
-                    ),
-                  }}
-                >
-                  Change
-                </Button>
-              }
-            >
-              {tokens.map((token) => {
-                return (
-                  <div
-                    style={{
-                      width: "100%",
-                      color: "white",
-                      backgroundColor: getColor(
-                        menuTheme,
-                        "button",
-                        isDarkModeOn
-                      ),
-                    }}
-                    key={token}
-                    node="button"
-                    onClick={() => handleToken(token)}
-                  >
-                    <div
-                      className="center"
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        padding: "4px 0",
-                      }}
-                    >
-                      {token === "default" ? (
-                        defaultToken
-                      ) : (
-                        <i
-                          className={`material-icons white-text`}
-                          style={{ height: `100%` }}
-                        >
-                          {token}
-                        </i>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </Dropdown>
-          </div>
-        </Col>
-        <Col s={1} m={2}></Col>
-      </Row>
-      <Row className="valign-wrapper">
         <Col className="center" s={5} m={4}>
           <TextButton
             text="Create Game"
@@ -334,41 +186,199 @@ const LobbyForm = ({
         </Col>
         <Col s={1} m={2}></Col>
       </Row>
-      <Row className="valign-wrapper">
-        <Col className="center" s={5} m={4}>
-          {" "}
-          <Checkbox
-            id="isPrivateCheckbox"
-            label="PRIVATE"
-            value="PRIVATE"
-            checked={clientParams.isPrivate}
-            onChange={() => {
-              handleIsPrivate(!clientParams.isPrivate);
-            }}
-          />
-        </Col>
-        <Col s={2} m={2} style={{ paddingRight: "0" }}>
-          <BoardSizeSlider
-            label="Rows:"
-            min={3}
-            max={maxBoardDims[0]}
-            value={BS.dims[0]}
-            onChange={handleNumRows}
-          />
-        </Col>
-        <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
-        <Col s={2} m={2} style={{ paddingRight: "0" }}>
-          <BoardSizeSlider
-            label="Columns:"
-            min={3}
-            max={maxBoardDims[1]}
-            value={BS.dims[1]}
-            onChange={handleNumCols}
-          />
-        </Col>
-        <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
-        <Col s={1} m={2}></Col>
-      </Row>
+      {showMoreOptions && (
+        <Row className="valign-wrapper">
+          <Col className="center" s={5} m={4}>
+            {" "}
+            <Checkbox
+              id="isPrivateCheckbox"
+              label="PRIVATE"
+              value="PRIVATE"
+              checked={clientParams.isPrivate}
+              onChange={() => {
+                handleIsPrivate(!clientParams.isPrivate);
+              }}
+            />
+          </Col>
+          <Col s={2} m={2} style={{ paddingRight: "0" }}>
+            <BoardSizeSlider
+              label="Rows:"
+              min={3}
+              max={maxBoardDims[0]}
+              value={BS.dims[0]}
+              onChange={handleNumRows}
+            />
+          </Col>
+          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
+          <Col s={2} m={2} style={{ paddingRight: "0" }}>
+            <BoardSizeSlider
+              label="Columns:"
+              min={3}
+              max={maxBoardDims[1]}
+              value={BS.dims[1]}
+              onChange={handleNumCols}
+            />
+          </Col>
+          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
+          <Col s={1} m={2}></Col>
+        </Row>
+      )}
+      {showMoreOptions && (
+        <Row className="valign-wrapper">
+          <Col className="center" s={4} m={4}>
+            <span style={{ fontSize: "23px" }}>
+              {isLargeScreen ? "Your token:" : "Token:"}
+            </span>
+          </Col>
+          <Col s={3} m={2} className="center">
+            {clientParams.token === "default" ? (
+              defaultToken
+            ) : (
+              <div className={"white-text"} style={{ fontSize: "30px" }}>
+                <i
+                  className={`material-icons white-text`}
+                  style={{ height: `100%` }}
+                >
+                  {clientParams.token}
+                </i>
+              </div>
+            )}
+          </Col>
+          <Col s={4} m={4}>
+            <div>
+              <Dropdown
+                id="Dropdown_6"
+                options={{
+                  alignment: "left",
+                  autoTrigger: true,
+                  closeOnClick: true,
+                  constrainWidth: true,
+                  container: null,
+                  coverTrigger: true,
+                  hover: false,
+                  inDuration: 150,
+                  onCloseEnd: null,
+                  onCloseStart: null,
+                  onOpenEnd: null,
+                  onOpenStart: null,
+                  outDuration: 250,
+                }}
+                trigger={
+                  <Button
+                    node="button"
+                    style={{
+                      backgroundColor: getColor(
+                        menuTheme,
+                        "button",
+                        isDarkModeOn
+                      ),
+                    }}
+                  >
+                    Change
+                  </Button>
+                }
+              >
+                {tokens.map((token) => {
+                  return (
+                    <div
+                      style={{
+                        width: "100%",
+                        color: "white",
+                        backgroundColor: getColor(
+                          menuTheme,
+                          "button",
+                          isDarkModeOn
+                        ),
+                      }}
+                      key={token}
+                      node="button"
+                      onClick={() => handleToken(token)}
+                    >
+                      <div
+                        className="center"
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "center",
+                          padding: "4px 0",
+                        }}
+                      >
+                        {token === "default" ? (
+                          defaultToken
+                        ) : (
+                          <i
+                            className={`material-icons white-text`}
+                            style={{ height: `100%` }}
+                          >
+                            {token}
+                          </i>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </Dropdown>
+            </div>
+          </Col>
+          <Col s={1} m={2}></Col>
+        </Row>
+      )}
+      {showMoreOptions && (
+        <Row className="valign-wrapper">
+          <Col className="center" s={4} m={4}>
+            <span style={{ fontSize: "23px" }}>ELO id:</span>
+          </Col>
+          <Col s={6} m={3}>
+            <TextInput
+              id="eloIdInput"
+              value={clientParams.eloId}
+              onChange={(props) => {
+                handleEloId(props.target.value);
+              }}
+            />
+          </Col>
+          <Col s={1} m={1}>
+            <Modal
+              style={{ color: "black", backgroundColor: "white" }}
+              bottomSheet={false}
+              fixedFooter={false}
+              header={"About ELO ids"}
+              open={false}
+              options={{
+                dismissible: true,
+                endingTop: "10%",
+                inDuration: 250,
+                opacity: 0.4,
+                outDuration: 250,
+                preventScrolling: true,
+                startingTop: "4%",
+              }}
+              trigger={
+                <Button
+                  node="button"
+                  waves="light"
+                  small
+                  floating
+                  style={{
+                    color: "white",
+                    backgroundColor: getColor(
+                      menuTheme,
+                      "button",
+                      isDarkModeOn
+                    ),
+                  }}
+                  icon={<Icon>info</Icon>}
+                  onClick={handleRefreshName}
+                  tooltip={"About ELO ids"}
+                />
+              }
+            >
+              {<div>{eloIdAboutText}</div>}
+            </Modal>
+          </Col>
+          <Col s={1} m={4}></Col>
+        </Row>
+      )}
       <Row className="valign-wrapper">
         <Col className="center" s={5} m={4}>
           <span style={{ fontSize: "15px" }}>{"More options:"}</span>
@@ -539,29 +549,31 @@ const LobbyForm = ({
           <Col s={1} m={2}></Col>
         </Row>
       )}
-      <Row className="valign-wrapper">
-        <Col className="center" s={5} m={4}>
-          <TextButton
-            text="Join Game"
-            onClick={handleJoinGame}
-            menuTheme={menuTheme}
-            isDarkModeOn={isDarkModeOn}
-            isDisabled={clientParams.joinCode === ""}
-          />
-        </Col>
-        <Col s={6} m={5}>
-          <TextInput
-            id="joinInput"
-            placeholder="Write game code here..."
-            value={`${clientParams.joinCode}`}
-            onChange={(props) => {
-              console.log(props);
-              handleJoinCode(props.target.value);
-            }}
-          />
-        </Col>
-        <Col s={1} m={3}></Col>
-      </Row>
+      {showMoreOptions && (
+        <Row className="valign-wrapper">
+          <Col className="center" s={5} m={4}>
+            <TextButton
+              text="Join Game"
+              onClick={handleJoinGame}
+              menuTheme={menuTheme}
+              isDarkModeOn={isDarkModeOn}
+              isDisabled={clientParams.joinCode === ""}
+            />
+          </Col>
+          <Col s={6} m={5}>
+            <TextInput
+              id="joinInput"
+              placeholder="Write game code here..."
+              value={`${clientParams.joinCode}`}
+              onChange={(props) => {
+                console.log(props);
+                handleJoinCode(props.target.value);
+              }}
+            />
+          </Col>
+          <Col s={1} m={3}></Col>
+        </Row>
+      )}
       <Row className="valign-wrapper">
         <Col className="center" s={6} m={6}>
           <TextButton
