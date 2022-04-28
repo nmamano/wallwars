@@ -296,6 +296,40 @@ struct Situation {
     return "(" + move_str + ")";
   }
 
+  std::string NodeInStandardNotation(int node) const {
+    char row = Row(C, node) == 10 ? 'X' : '1' + Row(C, node);
+    char col = 'a' + Col(C, node);
+    return std::string(1, col) + std::string(1, row);
+  }
+
+  std::string EdgeInStandardNotation(int edge) const {
+    // Edge/2 is the node above or to the left.
+    return NodeInStandardNotation(edge / 2) +
+           (IsHorizontalEdge(edge) ? ">" : "v");
+  }
+
+  // Returns a string representing a move in standard notation assuming that the
+  // move can be played on the situation.
+  std::string MoveToStandardNotation(Move move) const {
+    int end_node = TokenToMove() + move.token_change;
+    if (move.IsDoubleWalkMove()) return NodeInStandardNotation(end_node);
+    if (move.IsWalkAndBuildMove()) {
+      int edge = move.edges[0] != -1 ? move.edges[0] : move.edges[1];
+      return NodeInStandardNotation(end_node) + " " +
+             EdgeInStandardNotation(edge);
+    }
+    // Build-and-build move:
+    std::string edge1 = EdgeInStandardNotation(move.edges[0]),
+                edge2 = EdgeInStandardNotation(move.edges[1]);
+    // If the two edges are the edges below and to the right of a cell, the
+    // vertical edge comes first, which has higher ASCII because 'v' > '>'"".
+    if (move.edges[0] / 2 == move.edges[1] / 2) {
+      return std::max(edge1, edge2) + " " + std::min(edge1, edge2);
+    }
+    // Otherwise, alphabetical order.
+    return std::min(edge1, edge2) + " " + std::max(edge1, edge2);
+  }
+
   // todo: clean up the padding logic.
   void PrintBoardWithEdgeIndices() const {
     int p0 = tokens[0], p1 = tokens[1];
@@ -340,8 +374,8 @@ struct Situation {
         std::cout << std::string(left_padding, ' ') << node_str
                   << std::string(right_padding, ' ');
 
-        // Horizontal edge to the right. Horizontal edges always have a width of
-        // 5 characters.
+        // Horizontal edge to the right. Horizontal edges always have a width
+        // of 5 characters.
         if (col == C - 1) continue;
         int edge = EdgeRight(C, node);
         if (!G.edges[edge]) {
@@ -451,9 +485,10 @@ struct Situation {
       std::cout << s.substr(0, s_i) << '#' << s.substr(s_i) << std::endl;
     }
   }
-  // Advances `s_i`, an index in `s`, until after `token`. It skips white spaces
-  // before `token`. Returns false if anything other than white spaces followed
-  // by `token` is encountered, or if `s` ends before the token is found.
+  // Advances `s_i`, an index in `s`, until after `token`. It skips white
+  // spaces before `token`. Returns false if anything other than white spaces
+  // followed by `token` is encountered, or if `s` ends before the token is
+  // found.
   bool ConsumeToken(const std::string& token, const std::string& s,
                     size_t& s_i) {
     SkipWhiteSpace(s, s_i);
@@ -545,11 +580,11 @@ struct Situation {
   }
 
   // Parses a move in standard notation starting at s[s_i]. Returns false if
-  // parsing fails. Otherwise, returns true, moves i to after the parsed string
-  // and stores the parsed move in `move`. Any initial white space is skipped.
-  // If there is more than one action, any order of the actions is accepted.
-  // Upper and lowercase letters are allowed. Examples of moves: "a1", "lX", "lX
-  // a1v", "a1v a1>", a2> l1>", "A2> DxV".
+  // parsing fails. Otherwise, returns true, moves i to after the parsed
+  // string and stores the parsed move in `move`. Any initial white space is
+  // skipped. If there is more than one action, any order of the actions is
+  // accepted. Upper and lowercase letters are allowed. Examples of moves:
+  // "a1", "lX", "lX a1v", "a1v a1>", a2> l1>", "A2> DxV".
   bool ParseMove(const std::string& s, size_t& s_i, ParsedMove& move) {
     int walk_action_count = 0;
     for (int action_index = 0; !IsDoneParsingMove(s, s_i); ++action_index) {
@@ -576,8 +611,8 @@ struct Situation {
   }
 
   // Parses a string in standard notation into the list of individual moves.
-  // Returns whether parsing succeeds, in which case `parsed_moves` contains the
-  // list of moves and `notated_moves` contains the list of strings
+  // Returns whether parsing succeeds, in which case `parsed_moves` contains
+  // the list of moves and `notated_moves` contains the list of strings
   // corresponding to the moves.
   bool ParseMoveList(const std::string& s,
                      std::vector<ParsedMove>& parsed_moves,
@@ -634,6 +669,16 @@ struct SituationHash {
            std::hash<std::bitset<NumRealAndFakeEdges(R, C)>>{}(sit.G.edges);
   }
 };
+
+template <int R, int C>
+Situation<R, C> ParseSituationOrCrash(std::string standard_notation) {
+  Situation<R, C> sit;
+  if (!sit.BuildFromStandardNotationMoves(standard_notation)) {
+    std::cerr << "Error: Failed to parse standard notation" << std::endl;
+    std::exit(EXIT_FAILURE);
+  }
+  return sit;
+}
 
 }  // namespace wallwars
 

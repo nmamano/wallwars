@@ -397,16 +397,6 @@ std::string BenchmarkMetricsReport(
   return sout.str();
 }
 
-template <int R, int C>
-Situation<R, C> ParseSituationOrCrash(std::string standard_notation) {
-  Situation<R, C> sit;
-  if (!sit.BuildFromStandardNotationMoves(standard_notation)) {
-    std::cerr << "Error: Failed to parse standard notation" << std::endl;
-    std::exit(EXIT_FAILURE);
-  }
-  return sit;
-}
-
 void StreamAndStdOut(std::ostream& out, std::string s) {
   std::cout << s << std::endl;
   out << s << std::endl;

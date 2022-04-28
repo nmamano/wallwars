@@ -22,6 +22,10 @@ struct Move {
   bool operator!=(const Move& rhs) const {
     return (token_change != rhs.token_change || edges != rhs.edges);
   }
+
+  bool IsDoubleWalkMove() { return edges[0] == -1 && edges[1] == -1; }
+  bool IsWalkAndBuildMove() { return (edges[0] == -1) ^ (edges[1] == -1); }
+  bool IsDoubleBuildMove() { return token_change == 0; }
 };
 
 inline Move DoubleWalkMove(int from_node, int to_node) {
