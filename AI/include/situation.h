@@ -575,6 +575,8 @@ struct Situation {
       } else {
         action.type = '.';
       }
+    } else {
+      action.type = '.';
     }
     return true;
   }
