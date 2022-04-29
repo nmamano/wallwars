@@ -138,6 +138,7 @@ std::string ExitTypeTable(std::map<std::string, std::string> prev_csv,
   table.AddToNewRow({"Depth", "Total", "%", "|", "rec_eval", "%", "leaf_eval",
                      "%", "tt_hit", "%", "tt_cutoff", "%", "game_over", "%"});
   for (int depth = kMaxDepth; depth >= 0; --depth) {
+    if (m.ExitsAtDepth(depth) == 0) continue;
     table.AddToNewRow(depth);
     long long total_row = m.ExitsAtDepth(depth);
     table.AddToLastRow(total_row);
@@ -242,6 +243,7 @@ std::string TTReadWriteTables(std::map<std::string, std::string> prev_csv,
   table1.AddToNewRow(header_row);
   table2.AddToNewRow(header_row);
   for (int depth = kMaxDepth; depth >= 0; --depth) {
+    if (m.ExitsAtDepth(depth) == 0) continue;
     AddTTReadWriteTableRow(std::to_string(depth), m.ExitsAtDepth(depth),
                            m.TTReadsAtDepthOfType(depth, EXACT_READ),
                            m.TTReadsAtDepthOfType(depth, IMPROVEMENT_READ),
@@ -303,6 +305,7 @@ std::string ChildGenerationTable(std::map<std::string, std::string> prev_csv,
   table.AddToNewRow({"Depth", "Generated", "|", "Visited", "%", "Pruned", "%"});
   // Skips depth 0, where no children are generated.
   for (int depth = kMaxDepth; depth >= 1; --depth) {
+    if (m.ExitsAtDepth(depth) == 0) continue;
     long long visited = m.VisitedChildrenAtDepth(depth);
     long long pruned = m.PrunedChildrenAtDepth(depth);
     AddChildrenGenerationRow(std::to_string(depth), visited, pruned, table);
