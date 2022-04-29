@@ -142,7 +142,7 @@ class InteractiveGame {
   void PlayGame(std::array<bool, 2> auto_moves) {
     std::array<Negamax<R, C>, 2> negamaxers;
 
-    Situation<R, C> sit;
+    Situation<R, C> sit = StartingSituation<R, C>();
     for (int ply = 0; !sit.IsGameOver(); ++ply) {
       using namespace std::chrono;
       // P0 moves on even plies, P1 moves on odd plies.

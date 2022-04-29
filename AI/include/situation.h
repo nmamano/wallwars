@@ -34,17 +34,24 @@ constexpr std::array<int, 2> Goals(int R, int C) {
 // cell in the board.
 template <int R, int C>
 struct Situation {
-  // Constructs the initial situation: the players are in the corner, all edges
-  // are active, and it is P0's turn.
-  Situation()
-      : tokens({static_cast<int8_t>(Starts(C)[0]),
-                static_cast<int8_t>(Starts(C)[1])}) {}
+  // Since situations are used as keys in the memoization map, we use a compact
+  // representation.
+  // p0 and p1. 8 bits suffice for boards up to 10x12.
+  std::array<int8_t, 2> tokens;
+  int8_t turn = 0;  // Index of the player to move; 0 or 1.
+  Graph<R, C> G;
 
-  void Reset() {
+  // No constructor so that a Situation is a POD. This should make it easier to
+  // initialize the transposition table, which can contain 100's of millions of
+  // them.
+
+  // Resets it to the start situation: the players are in the corner, all
+  // edges are active, and it is P0's turn.
+  void SetStartingSituation() {
     tokens = {static_cast<int8_t>(Starts(C)[0]),
               static_cast<int8_t>(Starts(C)[1])};
     turn = 0;
-    G = {};
+    G.SetStartingGraph();
   }
 
   // Initializes `this` Situation by applying a string `s` representing a valid
@@ -52,7 +59,7 @@ struct Situation {
   // example: "1. b2 2. b3v c2>". Returns whether `s` is parsed correctly, in
   // which case `this` is set to the resulting situation.
   bool BuildFromStandardNotationMoves(const std::string& s) {
-    Reset();
+    SetStartingSituation();
     std::vector<ParsedMove> parsed_moves;
     std::vector<std::string> notated_moves;
     if (!ParseMoveList(s, parsed_moves, notated_moves)) return false;
@@ -63,7 +70,7 @@ struct Situation {
       if (!IsLegalMove(move)) {
         std::cout << "Could not apply move " << i + 1 << ", "
                   << notated_moves[i] << ": " << move << std::endl;
-        Reset();
+        SetStartingSituation();
         return false;
       }
       ApplyMove(move);
@@ -71,24 +78,6 @@ struct Situation {
     return true;
   }
 
-  // Since situations are used as keys in the memoization map, we use a compact
-  // representation.
-  // p0 and p1. 8 bits suffice for boards up to 10x12.
-  std::array<int8_t, 2> tokens;
-  int8_t turn = 0;  // Index of the player to move; 0 or 1.
-  Graph<R, C> G;
-
-  Situation(const Situation& other)
-      : tokens(other.tokens), turn(other.turn), G(other.G) {}
-
-  Situation& operator=(const Situation& other) {
-    if (&other != this) {
-      tokens = other.tokens;
-      turn = other.turn;
-      G = other.G;
-    }
-    return *this;
-  }
   bool operator==(const Situation& rhs) const {
     return (tokens == rhs.tokens && turn == rhs.turn && G == rhs.G);
   }
@@ -467,7 +456,6 @@ struct Situation {
               << std::endl;
   }
 
- private:
   bool IsWhiteSpace(char c) { return c == ' ' || c == '\t' || c == '\n'; }
 
   // Advances `s_i` while it is at a white space character.
@@ -679,6 +667,13 @@ Situation<R, C> ParseSituationOrCrash(std::string standard_notation) {
     std::cerr << "Error: Failed to parse standard notation" << std::endl;
     std::exit(EXIT_FAILURE);
   }
+  return sit;
+}
+
+template <int R, int C>
+Situation<R, C> StartingSituation() {
+  Situation<R, C> sit;
+  sit.SetStartingSituation();
   return sit;
 }
 

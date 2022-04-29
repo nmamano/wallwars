@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 
 #include "benchmark.h"
 #include "interactive_game.h"

@@ -184,11 +184,11 @@ struct Graph {
   // uses 2 * R * C bits (plus padding).
   std::bitset<NumRealAndFakeEdges(R, C)> edges;
 
-  // Constructs a grid graph where all real edges are active (fake edges are
-  // deactivated).
-  Graph() { Reset(); }
+  // No constructor so that a Situation is a POD. This should make it easier to
+  // initialize the transposition table, which can contain 100's of millions of
+  // them.
 
-  void Reset() {
+  void SetStartingGraph() {
     edges.set();
     for (int e = 0; e < NumRealAndFakeEdges(R, C); e++) {
       if (!IsRealEdge(R, C, e)) DeactivateEdge(e);
@@ -209,7 +209,7 @@ struct Graph {
   // are no newlines between rows. Returns whether `s` is parsed correctly, in
   // which case `this` is set to the resulting graph.
   bool BuildFromString(const std::string& s) {
-    Reset();
+    SetStartingGraph();
     for (int i = 0; i < R * 2 - 1; ++i) {
       int row = i / 2;
       for (int j = 0; j < C * 2 - 1; ++j) {
@@ -221,7 +221,7 @@ struct Graph {
           if (c != '.') {
             std::cout << "Expected '.' while reading graph but saw '" << c
                       << "'" << std::endl;
-            Reset();
+            SetStartingGraph();
             return false;
           }
         }
@@ -229,7 +229,7 @@ struct Graph {
           if (c != '+') {
             std::cout << "Expected '+' while reading graph but saw '" << c
                       << "'" << std::endl;
-            Reset();
+            SetStartingGraph();
             return false;
           }
         }
@@ -240,7 +240,7 @@ struct Graph {
           } else if (c != ' ') {
             std::cout << "Expected '|' or ' ' while reading graph but saw '"
                       << c << "'" << std::endl;
-            Reset();
+            SetStartingGraph();
             return false;
           }
         }
@@ -251,7 +251,7 @@ struct Graph {
           } else if (c != ' ') {
             std::cout << "Expected '-' or ' ' while reading graph but saw '"
                       << c << "'" << std::endl;
-            Reset();
+            SetStartingGraph();
             return false;
           }
         }
@@ -649,8 +649,6 @@ struct Graph {
                    char node1_char) const {
     std::cout << AsPrettyString(node0, node1, node0_char, node1_char);
   }
-
- private:
   struct BridgesState {
     // DFS visit order, or -1 for unvisited yet.
     std::array<int, NumNodes(R, C)> rank;
@@ -687,6 +685,15 @@ struct Graph {
 template <int R, int C>
 inline std::ostream& operator<<(std::ostream& os, const Graph<R, C>& G) {
   return os << G.AsPrettyString(-1, -1, '-', '-');
+}
+
+// Constructs a grid graph where all real edges are active (fake edges are
+// deactivated).
+template <int R, int C>
+Graph<R, C> StartingGraph() {
+  Graph<R, C> graph;
+  graph.SetStartingGraph();
+  return graph;
 }
 
 }  // namespace wallwars

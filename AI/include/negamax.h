@@ -482,7 +482,7 @@ class Negamax {
     // while minimizing reachability computations.
     for (int label = 0; label < num_labels; ++label) {
       // The two-edge connected component with label `label`.
-      Graph<R, C> subgraph;
+      Graph<R, C> subgraph = StartingGraph<R, C>();
       for (int edge = 0; edge < NumRealAndFakeEdges(R, C); ++edge) {
         if (edge_labels[edge] != label) subgraph.DeactivateEdge(edge);
       }

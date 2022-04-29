@@ -136,7 +136,7 @@ class Tests {
   // Tests
 
   bool GraphDistanceTest() {
-    Graph<4, 4> G;
+    Graph<4, 4> G = StartingGraph<4, 4>();
     G.BuildFromString(
         ".|. . ."
         " +-+-+ "
@@ -153,7 +153,7 @@ class Tests {
   }
 
   bool GraphDistancesTest() {
-    Graph<4, 4> G;
+    Graph<4, 4> G = StartingGraph<4, 4>();
     G.BuildFromString(
         ".|. . ."
         " +-+-+ "
@@ -179,7 +179,7 @@ class Tests {
 
   bool GraphNodesAtDistance2Test() {
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ".|. . ."
           " +-+-+ "
@@ -209,7 +209,7 @@ class Tests {
       }
     }
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ".|.|.|."
           " +-+-+ "
@@ -252,7 +252,7 @@ class Tests {
     12 13 14 15
     */
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ".|. . ."
           " +-+-+ "
@@ -267,7 +267,7 @@ class Tests {
     }
     // Case traversing every node.
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ". . . ."
           "-+-+-+ "
@@ -283,14 +283,14 @@ class Tests {
     }
     // Case with same start and goal.
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       auto actual = G.ShortestPath(15, 15);
       auto expected = ExtendWithMinus1({15});
       ASSERT_EQ(actual, expected);
     }
     // Case with multiple possible shortest paths.
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       auto actual = G.ShortestPath(3, 12);
       if (actual[0] != 3 || (actual[1] != 2 && actual[1] != 7) ||
           actual[6] != 12 || actual[7] != -1) {
@@ -304,7 +304,7 @@ class Tests {
 
   bool GraphShortestPathWithOrientationsTest() {
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       std::array<int, NumRealAndFakeEdges(4, 4)> orientations;
       orientations.fill(0);
       for (int edge : {1, 3, 5, 11, 13, 15, 17, 19, 21}) {
@@ -334,7 +334,7 @@ class Tests {
       }
     }
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       std::array<int, NumRealAndFakeEdges(4, 4)> orientations;
       orientations.fill(0);
       for (int edge : {1, 3, 5, 11, 13, 15, 17, 19, 21}) {
@@ -364,7 +364,7 @@ class Tests {
       }
     }
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       std::array<int, NumRealAndFakeEdges(4, 4)> orientations;
       orientations.fill(0);
       for (int edge : {0, 8, 16, 10, 18, 26, 4, 12, 20}) {
@@ -394,7 +394,7 @@ class Tests {
       }
     }
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       std::array<int, NumRealAndFakeEdges(4, 4)> orientations;
       orientations.fill(0);
       for (int edge : {0, 8, 16, 10, 18, 26, 4, 12, 20}) {
@@ -424,7 +424,7 @@ class Tests {
       }
     }
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ". . . ."
           " + +-+ "
@@ -461,7 +461,7 @@ class Tests {
       }
     }
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       std::array<int, NumRealAndFakeEdges(4, 4)> orientations;
       orientations.fill(0);
       for (int edge : {0, 2, 4}) {
@@ -492,7 +492,7 @@ class Tests {
   bool GraphConnectedComponentsTest() {
     // Case with only 1 CC.
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ".|. . ."
           " +-+-+ "
@@ -508,7 +508,7 @@ class Tests {
     }
     // Case with 4 CC.
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ".|. . ."
           " +-+-+ "
@@ -534,7 +534,7 @@ class Tests {
   bool GraphBridgesTest() {
     // Case where every enabled edge is a bridge.
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ".|. . ."
           " +-+-+ "
@@ -564,7 +564,7 @@ class Tests {
     }
     // Case with no bridges.
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ". . . ."
           " +-+-+ "
@@ -583,7 +583,7 @@ class Tests {
   bool GraphTwoEdgeConnectedComponentsTest() {
     // Empty graph with only 1 2-ECC.
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       Graph<4, 4> G_original = G;
       auto actual = G.TwoEdgeConnectedComponents();
       ASSERT_EQ(G, G_original);
@@ -593,7 +593,7 @@ class Tests {
     }
     // Case with 2 2-ECC.
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ". . . ."
           " +-+-+ "
@@ -611,7 +611,7 @@ class Tests {
     }
     // Case with a bridge.
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ". . . ."
           " +-+ + "
@@ -629,7 +629,7 @@ class Tests {
     }
     // Case with single-node 2-ECCs.
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ". . . ."
           "-+ +-+ "
@@ -657,7 +657,7 @@ class Tests {
   bool GraphTwoEdgeDisjointPathsTest() {
     // Empty graph case.
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       {
         auto actual = G.TwoEdgeDisjointPaths(0, 3);
         std::array<std::array<int, NumNodes(4, 4)>, 2> expected = {
@@ -686,7 +686,7 @@ class Tests {
       }
     }
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ". . . ."
           " +-+-+ "
@@ -725,7 +725,7 @@ class Tests {
       }
     }
     {
-      Graph<4, 4> G;
+      Graph<4, 4> G = StartingGraph<4, 4>();
       G.BuildFromString(
           ". . . ."
           " +-+ + "
@@ -769,7 +769,7 @@ class Tests {
   bool SituationIsLegalMoveTest() {
     // Case where each individual wall would be legal, but both together are
     // not.
-    Situation<4, 4> sit;
+    Situation<4, 4> sit = StartingSituation<4, 4>();
     sit.G.BuildFromString(
         ". . . ."
         " + + + "
@@ -1108,7 +1108,7 @@ class Tests {
     Negamax<4, 4> negamaxer;
     // Case with only one legal move.
     {
-      Situation<4, 4> sit;
+      Situation<4, 4> sit = StartingSituation<4, 4>();
       sit.G.BuildFromString(
           ".|.|.|."
           " +-+-+ "
@@ -1131,7 +1131,7 @@ class Tests {
       }
     }
     {
-      Situation<4, 4> sit;
+      Situation<4, 4> sit = StartingSituation<4, 4>();
       // There is only one winning move.
       sit.G.BuildFromString(
           ". . . ."
