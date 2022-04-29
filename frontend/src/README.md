@@ -10,21 +10,21 @@ $ source  ../../../emsdk/emsdk_env.sh
 
 This is so that we can compile with the em++ compiler (assumes you have installed the emscripten toolchain; your relative path may be different).
 
-2. Run
+2. Compile `src/ai.cc`, producing `src/ai.mjs`.
 
 ```
 make -B
 ```
 
-This compiles `src/ai.cc`, producing `src/ai.mjs`. The file `src/ai.cc` does not have a main function, it just contains library functions that we export so that they can be called from javascript code. The functions are imported in `src/App.js`.
+The file `src/ai.cc` does not have a main function, it just contains library functions. The js code can call those functions by importing `createModule` from `ai.mjs` and then using `Module.cwrap`.
 
-3. Add this line to the top of `src/ai.mjs`:
+3. Add `/* eslint-disable */` to the top of `src/ai.mjs`:
 
 ```
-/* eslint-disable */
+sed -i '1 i\/* eslint-disable */' src/ai.mjs
 ```
 
-Otherwise, eslint will crash immediately due to lint errors when running the react app.
+Otherwise, react crashes immediately due to lint errors.
 
 4. Start the react app as usual:
 

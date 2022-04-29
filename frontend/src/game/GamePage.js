@@ -418,6 +418,13 @@ const GamePage = ({
     } else {
       updateState((draftState) => {
         draftState.shouldPlaySound = true;
+        if (clientParams.clientRole === roleEnum.computer) {
+          // In the C++ AI, the player on the top-left always moves first.
+          // So, here, we make the Creator always start.
+          // Since applySetupRematch flips who starts,
+          // we flip it here to negate the effect.
+          draftState.creatorStarts = !draftState.creatorStarts;
+        }
         applySetupRematch(draftState);
       });
     }
