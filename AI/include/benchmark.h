@@ -187,7 +187,8 @@ std::string ExitTypeTable(std::map<std::string, std::string> prev_csv,
   return sout.str();
 }
 
-void AddTTReadWriteTableRow(std::string depth, long long total, long long exact,
+void AddTTReadWriteTableRow(std::string depth, long long total_across_depths,
+                            long long total, long long exact,
                             long long improvement, long long useless,
                             long long miss, long long no_read, long long update,
                             long long add, long long replace,
@@ -208,7 +209,7 @@ void AddTTReadWriteTableRow(std::string depth, long long total, long long exact,
   table1.AddToLastRow(no_write);
 
   table2.AddToNewRow(depth);
-  table2.AddToLastRow("100");
+  table2.AddToLastRow(Percentage(total, total_across_depths), 2);
   table2.AddToLastRow("|");
   table2.AddToLastRow(Percentage(exact, total), 2);
   table2.AddToLastRow(Percentage(improvement, total), 2);
@@ -244,22 +245,22 @@ std::string TTReadWriteTables(std::map<std::string, std::string> prev_csv,
   table2.AddToNewRow(header_row);
   for (int depth = kMaxDepth; depth >= 0; --depth) {
     if (m.ExitsAtDepth(depth) == 0) continue;
-    AddTTReadWriteTableRow(std::to_string(depth), m.ExitsAtDepth(depth),
-                           m.TTReadsAtDepthOfType(depth, EXACT_READ),
-                           m.TTReadsAtDepthOfType(depth, IMPROVEMENT_READ),
-                           m.TTReadsAtDepthOfType(depth, USELESS_READ),
-                           m.TTReadsAtDepthOfType(depth, MISS_READ),
-                           m.TTReadsAtDepthOfType(depth, NO_READ),
-                           m.TTWritesAtDepthOfType(depth, UPDATE_WRITE),
-                           m.TTWritesAtDepthOfType(depth, ADD_WRITE),
-                           m.TTWritesAtDepthOfType(depth, REPLACE_WRITE),
-                           m.TTWritesAtDepthOfType(depth, NO_WRITE), table1,
-                           table2);
+    AddTTReadWriteTableRow(
+        std::to_string(depth), m.TotalExits(), m.ExitsAtDepth(depth),
+        m.TTReadsAtDepthOfType(depth, EXACT_READ),
+        m.TTReadsAtDepthOfType(depth, IMPROVEMENT_READ),
+        m.TTReadsAtDepthOfType(depth, USELESS_READ),
+        m.TTReadsAtDepthOfType(depth, MISS_READ),
+        m.TTReadsAtDepthOfType(depth, NO_READ),
+        m.TTWritesAtDepthOfType(depth, UPDATE_WRITE),
+        m.TTWritesAtDepthOfType(depth, ADD_WRITE),
+        m.TTWritesAtDepthOfType(depth, REPLACE_WRITE),
+        m.TTWritesAtDepthOfType(depth, NO_WRITE), table1, table2);
   }
   table1.AddHorizontalLineRow();
   table2.AddHorizontalLineRow();
   AddTTReadWriteTableRow(
-      "Sum", m.TotalExits(), m.TTReadsOfType(EXACT_READ),
+      "Sum", m.TotalExits(), m.TotalExits(), m.TTReadsOfType(EXACT_READ),
       m.TTReadsOfType(IMPROVEMENT_READ), m.TTReadsOfType(USELESS_READ),
       m.TTReadsOfType(MISS_READ), m.TTReadsOfType(NO_READ),
       m.TTWritesOfType(UPDATE_WRITE), m.TTWritesOfType(ADD_WRITE),
@@ -269,7 +270,7 @@ std::string TTReadWriteTables(std::map<std::string, std::string> prev_csv,
     // +1 for the root, which is not a children.
     long long total = std::stoll(prev_csv["visited_children"]) + 1;
     AddTTReadWriteTableRow(
-        "Prev", total, std::stoll(prev_csv["tt_exact_reads"]),
+        "Prev", total, total, std::stoll(prev_csv["tt_exact_reads"]),
         std::stoll(prev_csv["tt_improvement_reads"]),
         std::stoll(prev_csv["tt_useless_reads"]),
         std::stoll(prev_csv["tt_miss_reads"]),
@@ -413,9 +414,13 @@ void StreamAndStdOutEmptyLine(std::ostream& out) {
 // Returns a map from the values in a column to the row index. Assumes that the
 // row's values are unique. Skips first (header) row.
 std::map<std::string, int> ColumnValueToRowIndex(
-    const std::vector<std::vector<std::string>>& table, int col) {
+    const std::vector<std::vector<std::string>>& table, std::size_t col) {
   std::map<std::string, int> res;
   for (size_t i = 1; i < table.size(); ++i) {
+    if (table[i].size() <= col) {
+      std::cerr << "Error: row does not have enough columns." << std::endl;
+      std::exit(EXIT_FAILURE);
+    }
     res[table[i][col]] = i;
   }
   return res;
@@ -426,6 +431,10 @@ std::map<std::string, std::string> ColumnNameToRowValues(
     const std::vector<std::vector<std::string>>& table, int row) {
   std::map<std::string, std::string> res;
   for (size_t j = 0; j < table[0].size(); ++j) {
+    if (table[row].size() <= j) {
+      std::cerr << "Error: row does not have enough columns." << std::endl;
+      std::exit(EXIT_FAILURE);
+    }
     res[table[0][j]] = table[row][j];
   }
   return res;
