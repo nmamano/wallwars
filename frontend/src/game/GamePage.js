@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Button, Row, Col } from "react-materialize";
 import { useImmer } from "use-immer";
 import UIfx from "uifx";
@@ -41,7 +41,6 @@ import {
   applyPuzzleTakeback,
 } from "./gameState";
 import { lastPuzzleMoveIsCorrect } from "./puzzleLogic";
-
 import Board from "./Board";
 import Header from "../shared/Header";
 import Dialog from "../shared/Dialog";
@@ -52,6 +51,7 @@ import puzzleHelp from "./puzzleHelp";
 import ControlPanel from "./ControlPanel";
 import { getColor } from "../shared/colorThemes";
 import { cellEnum } from "../shared/gameLogicUtils";
+import createModule from "../ai.mjs";
 
 const moveSound = new UIfx(moveSoundAudio);
 const playMoveSound = () => {
@@ -77,6 +77,16 @@ const GamePage = ({
 
   //the 'state' object contains every other piece of state
   const [state, updateState] = useImmer(createInitialState(cookies));
+
+  //===================================================
+  // WebAssembly AI
+  //===================================================
+  const [getMove8x8, setGetMove8x8] = useState();
+  useEffect(() => {
+    createModule().then((Module) => {
+      setGetMove8x8(() => Module.cwrap("GetMove8x8", "string", ["string"]));
+    });
+  });
 
   //===================================================
   //communication FROM the server
@@ -623,13 +633,17 @@ const GamePage = ({
     if (state.lifeCycleStage < 1 || state.lifeCycleStage > 3) return;
     if (creatorToMove(state)) return;
     const moveIndex = turnCount(state) + 1;
+    const playAiMove = async () => {
+      await getAiMove(state, getMove8x8).then((aiActions) =>
+        updateState((draftState) => {
+          applyMove(draftState, aiActions, 60 * 60, moveIndex);
+        })
+      );
+    };
+    playAiMove().catch(console.error);
+
     // Async. call in case the AI takes long to move. The player
     // is still able to premove and such.
-    getAiMove(state).then((aiActions) =>
-      updateState((draftState) => {
-        applyMove(draftState, aiActions, 60 * 60, moveIndex);
-      })
-    );
   });
 
   //===================================================

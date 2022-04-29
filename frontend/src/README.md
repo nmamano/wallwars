@@ -13,7 +13,7 @@ This is so that we can compile with the em++ compiler (assumes you have installe
 2. Run
 
 ```
-make
+make -B
 ```
 
 This compiles `src/ai.cc`, producing `src/ai.mjs`. The file `src/ai.cc` does not have a main function, it just contains library functions that we export so that they can be called from javascript code. The functions are imported in `src/App.js`.

@@ -4,7 +4,7 @@ import { useMediaQuery } from "react-responsive";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import showToastNotification from "../shared/showToastNotification";
 
-import { moveNotation } from "../shared/gameLogicUtils";
+import { moveNotation, getStandardNotation } from "../shared/gameLogicUtils";
 import { getColor } from "../shared/colorThemes";
 import hoverHighlight from "../shared/hoverHighlight.module.css";
 
@@ -52,16 +52,6 @@ const MoveHistory = ({
     backgroundColor: colBg,
   };
 
-  const getStandardNotation = () => {
-    let res = "";
-    for (let i = 1; i < moveHistory.length; ++i) {
-      if (i > 1) res += " ";
-      res += i;
-      res += ". " + moveNotation(moveHistory[i].actions);
-    }
-    return res;
-  };
-
   return (
     <div
       id={"movehistory"}
@@ -83,7 +73,7 @@ const MoveHistory = ({
             <th style={headEntryStyle}>
               <CopyToClipboard
                 style={{ cursor: "pointer" }}
-                text={getStandardNotation()}
+                text={getStandardNotation(moveHistory)}
                 onCopy={() =>
                   showToastNotification("Game copied to clipboard!")
                 }

@@ -306,7 +306,7 @@ export const applyCreatedLocally = (
   token
 ) => {
   applyAddCreator(draftState, timeControl, boardSettings, name + "1", token);
-  applyCreatedOnServer(draftState, "local", Math.random() < 0.5, 0);
+  applyCreatedOnServer(draftState, "local", true, 0);
   applyJoinerJoined(draftState, name + "2", "cloud_off", 0);
 };
 
@@ -321,7 +321,7 @@ export const applyCreatedVsComputer = (
     increment: 0,
   };
   applyAddCreator(draftState, timeControl, boardSettings, name, token);
-  applyCreatedOnServer(draftState, "AI", Math.random() < 0.5, 0);
+  applyCreatedOnServer(draftState, "AI", true, 0);
   applyJoinerJoined(draftState, "AI", "memory", 0);
 };
 

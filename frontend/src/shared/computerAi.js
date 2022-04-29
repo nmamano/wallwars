@@ -1,7 +1,12 @@
-import { distance, dimensions, inBounds } from "./gameLogicUtils";
+import {
+  distance,
+  dimensions,
+  inBounds,
+  getStandardNotation,
+  MoveNotationToMove,
+} from "./gameLogicUtils";
 
-// Simple AI that walks towards the goal. It does not build any walls.
-export const getAiMove = async (state) => {
+const DoubleWalkMove = (state) => {
   const grid = state.moveHistory[state.moveHistory.length - 1].grid;
   const playerPos = state.moveHistory[state.moveHistory.length - 1].playerPos;
   const aiPos = playerPos[1];
@@ -32,4 +37,15 @@ export const getAiMove = async (state) => {
   // it means that the AI is at distance 1 from its goal. In this case, we simply
   // move to the goal. Note that it is not a legal move, as it is only 1 action.
   return [aiGoal];
+};
+
+// Simple AI that walks towards the goal. It does not build any walls.
+export const getAiMove = async (state, getMove8x8) => {
+  if (!getMove8x8) {
+    console.log("Fall back in case the WebAssembly AI hasn't loaded yet");
+    return DoubleWalkMove(state);
+  }
+  const standard_notation = getStandardNotation(state.moveHistory);
+  const move_notation = getMove8x8(standard_notation);
+  return MoveNotationToMove(move_notation);
 };

@@ -176,6 +176,7 @@ const LobbyPage = ({ socket }) => {
       draftState.showMoreOptions = !draftState.showMoreOptions;
     });
   };
+  // `coord` is 0 for row and 1 for column.
   const handleStartPos = (player, coord, val) => {
     updateState((draftState) => {
       draftState.boardSettings.startPos[player][coord] = val;
@@ -275,12 +276,16 @@ const LobbyPage = ({ socket }) => {
     });
   };
   const handleComputerGame = () => {
-    const bs = validateBoardSettings();
     const name = validateName();
     const eloId = validateEloId();
     updateState((draftState) => {
       draftState.clientRole = "computer";
-      draftState.boardSettings = bs;
+      //overwrite dimensions for computer game (can only be 8x8)
+      draftState.boardSettings = {
+        dims: [15, 15],
+        startPos: defaultInitialPlayerPos([15, 15]),
+        goalPos: defaultGoalPos([15, 15]),
+      };
       draftState.playerName = name;
       draftState.eloId = eloId;
       draftState.hasOngoingGame = false;

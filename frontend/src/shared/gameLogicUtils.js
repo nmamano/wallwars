@@ -240,3 +240,41 @@ export function moveNotation(actions) {
     ? actionNotation(a1) + " " + actionNotation(a2)
     : actionNotation(a2) + " " + actionNotation(a1);
 }
+
+const ActionNotationToMove = (s) => {
+  let classic_col = 1 + s.charCodeAt(0) - "a".charCodeAt(0);
+  let classic_row;
+  if (s[1] === "X") classic_row = 10;
+  else classic_row = parseInt(s[1]);
+  let pos = classicToInternalPos([classic_row, classic_col]);
+  if (s.length === 2) {
+    return pos;
+  } else if (s[2] === ">") {
+    pos[1]++;
+    return pos;
+  } else if (s[2] === "v") {
+    pos[0]++;
+    return pos;
+  } else {
+    console.error("Could not parse action ", s);
+  }
+};
+
+export const MoveNotationToMove = (s) => {
+  let actions = [];
+  let str_actions = s.split(" ");
+  str_actions.forEach((a) => {
+    actions.push(ActionNotationToMove(a));
+  });
+  return actions;
+};
+
+export const getStandardNotation = (moveHistory) => {
+  let res = "";
+  for (let i = 1; i < moveHistory.length; ++i) {
+    if (i > 1) res += " ";
+    res += i;
+    res += ". " + moveNotation(moveHistory[i].actions);
+  }
+  return res;
+};
