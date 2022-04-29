@@ -6,6 +6,9 @@ namespace wallwars {
 // Search depth of the Negamax AI.
 constexpr int kMaxDepth = 20;
 
+// Space allocated for the transposition table.
+constexpr long long kTranspositionTableBytes = 512 * 1024 * 1024;
+
 // Indicate whether the AI should indicate alternative moves that are as good as
 // the found move.
 constexpr bool kShowMatchingMoves = false;

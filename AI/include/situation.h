@@ -651,15 +651,6 @@ inline std::ostream& operator<<(std::ostream& os, const Situation<R, C>& sit) {
   return os << sit.AsPrettyString();
 }
 
-// Todo: improve hash function.
-template <int R, int C>
-struct SituationHash {
-  std::size_t operator()(const Situation<R, C>& sit) const {
-    return (sit.tokens[0] | (sit.tokens[1] << 16)) ^
-           std::hash<std::bitset<NumRealAndFakeEdges(R, C)>>{}(sit.G.edges);
-  }
-};
-
 template <int R, int C>
 Situation<R, C> ParseSituationOrCrash(std::string standard_notation) {
   Situation<R, C> sit;

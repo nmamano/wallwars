@@ -5,7 +5,6 @@
 #include <bitset>
 #include <chrono>
 #include <iostream>
-#include <unordered_map>
 
 #include "benchmark_metrics.h"
 #include "constants.h"
@@ -14,6 +13,7 @@
 #include "macro_utils.h"
 #include "move.h"
 #include "situation.h"
+#include "transposition_table.h"
 
 namespace wallwars {
 template <int R, int C>
@@ -57,11 +57,6 @@ class Negamax {
   // An arbitrary invalid move.
   static constexpr Move TimeoutMove() { return {0, {-2, -2}}; }
 
-  // Alpha-beta flags.
-  static constexpr int8_t kExactFlag = 0;
-  static constexpr int8_t kLowerboundFlag = 1;
-  static constexpr int8_t kUpperboundFlag = 2;
-
   // Evaluates situation `sit_` with the Negamax algorithm, exploring `depth`
   // moves ahead. Higher is better for the player to move.
   int NegamaxEval(int depth, int alpha, int beta) {
@@ -80,33 +75,32 @@ class Negamax {
     }
 
     int starting_alpha = alpha;
-    auto memo_entry = memoized_evals_.find(sit_);
-    bool found_memo_entry = memo_entry != memoized_evals_.end();
-    if (found_memo_entry) {
-      if (memo_entry->second.depth >= depth) {
-        int memo_alpha_beta_flag = memo_entry->second.alpha_beta_flag;
-        int memo_eval = memo_entry->second.eval;
-        if (memo_alpha_beta_flag == kExactFlag) {
+    std::size_t tt_location = TT.Location(sit_);
+    TTEntry<R, C>& tt_entry = TT.Entry(tt_location);
+    bool found_tt_entry = TT.Contains(tt_location, sit_);
+    if (found_tt_entry) {
+      if (tt_entry.depth >= depth) {
+        if (tt_entry.alpha_beta_flag == kExactFlag) {
           METRIC_INC(num_exits[depth][TT_HIT_EXIT]);
-          return memo_eval;
-        } else if (memo_alpha_beta_flag == kLowerboundFlag) {
-          if (memo_eval > alpha) {
+          return tt_entry.eval;
+        } else if (tt_entry.alpha_beta_flag == kLowerboundFlag) {
+          if (tt_entry.eval > alpha) {
             METRIC_INC(tt_improvement_reads[depth]);
-            alpha = memo_eval;
+            alpha = tt_entry.eval;
           } else {
             METRIC_INC(tt_useless_reads[depth]);
           }
-        } else /*(memo_alpha_beta_flag == kUpperboundFlag)*/ {
-          if (memo_eval < beta) {
+        } else /*(tt_entry.alpha_beta_flag == kUpperboundFlag)*/ {
+          if (tt_entry.eval < beta) {
             METRIC_INC(tt_improvement_reads[depth]);
-            beta = memo_eval;
+            beta = tt_entry.eval;
           } else {
             METRIC_INC(tt_useless_reads[depth]);
           }
         }
         if (alpha >= beta) {
           METRIC_INC(num_exits[depth][TT_CUTOFF_EXIT]);
-          return memo_eval;
+          return tt_entry.eval;
         }
       }
     }
@@ -137,15 +131,14 @@ class Negamax {
       alpha_beta_flag = kUpperboundFlag;
     else if (eval >= beta)
       alpha_beta_flag = kLowerboundFlag;
-    if (found_memo_entry) {
-      memo_entry->second.alpha_beta_flag = alpha_beta_flag;
-      memo_entry->second.depth = static_cast<int8_t>(depth);
-      memo_entry->second.eval = static_cast<int16_t>(eval);
-    } else {
+    if (found_tt_entry) {
+      tt_entry.alpha_beta_flag = alpha_beta_flag;
+      tt_entry.depth = static_cast<int8_t>(depth);
+      tt_entry.eval = static_cast<int16_t>(eval);
+    } else if (TT.IsEmpty(tt_location)) {
       METRIC_INC(tt_add_writes[depth]);
-      memoized_evals_.insert({sit_,
-                              {alpha_beta_flag, static_cast<int8_t>(depth),
-                               static_cast<int16_t>(eval)}});
+      TT.Insert(tt_location, sit_, alpha_beta_flag, static_cast<int8_t>(depth),
+                static_cast<int16_t>(eval));
     }
     METRIC_INC(num_exits[depth][REC_EVAL_EXIT]);
     return eval;
@@ -153,8 +146,8 @@ class Negamax {
 
   // Same function as `NegamaxEval()`, with the following differences:
   // - We need to keep track of the best move, not only its evaluation.
-  // - Situations are not memoized, as they are evaluated exactly once since
-  // this is the shallowest search depth.
+  // - Situations are not stored in the TT, as they are evaluated exactly once
+  // since this is the shallowest search depth.
   // - Assumes it is not game over.
   // - Assumes depth > 0.
   // - Keeps track of time spent and can return `kTimeoutScore` to indicate the
@@ -620,20 +613,7 @@ class Negamax {
   // The situation that moves are applied to to traverse the search tree.
   Situation<R, C> sit_;
 
-  // Values of the memoization table. Designed to fit in one 32-bit word.
-  struct MemoizedEval {
-    // Indicates if the evaluation is exact, a lower bound, or an upper bound.
-    // See the flag constants in `negamaxer.cc`.
-    int8_t alpha_beta_flag;
-    // Depth of the eval. Higher (shallower) depths are based on a longer
-    // lookahead, so they can be used for lower depths too. Depths up to 127 are
-    // possible.
-    int8_t depth;
-    // Eval of a position. Evals with absolute value up to 32767 are possible.
-    int16_t eval;
-  };
-  std::unordered_map<Situation<R, C>, MemoizedEval, SituationHash<R, C>>
-      memoized_evals_;
+  TranspositionTable<R, C> TT;
 
   // Given a list of nodes `node_list` and a set of nodes `node_set`, returns
   // two nodes: (1) the first and last nodes in `node_list` that are in

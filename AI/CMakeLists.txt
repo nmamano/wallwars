@@ -23,6 +23,7 @@ add_executable(wallwars_ai
     "include/utils.h"
     "include/interactive_game.h"
     "include/tests.h"
+    "include/transposition_table.h"
 
     # External headers (see above)
     "include/external/span.h"
