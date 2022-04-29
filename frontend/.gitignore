@@ -11,6 +11,9 @@
 # production
 /build
 
+# em++ output
+src/ai.mjs
+
 # misc
 .DS_Store
 .env.local
