@@ -5,5 +5,5 @@ src/ai.mjs: src/ai.cc
 	  -s EXPORT_NAME='createModule'  \
 	  -s USE_ES6_IMPORT_META=0  \
 	  -s EXPORTED_FUNCTIONS='["_GetMove8x8"]'  \
-	  -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]'  \
+	  -s EXPORTED_RUNTIME_METHODS='["cwrap"]'  \
 	  -O3

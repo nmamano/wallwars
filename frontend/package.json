@@ -47,8 +47,8 @@
       "not ie 11",
       "not dead",
       "not op_mini all"
-    ],
-  "development": [
+    ], 
+    "development": [
       ">0.3%",
       "not ie 11",
       "not dead",
