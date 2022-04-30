@@ -86,7 +86,7 @@ const GamePage = ({
     createModule().then((Module) => {
       setGetMove8x8(() => Module.cwrap("GetMove8x8", "string", ["string"]));
     });
-  });
+  }, []);
 
   //===================================================
   //communication FROM the server
