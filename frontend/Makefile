@@ -6,4 +6,6 @@ src/ai.mjs: src/ai.cc
 	  -s USE_ES6_IMPORT_META=0  \
 	  -s EXPORTED_FUNCTIONS='["_GetMove8x8"]'  \
 	  -s EXPORTED_RUNTIME_METHODS='["cwrap"]'  \
+		-s TOTAL_MEMORY=100MB \
+		-s INITIAL_MEMORY=100MB \
 	  -O3

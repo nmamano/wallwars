@@ -29,18 +29,18 @@ class Negamax {
       int beta = 2 * kInfinity;
       long long millis_left = millis - MillisSince(start);
       if (millis_left <= 0) break;
-      std::cerr << "Search depth " << depth << " with " << millis_left
+      std::cout << "Search depth " << depth << " with " << millis_left
                 << " millis left." << std::endl;
       ScoredMove new_move =
           NegamaxEvalReturnMove(depth, alpha, beta, millis_left);
       if (new_move.score == kTimeoutScore) {
-        std::cerr << "Search at depth " << depth << " did not finish."
+        std::cout << "Search at depth " << depth << " did not finish."
                   << std::endl;
         break;
       }
       move = new_move.move;
       if (new_move.score == 1000) {
-        std::cerr << "Found winning move at depth " << depth << "."
+        std::cout << "Found winning move at depth " << depth << "."
                   << std::endl;
         break;
       }
@@ -182,10 +182,10 @@ class Negamax {
 
       if (move_eval > best_move.score) {
         best_move = {move, move_eval};
-        std::cerr << "Best move: " << sit_.MoveToString(move)
+        std::cout << "Best move: " << sit_.MoveToString(move)
                   << " (eval: " << move_eval << ")" << std::endl;
       } else if (kShowMatchingMoves && move_eval == best_move.score) {
-        std::cerr << "Matching move: " << sit_.MoveToString(move)
+        std::cout << "Matching move: " << sit_.MoveToString(move)
                   << " (eval: " << move_eval << ")" << std::endl;
       }
 

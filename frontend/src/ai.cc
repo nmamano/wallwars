@@ -14,8 +14,9 @@ EMSCRIPTEN_KEEPALIVE char const* GetMove8x8(char const* standard_notation) {
       wallwars::ParseSituationOrCrash<8, 8>(standard_notation);
   wallwars::Negamax<8, 8> negamax;
   // Expects that the game is not over, i.e., no player is at their goal.
-  wallwars::Move move = negamax.GetMove(sit, 1000);
+  wallwars::Move move = negamax.GetMove(sit, 500);
   std::string move_str = sit.MoveToStandardNotation(move);
-  return move_str.c_str();
+  char* c = strdup(move_str.c_str());
+  return c;
 }
 }
