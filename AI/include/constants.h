@@ -7,7 +7,7 @@ namespace wallwars {
 constexpr int kMaxDepth = 20;
 
 // Space allocated for the transposition table.
-constexpr long long kTranspositionTableBytes = 10 * 1024 * 1024;
+constexpr long long kTranspositionTableBytes = 1.5 * 1024 * 1024 * 1024;
 
 // Indicate whether the AI should indicate alternative moves that are as good as
 // the found move.

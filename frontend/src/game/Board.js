@@ -45,7 +45,6 @@ const Board = ({
       handleClick(pos);
       return;
     }
-    console.log(pos);
 
     // Manipulate highlights if ctrl is pressed
 

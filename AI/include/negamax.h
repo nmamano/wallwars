@@ -182,10 +182,10 @@ class Negamax {
 
       if (move_eval > best_move.score) {
         best_move = {move, move_eval};
-        std::cout << "Best move: " << sit_.MoveToString(move)
+        std::cout << "Best move: " << sit_.MoveToStandardNotation(move)
                   << " (eval: " << move_eval << ")" << std::endl;
       } else if (kShowMatchingMoves && move_eval == best_move.score) {
-        std::cout << "Matching move: " << sit_.MoveToString(move)
+        std::cout << "Matching move: " << sit_.MoveToStandardNotation(move)
                   << " (eval: " << move_eval << ")" << std::endl;
       }
 
