@@ -63,9 +63,11 @@ std::string BenchmarkSettings(std::string description, std::string timestamp) {
   std::ostringstream sout;
   sout << "Description: " << description << "\n"
        << "Time: " << timestamp << "\n\n"
-       << "Num benchmark samples: " << kNumBenchmarkSamples << "\n"
-       << "Negamax depth: " << kMaxDepth << '\n'
-       << "Sizes (bytes): int: " << sizeof(int) << " Move: " << sizeof(Move)
+       << "Num benchmark samples: " << kBenchmarkNumSamples << "\n"
+       << "Negamax search time (ms): " << kBenchmarksearchTimeMillis << '\n'
+       << "Negamax max depth: " << kMaxDepth << '\n'
+       << "TT size (MB): " << kTranspositionTableMB << '\n'
+       << "Sizes (bytes): Move: " << sizeof(Move) << " int: " << sizeof(int)
        << '\n';
   return sout.str();
 }
@@ -76,9 +78,11 @@ template <int R, int C>
 std::string DimensionsSettings() {
   std::ostringstream sout;
   sout << "\nBoard dimensions: " << R << " x " << C << '\n'
-       << "Branching factor: " << MaxNumLegalMoves(R, C) << '\n'
+       << "Branching factor (upper bound): " << MaxNumLegalMoves(R, C) << '\n'
+       << "Num entries in TT: " << NumTTEntries<R, C>() << '\n'
        << "Sizes (bytes): Graph: " << sizeof(Graph<R, C>)
-       << " Situation: " << sizeof(Situation<R, C>) << '\n';
+       << " Situation: " << sizeof(Situation<R, C>)
+       << " TTEntry: " << sizeof(TTEntry<R, C>) << '\n';
   return sout.str();
 }
 
@@ -459,7 +463,7 @@ std::pair<Move, BenchmarkMetrics> GetMoveWithMetrics(Negamax<R, C>& negamax,
                                                      Situation<R, C> sit) {
   global_metrics = {};
   auto start = std::chrono::high_resolution_clock::now();
-  Move move = negamax.GetMove(sit, 10000);
+  Move move = negamax.GetMove(sit, kBenchmarksearchTimeMillis);
   auto stop = std::chrono::high_resolution_clock::now();
   global_metrics.wall_clock_time_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(stop - start)
@@ -488,14 +492,14 @@ void BenchmarkSituation(BenchmarkContext& context,
   std::vector<BenchmarkMetrics> samples;
   std::string first_move = "";
   StreamAndStdOut(context.report_out, "Situation: " + input.sit_name);
-  for (int i = 0; i < kNumBenchmarkSamples; ++i) {
+  for (int i = 0; i < kBenchmarkNumSamples; ++i) {
     Negamax<R, C> negamaxer;
     auto move_metrics = GetMoveWithMetrics<R, C>(negamaxer, sit);
-    std::string move = sit.MoveToString(move_metrics.first);
+    std::string move = sit.MoveToStandardNotation(move_metrics.first);
     if (i == 0) first_move = move;
     StreamAndStdOut(context.report_out,
                     "Chosen move " + std::to_string(i + 1) + ": " +
-                        sit.MoveToString(move_metrics.first));
+                        sit.MoveToStandardNotation(move_metrics.first));
     if (move != input.expected_move) {
       StreamAndStdOut(context.report_out, "NOTE: did not play expected move " +
                                               input.expected_move);
@@ -512,44 +516,48 @@ void BenchmarkSituation(BenchmarkContext& context,
 void BenchmarkSituations(BenchmarkContext& context) {
   BenchmarkSituationInput input;
 
+  StreamAndStdOut(context.report_out, DimensionsSettings<8, 8>());
+  input = {"Empty-8x8", "", "c1"};
+  BenchmarkSituation<8, 8>(context, input);
+
   StreamAndStdOut(context.report_out, DimensionsSettings<10, 12>());
-  input = {"Start-position", "", "(SE)"};
+  input = {"Empty-10x12", "", "c1"};
   BenchmarkSituation<10, 12>(context, input);
-  input = {"Trident-opening", "1. b2 2. b3v c2>", "(SE)"};
+  input = {"Trident-opening", "1. b2 2. b3v c2>", "c3"};
   BenchmarkSituation<10, 12>(context, input);
 
   StreamAndStdOut(context.report_out, DimensionsSettings<4, 4>());
-  input = {"Empty-4x4", "", "(SE)"};
+  input = {"Empty-4x4", "", "b2"};
   BenchmarkSituation<4, 4>(context, input);
 
   StreamAndStdOut(context.report_out, DimensionsSettings<3, 7>());
   input = {"Puzzle2",
            "1. c1 2. e1 3. a1> a2> 4. f1> f2> 5. c1v d1v 6. c2v e1v 7. d2v e2v",
-           "(3 25)"};
+           "c3> e1>"};
   BenchmarkSituation<3, 7>(context, input);
   input = {"Puzzle9",
            "1. b2 2. f2 3. d2 4. d2 5. f2 6. b2 7. a2> b2v 8. f2v f2>",
-           "(3 19)"};
+           "a1v c2v"};
   BenchmarkSituation<3, 7>(context, input);
 
   StreamAndStdOut(context.report_out, DimensionsSettings<5, 5>());
   input = {"Puzzle5",
            "1. d2> d3> 2. d4v d4> 3. b4v c4v 4. a3> a4> 5. a2> b1v 6. b2> b3>",
-           "(4 9)"};
+           "c1> e3v"};
   BenchmarkSituation<5, 5>(context, input);
 
   StreamAndStdOut(context.report_out, DimensionsSettings<4, 5>());
   input = {"Puzzle6",
            "1. b2 2. d2 3. a4> b3v 4. b2v b2> 5. d3v d4> 6. d2v d2> 7. b4> c4> "
            "8. a2> c2>",
-           "(4 22)"};
+           "a3> c1>"};
   BenchmarkSituation<4, 5>(context, input);
 
   StreamAndStdOut(context.report_out, DimensionsSettings<6, 9>());
   input = {"Tim-puzzle",
            "1. g3v h3v 2. b3v c3v 3. e3v f3v 4. c4> d3v 5. f4> f5> 6. c5> c6> "
            "7. f1> f6> 8. c1> c2> 9. a2 f2> 10. h2> h3>",
-           "(73 75)"};
+           "a5v b5v"};
   BenchmarkSituation<6, 9>(context, input);
 }
 

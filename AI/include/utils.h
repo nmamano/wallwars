@@ -172,6 +172,7 @@ std::string CurrentTimestamp() {
   std::string YYYY = t.substr(t.size() - 5, 4);
   std::string MM = month_to_num[t.substr(4, 3)];
   std::string DD = t.substr(8, 2);
+  if (DD[0] == ' ') DD[0] = '0';
   std::string hh = t.substr(11, 2);
   std::string mm = t.substr(14, 2);
   std::string ss = t.substr(17, 2);

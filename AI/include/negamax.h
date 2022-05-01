@@ -57,6 +57,62 @@ class Negamax {
   // An arbitrary invalid move.
   static constexpr Move TimeoutMove() { return {0, {-2, -2}}; }
 
+  // Same function as `NegamaxEval()`, with the following differences:
+  // - We need to keep track of the best move, not only its evaluation.
+  // - Situations are not stored in the TT, as they are evaluated exactly once
+  // since this is the shallowest search depth.
+  // - Assumes it is not game over.
+  // - Assumes depth > 0.
+  // - Keeps track of time spent and can return `kTimeoutScore` to indicate the
+  // search timed out.
+  ScoredMove NegamaxEvalReturnMove(int depth, int alpha, int beta,
+                                   int64_t millis_left) {
+    auto start = std::chrono::high_resolution_clock::now();
+    ScoredMove best_move;
+    // `best_move_eval` is initialized to -2*kInfinity so that *some* move is
+    // still chosen in the event that every move is losing, which are evaluated
+    // to -kInfinity.
+    best_move.score = -2 * kInfinity;
+
+    int eval = best_move.score;
+    const auto& ordered_moves = OrderedMoves(depth - 1);
+    METRIC_ADD(generated_children[depth], ordered_moves.size());
+    for (const ScoredMove& scored_move : ordered_moves) {
+      const Move& move = scored_move.move;
+
+      // If it's a move that we haven't validated yet, we need to check if it is
+      // legal.
+      if (scored_move.score == kPossiblyIllegalMoveScore &&
+          !sit_.IsLegalMove(move)) {
+        continue;
+      }
+
+      sit_.ApplyMove(move);
+      int move_eval = -NegamaxEval(depth - 1, -beta, -alpha);
+      eval = std::max(eval, move_eval);
+      sit_.UndoMove(move);
+      alpha = std::max(alpha, eval);
+
+      if (move_eval > best_move.score) {
+        best_move = {move, move_eval};
+        std::cout << "Best move: " << sit_.MoveToStandardNotation(move)
+                  << " (eval: " << move_eval << ")" << std::endl;
+      } else if (kShowMatchingMoves && move_eval == best_move.score) {
+        std::cout << "Matching move: " << sit_.MoveToStandardNotation(move)
+                  << " (eval: " << move_eval << ")" << std::endl;
+      }
+
+      if (alpha >= beta) break;
+
+      // If depth is 1, we complete evaluation even if we are out of
+      // time, to guarantee we have a move.
+      if (depth > 1 && MillisSince(start) > millis_left)
+        return {{}, kTimeoutScore};
+    }
+    METRIC_INC(num_exits[depth][REC_EVAL_EXIT]);
+    return best_move;
+  }
+
   // Evaluates situation `sit_` with the Negamax algorithm, exploring `depth`
   // moves ahead. Higher is better for the player to move.
   int NegamaxEval(int depth, int alpha, int beta) {
@@ -139,63 +195,15 @@ class Negamax {
       METRIC_INC(tt_add_writes[depth]);
       TT.Insert(tt_location, sit_, alpha_beta_flag, static_cast<int8_t>(depth),
                 static_cast<int16_t>(eval));
+    } else /*if (tt_entry.depth <= depth)*/ {
+      // With the condition commented out, the policy is "always repalce".
+      // With the condition, the policy is "replace only if larger depth".
+      METRIC_INC(tt_replace_writes[depth]);
+      TT.Insert(tt_location, sit_, alpha_beta_flag, static_cast<int8_t>(depth),
+                static_cast<int16_t>(eval));
     }
     METRIC_INC(num_exits[depth][REC_EVAL_EXIT]);
     return eval;
-  }
-
-  // Same function as `NegamaxEval()`, with the following differences:
-  // - We need to keep track of the best move, not only its evaluation.
-  // - Situations are not stored in the TT, as they are evaluated exactly once
-  // since this is the shallowest search depth.
-  // - Assumes it is not game over.
-  // - Assumes depth > 0.
-  // - Keeps track of time spent and can return `kTimeoutScore` to indicate the
-  // search timed out.
-  ScoredMove NegamaxEvalReturnMove(int depth, int alpha, int beta,
-                                   int64_t millis_left) {
-    auto start = std::chrono::high_resolution_clock::now();
-    ScoredMove best_move;
-    // `best_move_eval` is initialized to -2*kInfinity so that *some* move is
-    // still chosen in the event that every move is losing, which are evaluated
-    // to -kInfinity.
-    best_move.score = -2 * kInfinity;
-
-    int eval = best_move.score;
-    const auto& ordered_moves = OrderedMoves(depth - 1);
-    METRIC_ADD(generated_children[depth], ordered_moves.size());
-    for (const ScoredMove& scored_move : ordered_moves) {
-      const Move& move = scored_move.move;
-
-      // If it's a move that we haven't validated yet, we need to check if it is
-      // legal.
-      if (scored_move.score == kPossiblyIllegalMoveScore &&
-          !sit_.IsLegalMove(move)) {
-        continue;
-      }
-
-      sit_.ApplyMove(move);
-      int move_eval = -NegamaxEval(depth - 1, -beta, -alpha);
-      eval = std::max(eval, move_eval);
-      sit_.UndoMove(move);
-      alpha = std::max(alpha, eval);
-
-      if (move_eval > best_move.score) {
-        best_move = {move, move_eval};
-        std::cout << "Best move: " << sit_.MoveToStandardNotation(move)
-                  << " (eval: " << move_eval << ")" << std::endl;
-      } else if (kShowMatchingMoves && move_eval == best_move.score) {
-        std::cout << "Matching move: " << sit_.MoveToStandardNotation(move)
-                  << " (eval: " << move_eval << ")" << std::endl;
-      }
-
-      // comment out the line below to evaluate all the moves
-      // e.g., to find all the optimal moves.
-      if (alpha >= beta) break;
-      if (MillisSince(start) > millis_left) return {{}, kTimeoutScore};
-    }
-    METRIC_INC(num_exits[depth][REC_EVAL_EXIT]);
-    return best_move;
   }
 
   // Evaluates situation `sit_` with the formula dist(p1, g1) - dist(p0, g0).

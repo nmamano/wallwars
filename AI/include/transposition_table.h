@@ -46,7 +46,8 @@ struct TTEntry {
 
 template <int R, int C>
 constexpr int NumTTEntries() {
-  return kTranspositionTableBytes / sizeof(TTEntry<R, C>);
+  long long size_bytes = kTranspositionTableMB * 1024LL * 1024LL;
+  return size_bytes / sizeof(TTEntry<R, C>);
 }
 
 template <int R, int C>
