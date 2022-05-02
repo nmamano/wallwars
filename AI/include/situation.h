@@ -135,6 +135,8 @@ struct Situation {
     return players_can_reach_goals;
   }
   bool IsLegalMove(Move move) const {
+    // Check that walls are not the same.
+    if (move.edges[0] != -1 && move.edges[0] == move.edges[1]) return false;
     // Check that walls are not fake or already present.
     for (int edge : move.edges) {
       if (edge == -1) continue;

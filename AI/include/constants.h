@@ -9,10 +9,6 @@ constexpr int kMaxDepth = 20;
 // Space allocated for the transposition table in mega bytes.
 constexpr int kTranspositionTableMB = 512;
 
-// Indicate whether the AI should indicate alternative moves that are as good as
-// the found move.
-constexpr bool kShowMatchingMoves = false;
-
 constexpr int kInteractiveGameR = 8;
 constexpr int kInteractiveGameC = 8;
 constexpr int kInteractiveGameMillis = 20000;

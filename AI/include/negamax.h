@@ -18,63 +18,143 @@
 namespace wallwars {
 template <int R, int C>
 class Negamax {
+  static constexpr int kGameOverEval = 999;  // Larger than any real evaluation.
+
+  static constexpr int kPossiblyIllegalMoveScore = -5000;
+  static constexpr int kWinningMoveScore = 10000;
+
+  TranspositionTable<R, C> TT;
+
+  // The situation that moves are applied to to traverse the search tree.
+  Situation<R, C> sit_;
+
+  int ID_depth;
+  std::chrono::high_resolution_clock::time_point search_start_timestamp;
+  int search_millis;
+
  public:
-  Move GetMove(Situation<R, C> sit, long long millis) {
-    Move move;
-    auto start = std::chrono::high_resolution_clock::now();
-    for (int depth = 1; depth < kMaxDepth; ++depth) {
-      // Reset data structures.
-      sit_ = sit;
-      int alpha = -2 * kInfinity;
-      int beta = 2 * kInfinity;
-      long long millis_left = millis - MillisSince(start);
-      if (millis_left <= 0) break;
-      std::cout << "Search depth " << depth << " with " << millis_left
+  Move GetMove(Situation<R, C> sit, int millis) {
+    search_start_timestamp = std::chrono::high_resolution_clock::now();
+    search_millis = millis;
+    sit_ = sit;
+    for (ID_depth = 1; ID_depth < kMaxDepth; ++ID_depth) {
+      int alpha = -2 * kGameOverEval;
+      int beta = 2 * kGameOverEval;
+
+      std::cout << "Search depth " << ID_depth << " with "
+                << millis - MillisSince(search_start_timestamp)
                 << " millis left." << std::endl;
-      ScoredMove new_move =
-          NegamaxEvalReturnMove(depth, alpha, beta, millis_left);
-      if (new_move.score == kTimeoutScore) {
-        std::cout << "Search at depth " << depth << " did not finish."
+
+      // The search store the best move in the TT.
+      NegamaxEval(ID_depth, alpha, beta);
+
+      TTEntry<R, C>& entry = TT.Entry(TT.Location(sit));
+      std::cout << "Best move: "
+                << sit.MoveToStandardNotation(MoveInTTEntry(entry))
+                << " (eval: " << entry.eval << ")" << std::endl;
+
+      if (entry.eval >= kGameOverEval) {
+        std::cout << "Found winning move at depth " << ID_depth << "."
                   << std::endl;
         break;
       }
-      move = new_move.move;
-      if (new_move.score == 1000) {
-        std::cout << "Found winning move at depth " << depth << "."
+      if (entry.eval <= -kGameOverEval) {
+        std::cout << "Position is lost at depth " << ID_depth << "."
                   << std::endl;
         break;
       }
+      if (millis - MillisSince(search_start_timestamp) <= 0) break;
     }
+
+    // Fetch best move from TT.
+    TTEntry<R, C> entry = TT.Entry(TT.Location(sit));
+    assert(entry.alpha_beta_flag == kExactFlag);
+    Move move = {entry.token_change, {entry.edge0, entry.edge1}};
+    sit.CrashIfMoveIsIllegal(move);
     return move;
   }
 
- private:
-  static constexpr int kInfinity = 999;  // Larger than any real evaluation.
-  static constexpr int kPossiblyIllegalMoveScore = -500;
-  // Arbitrary invalid value to indicate that the search timed out.
-  static constexpr int kTimeoutScore = -123123;
+  // Evaluates situation `sit_` with the Negamax algorithm, exploring `depth`
+  // moves ahead. Higher is better for the player to move.
+  int NegamaxEval(int depth, int alpha, int beta) {
+    if (sit_.IsGameOver()) {
+      METRIC_INC(num_exits[depth][GAME_OVER_EXIT]);
+      // Adding `depth` to winning positions makes the AI choose moves that
+      // win faster. Subtracting `depth` from losing positions makes the AI
+      // choose moves that take the longest to lose.
+      int winner = sit_.Winner();
+      if (winner == 2) return 0;  // Draw.
+      return winner == sit_.turn ? kGameOverEval + depth
+                                 : -kGameOverEval - depth;
+    }
+    if (depth == 0) {
+      METRIC_INC(num_exits[depth][LEAF_EVAL_EXIT]);
+      return (sit_.turn == 0 ? 1 : -1) * LeafEval();
+    }
 
-  // An arbitrary invalid move.
-  static constexpr Move TimeoutMove() { return {0, {-2, -2}}; }
+    // Read from TT.
+    int starting_alpha = alpha;
+    std::size_t tt_location = TT.Location(sit_);
+    TTEntry<R, C>& tt_entry = TT.Entry(tt_location);
+    bool found_tt_entry = TT.Contains(tt_location, sit_);
+    if (found_tt_entry && tt_entry.depth >= depth) {
+      assert(tt_entry.alpha_beta_flag != kEmptyEntry);
+      if (tt_entry.alpha_beta_flag == kExactFlag) {
+        METRIC_INC(num_exits[depth][TT_HIT_EXIT]);
+        return tt_entry.eval;
+      } else if (tt_entry.alpha_beta_flag == kLowerboundFlag) {
+        if (tt_entry.eval > alpha) {
+          METRIC_INC(tt_improvement_reads[depth]);
+          alpha = tt_entry.eval;
+        } else {
+          METRIC_INC(tt_useless_reads[depth]);
+        }
+      } else /*(tt_entry.alpha_beta_flag == kUpperboundFlag)*/ {
+        if (tt_entry.eval < beta) {
+          METRIC_INC(tt_improvement_reads[depth]);
+          beta = tt_entry.eval;
+        } else {
+          METRIC_INC(tt_useless_reads[depth]);
+        }
+      }
+      if (alpha >= beta) {
+        METRIC_INC(num_exits[depth][TT_CUTOFF_EXIT]);
+        return tt_entry.eval;
+      }
+    }
 
-  // Same function as `NegamaxEval()`, with the following differences:
-  // - We need to keep track of the best move, not only its evaluation.
-  // - Situations are not stored in the TT, as they are evaluated exactly once
-  // since this is the shallowest search depth.
-  // - Assumes it is not game over.
-  // - Assumes depth > 0.
-  // - Keeps track of time spent and can return `kTimeoutScore` to indicate the
-  // search timed out.
-  ScoredMove NegamaxEvalReturnMove(int depth, int alpha, int beta,
-                                   int64_t millis_left) {
-    auto start = std::chrono::high_resolution_clock::now();
     ScoredMove best_move;
-    // `best_move_eval` is initialized to -2*kInfinity so that *some* move is
-    // still chosen in the event that every move is losing, which are evaluated
-    // to -kInfinity.
-    best_move.score = -2 * kInfinity;
+    // `best_move_eval` is initialized to -2*kGameOverEval so that *some* move
+    // is still chosen in the event that every move is losing, which are
+    // evaluated to -kGameOverEval.
+    best_move.score = -2 * kGameOverEval;
 
-    int eval = best_move.score;
+    // Before generating moves, try the cached move, if any. This can cause an
+    // instant cut-off or improve the alpha.
+    Move cached_move{tt_entry.token_change, {tt_entry.edge0, tt_entry.edge1}};
+    if (found_tt_entry && sit_.IsLegalMove(cached_move)) {
+      // std::cerr << "tt entry: " << tt_entry.sit << " " << tt_entry.eval <<
+      // "
+      // "
+      //           << tt_entry.edge0 << " " << tt_entry.edge1 << " "
+      //           << (int)tt_entry.token_change << " "
+      //           << (int)tt_entry.alpha_beta_flag << " " <<
+      //           (int)tt_entry.depth
+      //           << " now applied" << std::endl;
+      // sit_.CrashIfMoveIsIllegal(cached_move);
+      // std::cerr << " done" << std::endl;
+      best_move.move = cached_move;
+      sit_.ApplyMove(cached_move);
+      best_move.score = -NegamaxEval(depth - 1, -beta, -alpha);
+      sit_.UndoMove(cached_move);
+      alpha = std::max(alpha, best_move.score);
+      METRIC_INC(num_exits[depth][LEAF_EVAL_EXIT]);
+      if (alpha >= beta) return best_move.score;
+    }
+
+    // Before generating moves, try a double-walk move to see if it causes a
+    // beta-cutoff or improves alpha: todo
+
     const auto& ordered_moves = OrderedMoves(depth - 1);
     METRIC_ADD(generated_children[depth], ordered_moves.size());
     for (const ScoredMove& scored_move : ordered_moves) {
@@ -89,126 +169,55 @@ class Negamax {
 
       sit_.ApplyMove(move);
       int move_eval = -NegamaxEval(depth - 1, -beta, -alpha);
-      eval = std::max(eval, move_eval);
       sit_.UndoMove(move);
-      alpha = std::max(alpha, eval);
 
-      if (move_eval > best_move.score) {
-        best_move = {move, move_eval};
-        std::cout << "Best move: " << sit_.MoveToStandardNotation(move)
-                  << " (eval: " << move_eval << ")" << std::endl;
-      } else if (kShowMatchingMoves && move_eval == best_move.score) {
-        std::cout << "Matching move: " << sit_.MoveToStandardNotation(move)
-                  << " (eval: " << move_eval << ")" << std::endl;
+      if (move_eval > alpha) {
+        alpha = move_eval;
+        best_move.score = move_eval;
+        best_move.move = move;
+        if (alpha >= beta) break;
       }
 
-      if (alpha >= beta) break;
-
-      // If depth is 1, we complete evaluation even if we are out of
-      // time, to guarantee we have a move.
-      if (depth > 1 && MillisSince(start) > millis_left)
-        return {{}, kTimeoutScore};
+      // Only do this check at the shallowest level, and after the first ID
+      // iteration. For the first ID iteration (depth 1) we want to finish to
+      // ensure we have at least a move.
+      if (ID_depth > 1 && depth == ID_depth &&
+          MillisSince(search_start_timestamp) > search_millis) {
+        std::cout << "Did not finish search at depth " << ID_depth << std::endl;
+        break;
+      }
     }
+
+    // Update TT. Current policy: always update or replace.
+    if (!found_tt_entry) {
+      tt_entry.sit = sit_;
+      if (TT.IsEmpty(tt_location)) {
+        METRIC_INC(tt_add_writes[depth]);
+      } else {
+        METRIC_INC(tt_replace_writes[depth]);
+      }
+    }
+
+    if (best_move.score <= starting_alpha)
+      tt_entry.alpha_beta_flag = kUpperboundFlag;
+    else if (best_move.score >= beta)
+      tt_entry.alpha_beta_flag = kLowerboundFlag;
+    else
+      tt_entry.alpha_beta_flag = kExactFlag;
+
+    tt_entry.depth = static_cast<int8_t>(depth);
+    tt_entry.eval = static_cast<int16_t>(best_move.score);
+    tt_entry.token_change = static_cast<int8_t>(best_move.move.token_change);
+    tt_entry.edge0 = static_cast<int16_t>(best_move.move.edges[0]);
+    tt_entry.edge1 = static_cast<int16_t>(best_move.move.edges[1]);
+
     METRIC_INC(num_exits[depth][REC_EVAL_EXIT]);
-    return best_move;
-  }
-
-  // Evaluates situation `sit_` with the Negamax algorithm, exploring `depth`
-  // moves ahead. Higher is better for the player to move.
-  int NegamaxEval(int depth, int alpha, int beta) {
-    if (sit_.IsGameOver()) {
-      METRIC_INC(num_exits[depth][GAME_OVER_EXIT]);
-      // Adding `depth` to winning positions makes the AI choose moves that
-      // win faster. Subtracting `depth` from losing positions makes the AI
-      // choose moves that take the longest to lose.
-      int winner = sit_.Winner();
-      if (winner == 2) return 0;  // Draw.
-      return winner == sit_.turn ? kInfinity + depth : -kInfinity - depth;
-    }
-    if (depth == 0) {
-      METRIC_INC(num_exits[depth][LEAF_EVAL_EXIT]);
-      return (sit_.turn == 0 ? 1 : -1) * DirectEval();
-    }
-
-    int starting_alpha = alpha;
-    std::size_t tt_location = TT.Location(sit_);
-    TTEntry<R, C>& tt_entry = TT.Entry(tt_location);
-    bool found_tt_entry = TT.Contains(tt_location, sit_);
-    if (found_tt_entry) {
-      if (tt_entry.depth >= depth) {
-        if (tt_entry.alpha_beta_flag == kExactFlag) {
-          METRIC_INC(num_exits[depth][TT_HIT_EXIT]);
-          return tt_entry.eval;
-        } else if (tt_entry.alpha_beta_flag == kLowerboundFlag) {
-          if (tt_entry.eval > alpha) {
-            METRIC_INC(tt_improvement_reads[depth]);
-            alpha = tt_entry.eval;
-          } else {
-            METRIC_INC(tt_useless_reads[depth]);
-          }
-        } else /*(tt_entry.alpha_beta_flag == kUpperboundFlag)*/ {
-          if (tt_entry.eval < beta) {
-            METRIC_INC(tt_improvement_reads[depth]);
-            beta = tt_entry.eval;
-          } else {
-            METRIC_INC(tt_useless_reads[depth]);
-          }
-        }
-        if (alpha >= beta) {
-          METRIC_INC(num_exits[depth][TT_CUTOFF_EXIT]);
-          return tt_entry.eval;
-        }
-      }
-    }
-
-    int eval = -2 * kInfinity;
-
-    const auto& ordered_moves = OrderedMoves(depth - 1);
-    METRIC_ADD(generated_children[depth], ordered_moves.size());
-    for (const ScoredMove& scored_move : ordered_moves) {
-      const Move& move = scored_move.move;
-
-      // If it's a move that we haven't validated yet, we need to check if it is
-      // legal.
-      if (scored_move.score == kPossiblyIllegalMoveScore &&
-          !sit_.IsLegalMove(move)) {
-        continue;
-      }
-
-      sit_.ApplyMove(move);
-      eval = std::max(eval, -NegamaxEval(depth - 1, -beta, -alpha));
-      sit_.UndoMove(move);
-      alpha = std::max(alpha, eval);
-      if (alpha >= beta) break;
-    }
-
-    int8_t alpha_beta_flag = kExactFlag;
-    if (eval <= starting_alpha)
-      alpha_beta_flag = kUpperboundFlag;
-    else if (eval >= beta)
-      alpha_beta_flag = kLowerboundFlag;
-    if (found_tt_entry) {
-      tt_entry.alpha_beta_flag = alpha_beta_flag;
-      tt_entry.depth = static_cast<int8_t>(depth);
-      tt_entry.eval = static_cast<int16_t>(eval);
-    } else if (TT.IsEmpty(tt_location)) {
-      METRIC_INC(tt_add_writes[depth]);
-      TT.Insert(tt_location, sit_, alpha_beta_flag, static_cast<int8_t>(depth),
-                static_cast<int16_t>(eval));
-    } else /*if (tt_entry.depth <= depth)*/ {
-      // With the condition commented out, the policy is "always repalce".
-      // With the condition, the policy is "replace only if larger depth".
-      METRIC_INC(tt_replace_writes[depth]);
-      TT.Insert(tt_location, sit_, alpha_beta_flag, static_cast<int8_t>(depth),
-                static_cast<int16_t>(eval));
-    }
-    METRIC_INC(num_exits[depth][REC_EVAL_EXIT]);
-    return eval;
+    return best_move.score;
   }
 
   // Evaluates situation `sit_` with the formula dist(p1, g1) - dist(p0, g0).
   // Higher is better for P0.
-  inline int DirectEval() const {
+  inline int LeafEval() const {
     return sit_.G.Distance(sit_.tokens[1], Goals(R, C)[1]) -
            sit_.G.Distance(sit_.tokens[0], Goals(R, C)[0]);
   }
@@ -340,7 +349,7 @@ class Negamax {
           if (!is_draw_by_one_move) {
             // We found a winning move, so we can discard any previously
             // generated moves and return the single winning move.
-            moves[0] = {DoubleWalkMove(tokens[turn], node), 1000};
+            moves[0] = {DoubleWalkMove(tokens[turn], node), kWinningMoveScore};
             DBGS(sit_.CrashIfMoveIsIllegal(moves[0].move));
             return nonstd::span<const ScoredMove>(moves.begin(),
                                                   moves.begin() + 1);
@@ -378,8 +387,9 @@ class Negamax {
         if (node == -1) continue;
         const int dist_to_goal_reduction =
             distances_from_goal[tokens[turn]] - distances_from_goal[node];
-        const int walk_score =
-            distances_from_goal[node] == 0 ? 1000 : 10 * dist_to_goal_reduction;
+        const int walk_score = distances_from_goal[node] == 0
+                                   ? kWinningMoveScore
+                                   : 10 * dist_to_goal_reduction;
 
         // If we did not prune any edge in `G_pruned`, we would not have found a
         // useless edge yet. However, the edge crossed by the player to move to
@@ -424,12 +434,13 @@ class Negamax {
           if (edge_labels[edge] == -1 && edge != useless_edge_after_move)
             continue;
 
-          if (walk_score == 1000) {
+          if (walk_score == kWinningMoveScore) {
             bool is_draw_by_one_move = turn == 0 && opp_dist <= 2;
             if (!is_draw_by_one_move) {
               // We found a winning move, so we can discard any previously
               // generated moves and return the single winning move.
-              moves[0] = {WalkAndBuildMove(tokens[turn], node, edge), 1000};
+              moves[0] = {WalkAndBuildMove(tokens[turn], node, edge),
+                          kWinningMoveScore};
               DBGS(sit_.CrashIfMoveIsIllegal(moves[0].move));
               return nonstd::span<const ScoredMove>(moves.begin(),
                                                     moves.begin() + 1);
@@ -618,11 +629,6 @@ class Negamax {
                                           moves.begin() + move_index);
   }
 
-  // The situation that moves are applied to to traverse the search tree.
-  Situation<R, C> sit_;
-
-  TranspositionTable<R, C> TT;
-
   // Given a list of nodes `node_list` and a set of nodes `node_set`, returns
   // two nodes: (1) the first and last nodes in `node_list` that are in
   // `node_set`, if any, or {-1, -1} otherwise. Assumes that all nodes in
@@ -648,6 +654,10 @@ class Negamax {
         break;
     }
     return {x, y};
+  }
+
+  Move MoveInTTEntry(const TTEntry<R, C>& entry) {
+    return {entry.token_change, {entry.edge0, entry.edge1}};
   }
 
   friend class Benchmark;

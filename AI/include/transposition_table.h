@@ -7,6 +7,7 @@
 
 #include "constants.h"
 #include "graph.h"
+#include "move.h"
 #include "situation.h"
 
 namespace wallwars {
@@ -33,15 +34,23 @@ constexpr int8_t kUpperboundFlag = 3;
 template <int R, int C>
 struct TTEntry {
   Situation<R, C> sit;
-  // Indicates if the evaluation is exact, a lower bound, or an upper bound.
+
+  // Eval of a position. Evals with absolute value up to 32767 are possible.
+  int16_t eval;
+
+  // Best move found for this position.
+  int16_t edge0;
+  int16_t edge1;
+  int8_t token_change;
+
+  // Whether the evaluation is exact, a lower bound, or an upper bound.
   // See the flag constants in `negamaxer.cc`.
   int8_t alpha_beta_flag = kEmptyEntry;
+
   // Depth of the eval. Higher (shallower) depths are based on a longer
   // lookahead, so they can be used for lower depths too. Depths up to 127 are
   // possible.
   int8_t depth;
-  // Eval of a position. Evals with absolute value up to 32767 are possible.
-  int16_t eval;
 };
 
 template <int R, int C>
@@ -73,11 +82,14 @@ class TranspositionTable {
 
   // `location` should equal Location(sit).
   inline void Insert(std::size_t location, const Situation<R, C>& sit,
-                     int8_t alpha_beta_flag, int8_t depth, int16_t eval) {
-    (*entries)[location].sit = sit;
-    (*entries)[location].alpha_beta_flag = alpha_beta_flag;
-    (*entries)[location].depth = depth;
-    (*entries)[location].eval = eval;
+                     int8_t alpha_beta_flag, int8_t depth, int16_t eval,
+                     Move best_move) {
+    TTEntry<R, C>& entry = (*entries)[location];
+    entry.sit = sit;
+    entry.alpha_beta_flag = alpha_beta_flag;
+    entry.depth = depth;
+    entry.eval = eval;
+    entry.best_move = best_move;
   }
 
   inline TTEntry<R, C>& Entry(std::size_t location) {
