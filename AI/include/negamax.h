@@ -133,16 +133,6 @@ class Negamax {
     // instant cut-off or improve the alpha.
     Move cached_move{tt_entry.token_change, {tt_entry.edge0, tt_entry.edge1}};
     if (found_tt_entry && sit_.IsLegalMove(cached_move)) {
-      // std::cerr << "tt entry: " << tt_entry.sit << " " << tt_entry.eval <<
-      // "
-      // "
-      //           << tt_entry.edge0 << " " << tt_entry.edge1 << " "
-      //           << (int)tt_entry.token_change << " "
-      //           << (int)tt_entry.alpha_beta_flag << " " <<
-      //           (int)tt_entry.depth
-      //           << " now applied" << std::endl;
-      // sit_.CrashIfMoveIsIllegal(cached_move);
-      // std::cerr << " done" << std::endl;
       best_move.move = cached_move;
       sit_.ApplyMove(cached_move);
       best_move.score = -NegamaxEval(depth - 1, -beta, -alpha);

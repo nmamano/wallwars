@@ -81,10 +81,10 @@ const GamePage = ({
   //===================================================
   // WebAssembly AI
   //===================================================
-  const [getMove8x8, setGetMove8x8] = useState();
+  const [getMove, setGetMove] = useState();
   useEffect(() => {
     createModule().then((Module) => {
-      setGetMove8x8(() => Module.cwrap("GetMove8x8", "string", ["string"]));
+      setGetMove(() => Module.cwrap("GetMove", "string", ["string"]));
     });
   }, []);
 
@@ -641,7 +641,7 @@ const GamePage = ({
     if (creatorToMove(state)) return;
     const moveIndex = turnCount(state) + 1;
     const playAiMove = async () => {
-      await getAiMove(state, getMove8x8).then((aiActions) =>
+      await getAiMove(state, getMove).then((aiActions) =>
         updateState((draftState) => {
           applyMove(draftState, aiActions, 60 * 60, moveIndex);
         })

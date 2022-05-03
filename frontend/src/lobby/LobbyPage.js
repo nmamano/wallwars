@@ -280,11 +280,13 @@ const LobbyPage = ({ socket }) => {
     const eloId = validateEloId();
     updateState((draftState) => {
       draftState.clientRole = "computer";
-      //overwrite dimensions for computer game (can only be 8x8)
+      //overwrite dimensions for computer game (can only be 7x7)
+      const board_dim = 7;
+      const internal_dim = board_dim * 2 - 1;
       draftState.boardSettings = {
-        dims: [15, 15],
-        startPos: defaultInitialPlayerPos([15, 15]),
-        goalPos: defaultGoalPos([15, 15]),
+        dims: [internal_dim, internal_dim],
+        startPos: defaultInitialPlayerPos([internal_dim, internal_dim]),
+        goalPos: defaultGoalPos([internal_dim, internal_dim]),
       };
       draftState.playerName = name;
       draftState.eloId = eloId;

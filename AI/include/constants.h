@@ -21,9 +21,9 @@ constexpr bool kBenchmark = true;
 constexpr int kBenchmarkNumSamples = 2;
 constexpr int kBenchmarksearchTimeMillis = 10000;
 
-constexpr int kBrowserR = 8;
-constexpr int kBrowserC = 8;
-constexpr int kBrowserMillis = 3000;
+constexpr int kBrowserR = 7;
+constexpr int kBrowserC = 7;
+constexpr int kBrowserMillis = 4000;
 
 }  // namespace wallwars
 

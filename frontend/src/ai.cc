@@ -9,7 +9,7 @@
 // C-API to be used in JS via the emscripten pipeline.
 extern "C" {
 
-EMSCRIPTEN_KEEPALIVE char const* GetMove8x8(char const* standard_notation) {
+EMSCRIPTEN_KEEPALIVE char const* GetMove(char const* standard_notation) {
   wallwars::Situation<wallwars::kBrowserR, wallwars::kBrowserC> sit =
       wallwars::ParseSituationOrCrash<wallwars::kBrowserR, wallwars::kBrowserC>(
           standard_notation);

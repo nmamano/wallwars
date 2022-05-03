@@ -4,7 +4,7 @@ src/ai.mjs: src/ai.cc
 		-s SINGLE_FILE=1  \
 		-s EXPORT_NAME='createModule'  \
 		-s USE_ES6_IMPORT_META=0  \
-		-s EXPORTED_FUNCTIONS='["_GetMove8x8"]'  \
+		-s EXPORTED_FUNCTIONS='["_GetMove"]'  \
 		-s EXPORTED_RUNTIME_METHODS='["cwrap"]'  \
 		-s TOTAL_MEMORY=2GB \
 		-s INITIAL_MEMORY=2GB \
