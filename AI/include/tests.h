@@ -47,18 +47,6 @@ namespace wallwars {
     ++num_executed_tests;                  \
   } while (0)
 
-#ifdef NTEST
-
-class Tests {
- public:
-  static bool RunTests() {
-    std::cout << "Tests disabled." << std::endl;
-    return false;
-  }
-};
-
-#else
-
 class Tests {
  public:
   // Returns whether all tests passed.
@@ -1113,8 +1101,6 @@ class Tests {
     return true;
   }
 };
-
-#endif
 
 }  // namespace wallwars
 

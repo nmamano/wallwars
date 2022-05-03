@@ -12,8 +12,6 @@ constexpr int kTranspositionTableMB = 512;
 constexpr int kInteractiveGameR = 8;
 constexpr int kInteractiveGameC = 8;
 constexpr int kInteractiveGameMillis = 20000;
-// Uncomment to avoid compiling the tests. This can speed up compilation.
-// #define NTEST
 
 // If set to false, the compiler can omit the code to track performance metrics.
 constexpr bool kBenchmark = true;
