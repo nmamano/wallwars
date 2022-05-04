@@ -135,15 +135,37 @@ class Negamax {
     if (found_tt_entry && sit_.IsLegalMove(cached_move)) {
       best_move.move = cached_move;
       sit_.ApplyMove(cached_move);
-      best_move.score = -NegamaxEval(depth - 1, -beta, -alpha);
+      int eval = -NegamaxEval(depth - 1, -beta, -alpha);
       sit_.UndoMove(cached_move);
-      alpha = std::max(alpha, best_move.score);
-      METRIC_INC(num_exits[depth][LEAF_EVAL_EXIT]);
-      if (alpha >= beta) return best_move.score;
+      alpha = std::max(alpha, eval);
+      // METRIC_INC(num_exits[depth][LEAF_EVAL_EXIT]);
+      if (alpha >= beta) {
+        UpdateTTEntry(found_tt_entry, tt_location, tt_entry, depth, cached_move,
+                      eval, starting_alpha, beta);
+        return eval;
+      } else {
+        best_move.move = cached_move;
+        best_move.score = eval;
+      }
     }
 
     // Before generating moves, try a double-walk move to see if it causes a
-    // beta-cutoff or improves alpha: todo
+    // beta-cutoff or improves alpha.
+    Move double_walk_move = GetDoubleWalkMove();
+    if (sit_.IsLegalMove(double_walk_move)) {
+      sit_.ApplyMove(double_walk_move);
+      int eval = -NegamaxEval(depth - 1, -beta, -alpha);
+      sit_.UndoMove(double_walk_move);
+      alpha = std::max(alpha, eval);
+      if (alpha >= beta) {
+        UpdateTTEntry(found_tt_entry, tt_location, tt_entry, depth,
+                      double_walk_move, eval, starting_alpha, beta);
+        return eval;
+      } else if (eval > best_move.score) {
+        best_move.move = double_walk_move;
+        best_move.score = eval;
+      }
+    }
 
     const auto& ordered_moves = OrderedMoves(depth - 1);
     METRIC_ADD(generated_children[depth], ordered_moves.size());
@@ -178,6 +200,15 @@ class Negamax {
       }
     }
 
+    UpdateTTEntry(found_tt_entry, tt_location, tt_entry, depth, best_move.move,
+                  best_move.score, starting_alpha, beta);
+    METRIC_INC(num_exits[depth][REC_EVAL_EXIT]);
+    return best_move.score;
+  }
+
+  inline void UpdateTTEntry(bool found_tt_entry, std::size_t tt_location,
+                            TTEntry<R, C>& tt_entry, int depth, Move move,
+                            int eval, int starting_alpha, int beta) {
     // Update TT. Current policy: always update or replace.
     if (!found_tt_entry) {
       tt_entry.sit = sit_;
@@ -188,21 +219,18 @@ class Negamax {
       }
     }
 
-    if (best_move.score <= starting_alpha)
+    if (eval <= starting_alpha)
       tt_entry.alpha_beta_flag = kUpperboundFlag;
-    else if (best_move.score >= beta)
+    else if (eval >= beta)
       tt_entry.alpha_beta_flag = kLowerboundFlag;
     else
       tt_entry.alpha_beta_flag = kExactFlag;
 
     tt_entry.depth = static_cast<int8_t>(depth);
-    tt_entry.eval = static_cast<int16_t>(best_move.score);
-    tt_entry.token_change = static_cast<int8_t>(best_move.move.token_change);
-    tt_entry.edge0 = static_cast<int16_t>(best_move.move.edges[0]);
-    tt_entry.edge1 = static_cast<int16_t>(best_move.move.edges[1]);
-
-    METRIC_INC(num_exits[depth][REC_EVAL_EXIT]);
-    return best_move.score;
+    tt_entry.eval = static_cast<int16_t>(eval);
+    tt_entry.token_change = static_cast<int8_t>(move.token_change);
+    tt_entry.edge0 = static_cast<int16_t>(move.edges[0]);
+    tt_entry.edge1 = static_cast<int16_t>(move.edges[1]);
   }
 
   // Evaluates situation `sit_` with the formula dist(p1, g1) - dist(p0, g0).
@@ -210,6 +238,19 @@ class Negamax {
   inline int LeafEval() const {
     return sit_.G.Distance(sit_.tokens[1], Goals(R, C)[1]) -
            sit_.G.Distance(sit_.tokens[0], Goals(R, C)[0]);
+  }
+
+  Move GetDoubleWalkMove() {
+    const std::array<int, NumNodes(R, C)> distances_from_goal =
+        sit_.G.Distances(Goals(R, C)[sit_.turn]);
+    for (int node : sit_.G.NodesAtDistance2(sit_.tokens[sit_.turn])) {
+      if (node == -1) continue;
+      if (distances_from_goal[node] ==
+          distances_from_goal[sit_.tokens[sit_.turn]] - 2) {
+        return DoubleWalkMove(sit_.tokens[sit_.turn], node);
+      }
+    }
+    return DoubleWalkMove(sit_.tokens[sit_.turn], 996);
   }
 
   // Returns a list of legal moves ordered heuristically from best to worst
