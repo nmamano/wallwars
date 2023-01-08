@@ -24,7 +24,7 @@
     "react-router-dom": "5.2.0",
     "react-scripts": "^5.0.1",
     "react-toastify": "^6.0.8",
-    "socket.io-client": "^2.3.0",
+    "socket.io-client": "^2.5.0",
     "uifx": "^2.0.7",
     "unique-names-generator": "^4.3.0",
     "use-immer": "^0.4.1",
