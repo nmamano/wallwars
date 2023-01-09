@@ -7,27 +7,27 @@
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.5.0",
     "@testing-library/user-event": "^7.2.1",
-    "@types/jest": "^26.0.4",
-    "@types/react": "^16.9.42",
-    "@types/react-dom": "^16.9.8",
-    "immer": "^9.0.6",
+    "@types/jest": "^26.0.24",
+    "@types/react": "^16.14.34",
+    "@types/react-dom": "^16.9.17",
+    "immer": "^9.0.17",
     "invert-color": "^2.0.0",
     "lodash.clonedeep": "^4.5.0",
-    "materialize-css": "^1.0.0-rc.2",
-    "nouislider-react": "^3.3.9",
-    "react": "^16.13.1",
-    "react-cookie": "^4.0.3",
-    "react-copy-to-clipboard": "^5.0.2",
-    "react-dom": "^16.13.1",
-    "react-materialize": "^3.9.2",
-    "react-responsive": "^8.1.0",
+    "materialize-css": "^1.0.0",
+    "nouislider-react": "^3.4.1",
+    "react": "^16.14.0",
+    "react-cookie": "^4.1.1",
+    "react-copy-to-clipboard": "^5.1.0",
+    "react-dom": "^16.14.0",
+    "react-materialize": "^3.10.0",
+    "react-responsive": "^8.2.0",
     "react-router-dom": "5.2.0",
     "react-scripts": "^5.0.1",
-    "react-toastify": "^6.0.8",
+    "react-toastify": "^6.2.0",
     "socket.io-client": "^2.5.0",
     "uifx": "^2.0.7",
-    "unique-names-generator": "^4.3.0",
-    "use-immer": "^0.4.1",
+    "unique-names-generator": "^4.7.1",
+    "use-immer": "^0.4.2",
     "wnumb": "^1.2.0"
   },
   "scripts": {
@@ -47,7 +47,7 @@
       "not ie 11",
       "not dead",
       "not op_mini all"
-    ], 
+    ],
     "development": [
       ">0.3%",
       "not ie 11",
@@ -56,6 +56,6 @@
     ]
   },
   "devDependencies": {
-    "gh-pages": "^3.1.0"
+    "gh-pages": "^3.2.3"
   }
 }
