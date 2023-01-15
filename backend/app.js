@@ -33,6 +33,14 @@ const server = http.createServer(app);
 const io = socketIo(server, {
   origins: [
     process.env.CLIENT_URL,
+    process.env.CLIENT_URL + ":80",
+    process.env.CLIENT_URL + ":3000",
+    process.env.CLIENT_URL + ":4000",
+    process.env.CLIENT_URL + ":4001",
+  ],
+  cors: [
+    process.env.CLIENT_URL,
+    process.env.CLIENT_URL + ":80",
     process.env.CLIENT_URL + ":3000",
     process.env.CLIENT_URL + ":4000",
     process.env.CLIENT_URL + ":4001",
