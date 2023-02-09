@@ -27,7 +27,7 @@ const M = require("./src/messageList");
 const port = process.env.PORT || 4001;
 const app = express();
 //the server doesn't serve any HTML, but it needs a route to listen for incoming connections
-const index = require("./routes/index");
+const index = require("./index");
 app.use(index);
 const server = http.createServer(app);
 const io = socketIo(server, {
