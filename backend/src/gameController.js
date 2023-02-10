@@ -4,12 +4,6 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const { updateRating, initialRating } = require("./rating/rating");
 
-//shut deprecation warnings
-mongoose.set("useNewUrlParser", true);
-mongoose.set("useFindAndModify", false);
-mongoose.set("useCreateIndex", true);
-mongoose.set("useUnifiedTopology", true);
-
 const url = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.vt6ui.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 var connectedToDB = false;
 
