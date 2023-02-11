@@ -24,7 +24,7 @@
     "react-responsive": "^9.0.2",
     "react-router-dom": "^6.8.1",
     "react-scripts": "^5.0.1",
-    "react-toastify": "^6.2.0",
+    "react-toastify": "^9.1.1",
     "socket.io-client": "^4.6.0",
     "uifx": "^2.0.7",
     "unique-names-generator": "^4.7.1",
