@@ -2,10 +2,10 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "Backend for WallWars game",
-  "main": "app.ts",
+  "main": "dist/app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "ts-node app.ts",
+    "start": "node dist/app.js",
     "build": "tsc -p .",
     "nodemon": "nodemon app.ts"
   },
