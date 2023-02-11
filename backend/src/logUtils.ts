@@ -1,5 +1,6 @@
-const fs = require("fs");
-const util = require("util");
+import fs from "fs";
+import util from "util";
+import { GameState } from "./gameState";
 
 //middleware for logging incoming and outgoing messages
 //format: hh:mm:ss ss|ccc|J -> #SERVER#: m [gg] {p}
@@ -16,7 +17,7 @@ const SAVE_FULL_LOGS = process.env.LOG_MESSAGES || false;
 var messageLogFile = fs.createWriteStream(__dirname + DEBUG_FILE, {
   flags: "w",
 });
-const cropAndLogMessage = (txt) => {
+const cropAndLogMessage = (txt: string) => {
   const maxLogLen = 1000;
   const maxTerminalLen = 140;
   if (SAVE_FULL_LOGS) {
@@ -32,32 +33,39 @@ const cropAndLogMessage = (txt) => {
   console.log(txt);
 };
 
-exports.logMessage = function (
+export function logMessage({
   eloId,
   socketId,
   game,
   sent,
   messageTitle,
-  messageParams
-) {
+  messageParams,
+}: {
+  eloId: string | null;
+  socketId: string;
+  game: GameState | null;
+  sent: boolean;
+  messageTitle: string;
+  messageParams: any;
+}) {
   let shortEloId = eloId ? eloId.substring(0, 3) : "";
   while (shortEloId.length < 3) shortEloId = shortEloId + "_";
   const shortSocketId = socketId.substring(0, 2);
   let client = shortSocketId + "," + shortEloId;
   const date = new Date();
   let [hs, ms, ss] = [date.getHours(), date.getMinutes(), date.getSeconds()];
-  if (ms < 10) ms = "0" + ms;
-  if (ss < 10) ss = "0" + ss;
-  let logText = `${hs}:${ms}:${ss} `;
+  let msStr = ms < 10 ? "0" + ms : ms;
+  let ssStr = ss < 10 ? "0" + ss : ss;
+  let logText = `${hs}:${msStr}:${ssStr} `;
   if (game) {
     const isCreator = eloId === game.eloIds[0];
     client += `,${isCreator ? "C" : "J"}`;
   } else {
     client += ",_";
   }
-  const serv = "#SERVER#";
+  const server = "#SERVER#";
   const arrow = " -> ";
-  logText += sent ? serv + arrow + client : client + arrow + serv;
+  logText += sent ? server + arrow + client : client + arrow + server;
   logText += `: ${messageTitle}`;
   if (game) {
     const shortJoinCode = game.joinCode.substring(0, 2);
@@ -68,4 +76,4 @@ exports.logMessage = function (
     logText += " " + paramsText;
   }
   cropAndLogMessage(logText);
-};
+}

@@ -1,4 +1,10 @@
-class GameManager {
+import { GameState } from "./gameState";
+
+// Manages the pairings between clients currently playing.
+export class GameManager {
+  unjoinedGames: GameState[];
+  ongoingGames: GameState[];
+
   constructor() {
     //if there were many concurrent users, this should be converted into a map
     //to avoid linear search. Not needed for now
@@ -8,7 +14,7 @@ class GameManager {
     this.ongoingGames = [];
   }
 
-  unjoinedGame(joinCode) {
+  unjoinedGame(joinCode: string): GameState | null {
     for (let i = 0; i < this.unjoinedGames.length; i++) {
       const game = this.unjoinedGames[i];
       if (game.joinCode === joinCode) return game;
@@ -16,7 +22,7 @@ class GameManager {
     return null;
   }
 
-  ongoingGameOfClient(eloId) {
+  ongoingGameOfClient(eloId: string | null): GameState | null {
     for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
       const [id1, id2] = game.eloIds;
@@ -25,7 +31,7 @@ class GameManager {
     return null;
   }
 
-  getOngoingGameByEloId(eloId) {
+  getOngoingGameByEloId(eloId: string): GameState | null {
     for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
       const [id1, id2] = game.eloIds;
@@ -34,28 +40,29 @@ class GameManager {
     return null;
   }
 
-  getOpponentSocketId(eloId) {
+  getOpponentSocketId(eloId: string | null): string | null {
     const game = this.ongoingGameOfClient(eloId);
     if (!game) return null;
     const [socketId1, socketId2] = game.socketIds;
     return eloId === game.eloIds[0] ? socketId2 : socketId1;
   }
-  getOpponentEloId(eloId) {
+
+  getOpponentEloId(eloId: string | null): string | null {
     const game = this.ongoingGameOfClient(eloId);
     if (!game) return null;
     const [eloId1, eloId2] = game.eloIds;
     return eloId === eloId1 ? eloId2 : eloId1;
   }
 
-  hasOngoingGame(eloId) {
+  hasOngoingGame(eloId: string): boolean {
     return this.ongoingGameOfClient(eloId) !== null;
   }
 
-  addUnjoinedGame(game) {
+  addUnjoinedGame(game: GameState): void {
     this.unjoinedGames.push(game);
   }
 
-  moveGameFromUnjoinedToOngoing(joinCode) {
+  moveGameFromUnjoinedToOngoing(joinCode: string): void {
     for (let i = 0; i < this.unjoinedGames.length; i++) {
       const game = this.unjoinedGames[i];
       if (game.joinCode === joinCode) {
@@ -69,14 +76,14 @@ class GameManager {
     );
   }
 
-  removeGamesByEloId(eloId) {
+  removeGamesByEloId(eloId: string): void {
     this.removeUnjoinedGamesByEloId(eloId);
     this.removeOngoingGamesByEloId(eloId);
   }
 
   //in theory, clients can only have one unjoined game at a time,
   //but we check all to be sure
-  removeUnjoinedGamesByEloId(eloId) {
+  removeUnjoinedGamesByEloId(eloId: string): void {
     if (!eloId) return;
     for (let i = 0; i < this.unjoinedGames.length; i++) {
       const game = this.unjoinedGames[i];
@@ -88,7 +95,7 @@ class GameManager {
     }
   }
 
-  getUnjoinedGameBySocketId(socketId) {
+  getUnjoinedGamesBySocketId(socketId: string): GameState | undefined {
     if (!socketId) return;
     let game;
     for (let i = 0; i < this.unjoinedGames.length; i++) {
@@ -99,7 +106,7 @@ class GameManager {
     return game;
   }
 
-  getOpenChallenges() {
+  getOpenChallenges(): GameState[] {
     const res = [];
     for (let i = 0; i < this.unjoinedGames.length; i++) {
       const game = this.unjoinedGames[i];
@@ -112,7 +119,7 @@ class GameManager {
 
   //in theory, clients can only have one ongoing game at a time,
   //but we check all to be sure
-  removeOngoingGamesByEloId(eloId) {
+  removeOngoingGamesByEloId(eloId: string): void {
     if (!eloId) return;
     for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
@@ -124,10 +131,8 @@ class GameManager {
     }
   }
 
-  printAllGames() {
+  printAllGames(): void {
     console.log("Unjoined games:\n", this.unjoinedGames);
     console.log("Ongoing games:\n", this.ongoingGames);
   }
 }
-
-module.exports = GameManager;

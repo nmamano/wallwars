@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   //client-server messages
   connectionMsg: "connection", //reserved socket.io message
   disconnectMsg: "disconnect", //reserved socket.io message

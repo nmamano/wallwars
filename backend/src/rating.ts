@@ -1,26 +1,95 @@
-// Taken from https://www.npmjs.com/package/glicko-two and converted to js.
+const defaultRating = 1500;
+const defaultDeviation = 350;
+const defaultVolatility = 0.06;
+const defaultTau = 0.06;
 
-var Outcome;
-(function (Outcome) {
-  Outcome[(Outcome["Win"] = 1)] = "Win";
-  Outcome[(Outcome["Loss"] = 0)] = "Loss";
-  Outcome[(Outcome["Tie"] = 0.5)] = "Tie";
-})(Outcome || (Outcome = {}));
+export enum Outcome {
+  Win = 1,
+  Loss = 0,
+  Tie = 0.5,
+}
+
+export type RatingTuple = {
+  rating: number;
+  deviation: number;
+  volatility: number;
+};
+
+export function initialRating(): RatingTuple {
+  return {
+    rating: defaultRating,
+    deviation: defaultDeviation,
+    volatility: defaultVolatility,
+  };
+}
+
+export function updateRating(
+  player: RatingTuple,
+  opponent: RatingTuple,
+  outcome: Outcome
+): RatingTuple {
+  const player_ = new Player({
+    defaultRating: defaultRating,
+    rating: player.rating,
+    deviation: player.deviation,
+    tau: defaultTau,
+    volatility: player.volatility,
+  });
+  const opponent_ = new Player({
+    defaultRating: defaultRating,
+    rating: opponent.rating,
+    deviation: opponent.deviation,
+    tau: defaultTau,
+    volatility: opponent.volatility,
+  });
+  player_.addResult(opponent_, outcome);
+  player_.updateRating();
+  return {
+    rating: player_.rating,
+    deviation: player_.ratingDeviation,
+    volatility: player_.volatility,
+  };
+}
+
+// ===========================================
+// Rating internals
+// Taken from https://www.npmjs.com/package/glicko-two.
+// ===========================================
+
+interface IPlayer {
+  defaultRating: number;
+  opponentRatingDeviations?: number[];
+  opponentRatings?: number[];
+  outcomes?: Outcome[];
+  rating: number;
+  deviation: number;
+  tau: number;
+  volatility: number;
+}
 
 class Player {
+  private static readonly scalingFactor = 173.7178;
+
+  private readonly defaultRating: number;
+  private readonly tau: number;
+
+  private _opponentRatingDeviations: number[] = [];
+  private _opponentRatings: number[] = [];
+  private _outcomes: Outcome[] = [];
+  private _rating: number;
+  private _ratingDeviation: number;
+  private _volatility: number;
+
   constructor({
     defaultRating,
     opponentRatingDeviations,
     opponentRatings,
     outcomes,
     rating,
-    ratingDeviation,
+    deviation: ratingDeviation,
     tau,
     volatility,
-  }) {
-    this._opponentRatingDeviations = [];
-    this._opponentRatings = [];
-    this._outcomes = [];
+  }: IPlayer) {
     this.tau = tau;
     this.defaultRating = defaultRating;
     this._rating = (rating - defaultRating) / Player.scalingFactor;
@@ -39,12 +108,13 @@ class Player {
           "opponentRatingDeviations, opponentRatings, outcomes must be of equal size"
         );
       }
-      this._opponentRatingDeviations = opponentRatingDeviations;
-      this._opponentRatings = opponentRatings;
-      this._outcomes = outcomes;
+      this._opponentRatingDeviations = opponentRatingDeviations || [];
+      this._opponentRatings = opponentRatings || [];
+      this._outcomes = outcomes || [];
     }
   }
-  static compositePlayer(players) {
+
+  static compositePlayer(players: Player[]) {
     if (players.length === 0) {
       throw new Error("Cannot create a composite of 0 players");
     }
@@ -63,35 +133,43 @@ class Player {
     return new Player({
       defaultRating: refPlayer.defaultRating,
       rating,
-      ratingDeviation,
+      deviation: ratingDeviation,
       tau: refPlayer.tau,
       // This is a pseudo player whose resulting volatility is irrelevant
       volatility: refPlayer.volatility,
     });
   }
+
   get opponentRatingDeviations() {
     return [...this._opponentRatingDeviations];
   }
+
   get opponentRatings() {
     return [...this._opponentRatings];
   }
+
   get outcomes() {
     return [...this._outcomes];
   }
+
   get rating() {
     return this._rating * Player.scalingFactor + this.defaultRating;
   }
+
   get ratingDeviation() {
     return this._ratingDeviation * Player.scalingFactor;
   }
+
   get volatility() {
     return this._volatility;
   }
-  addResult(opponent, outcome) {
+
+  addResult(opponent: Player, outcome: Outcome) {
     this._opponentRatings.push(opponent._rating);
     this._opponentRatingDeviations.push(opponent._ratingDeviation);
     this._outcomes.push(outcome);
   }
+
   // Calculates the new rating and rating deviation of the player.
   // Follows the steps of the algorithm described here:
   // http://www.glicko.net/glicko/glicko2.pdf
@@ -126,20 +204,24 @@ class Player {
     // Cleanup
     this.cleanPreviousMatches();
   }
-  isCompatiblePlayer(player) {
+
+  isCompatiblePlayer(player: Player) {
     return (
       player.tau === this.tau && player.defaultRating === this.defaultRating
     );
   }
+
   cleanPreviousMatches() {
     this._opponentRatings = [];
     this._opponentRatingDeviations = [];
     this._outcomes = [];
   }
+
   hasPlayed() {
     return this._outcomes.length > 0;
   }
-  volatilityAlgorithm(v, delta) {
+
+  volatilityAlgorithm(v: number, delta: number) {
     // Step 5.1
     let A = Math.log(Math.pow(this._volatility, 2));
     const f = this.fFactory(delta, v, A);
@@ -175,6 +257,7 @@ class Player {
     // Step 5.5
     return Math.exp(A / 2);
   }
+
   // Calculates and updates the player's rating deviation for the beginning of a
   // rating period.
   preRatingDeviation() {
@@ -182,6 +265,7 @@ class Player {
       Math.pow(this._ratingDeviation, 2) + Math.pow(this._volatility, 2)
     );
   }
+
   // Calculation of the estimated variance of the player's rating based on game
   // _outcomes
   variance() {
@@ -198,23 +282,26 @@ class Player {
     }
     return 1 / tempSum;
   }
+
   // The Glicko E function.
-  E(p2rating, p2ratingDeviation) {
+  E(p2rating: number, p2ratingDeviation: number) {
     return (
       1 /
       (1 + Math.exp(-1 * this.g(p2ratingDeviation) * (this._rating - p2rating)))
     );
   }
-  // The Glicko2 g(ratingDeviation) function.
-  g(ratingDeviation) {
+
+  // The Glicko2 g function.
+  g(ratingDeviation: number) {
     return (
       1 /
       Math.sqrt(1 + (3 * Math.pow(ratingDeviation, 2)) / Math.pow(Math.PI, 2))
     );
   }
+
   // The delta function of the Glicko2 system.
   // Calculation of the estimated improvement in rating (step 4 of the algorithm)
-  delta(v) {
+  delta(v: number) {
     let tempSum = 0;
     for (let i = 0, len = this._opponentRatings.length; i < len; i++) {
       tempSum +=
@@ -224,8 +311,9 @@ class Player {
     }
     return v * tempSum;
   }
-  fFactory(delta, v, a) {
-    return (x) => {
+
+  fFactory(delta: number, v: number, a: number) {
+    return (x: number) => {
       return (
         (Math.exp(x) *
           (Math.pow(delta, 2) -
@@ -239,6 +327,3 @@ class Player {
     };
   }
 }
-Player.scalingFactor = 173.7178;
-
-exports.Player = Player;

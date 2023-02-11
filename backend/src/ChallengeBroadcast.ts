@@ -1,29 +1,19 @@
-const { logMessage } = require("./logUtils");
-const M = require("./messageList");
-
-const emitMessageSubscriber = (subscribedSocket, msgTitle, msgParams) => {
-  if (msgParams) subscribedSocket.emit(msgTitle, msgParams);
-  else subscribedSocket.emit(msgTitle);
-  logMessage(
-    "SUBSCRIBER",
-    subscribedSocket.id,
-    null,
-    true,
-    msgTitle,
-    msgParams
-  );
-};
+import { logMessage } from "./logUtils";
+import M from "./messageList";
+import { GameState } from "./gameState";
 
 class ChallengeBroadcast {
+  subscribedSockets: any[];
+
   constructor() {
     this.subscribedSockets = [];
   }
 
-  addSubscriber(socket) {
+  addSubscriber(socket: any) {
     this.subscribedSockets.push(socket);
   }
 
-  removeSubscriber(socketId) {
+  removeSubscriber(socketId: string) {
     for (let i = 0; i < this.subscribedSockets.length; i++) {
       const cur = this.subscribedSockets[i];
       if (cur.id === socketId) {
@@ -34,7 +24,7 @@ class ChallengeBroadcast {
     console.error(`couldn't find socket with id ${socketId}`);
   }
 
-  notifyNewChallenge(game) {
+  notifyNewChallenge(game: GameState) {
     for (let i = 0; i < this.subscribedSockets.length; i++) {
       emitMessageSubscriber(this.subscribedSockets[i], M.newChallengeMsg, {
         challenge: game,
@@ -42,7 +32,7 @@ class ChallengeBroadcast {
     }
   }
 
-  notifyDeadChallenge(joinCode) {
+  notifyDeadChallenge(joinCode: string) {
     for (let i = 0; i < this.subscribedSockets.length; i++) {
       emitMessageSubscriber(this.subscribedSockets[i], M.deadChallengeMsg, {
         joinCode: joinCode,
@@ -51,4 +41,21 @@ class ChallengeBroadcast {
   }
 }
 
-module.exports = ChallengeBroadcast;
+function emitMessageSubscriber(
+  subscribedSocket: any,
+  msgTitle: string,
+  msgParams: any
+) {
+  if (msgParams) subscribedSocket.emit(msgTitle, msgParams);
+  else subscribedSocket.emit(msgTitle);
+  logMessage({
+    eloId: "SUBSCRIBER",
+    socketId: subscribedSocket.id,
+    game: null,
+    sent: true,
+    messageTitle: msgTitle,
+    messageParams: msgParams,
+  });
+}
+
+export default ChallengeBroadcast;

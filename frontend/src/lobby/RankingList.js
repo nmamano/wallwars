@@ -53,6 +53,7 @@ const RankingList = ({ socket, isLargeScreen, menuTheme, isDarkModeOn }) => {
     paddingBottom: "0.15rem",
     borderRadius: "0",
   };
+
   if (isLargeScreen) {
     return (
       <div
