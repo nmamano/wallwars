@@ -9,8 +9,6 @@
     "@testing-library/react": "^9.5.0",
     "@testing-library/user-event": "^7.2.1",
     "@types/jest": "^26.0.24",
-    "@types/react": "^16.14.34",
-    "@types/react-dom": "^16.9.17",
     "immer": "^9.0.17",
     "invert-color": "^2.0.0",
     "lodash.clonedeep": "^4.5.0",
@@ -57,6 +55,15 @@
     ]
   },
   "devDependencies": {
+    "@types/gh-pages": "^3.2.1",
+    "@types/lodash.clonedeep": "^4.5.7",
+    "@types/materialize-css": "^1.0.11",
+    "@types/react": "^17.0.53",
+    "@types/react-copy-to-clipboard": "^5.0.4",
+    "@types/react-dom": "^17.0.18",
+    "@types/testing-library__jest-dom": "^5.14.5",
+    "@types/testing-library__react": "^10.2.0",
+    "@types/wnumb": "^1.2.1",
     "gh-pages": "^5.0.0"
   }
 }
