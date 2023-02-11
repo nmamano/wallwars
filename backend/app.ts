@@ -38,34 +38,10 @@ app.use(index);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: [
-      process.env.CLIENT_URL + "",
-      process.env.CLIENT_URL + ":80",
-      process.env.CLIENT_URL + ":3000",
-      process.env.CLIENT_URL + ":4000",
-      process.env.CLIENT_URL + ":4001",
-      "http://" + process.env.CLIENT_URL + "",
-      "http://" + process.env.CLIENT_URL + ":80",
-      "http://" + process.env.CLIENT_URL + ":3000",
-      "http://" + process.env.CLIENT_URL + ":4000",
-      "http://" + process.env.CLIENT_URL + ":4001",
-      "https://" + process.env.CLIENT_URL + "",
-      "https://" + process.env.CLIENT_URL + ":80",
-      "https://" + process.env.CLIENT_URL + ":3000",
-      "https://" + process.env.CLIENT_URL + ":4000",
-      "https://" + process.env.CLIENT_URL + ":4001",
-    ],
+    origin: "*",
     methods: ["GET", "POST"],
-    allowedHeaders: ["my-custom-header"],
     credentials: true,
   },
-  // cors: [
-  //   process.env.CLIENT_URL,
-  //   process.env.CLIENT_URL + ":80",
-  //   process.env.CLIENT_URL + ":3000",
-  //   process.env.CLIENT_URL + ":4000",
-  //   process.env.CLIENT_URL + ":4001",
-  // ],
 });
 
 //global object containing all the games
