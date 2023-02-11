@@ -1,7 +1,6 @@
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
-import cors from "cors";
 
 import { initialRating } from "./src/rating";
 import * as db from "./src/database";
@@ -9,6 +8,7 @@ import { GameManager } from "./src/GameManager";
 import index from "./index";
 import ChallengeBroadcast from "./src/ChallengeBroadcast";
 import { logMessage } from "./src/logUtils";
+import cors from "cors";
 import {
   GameState,
   TimeControl,
@@ -35,12 +35,14 @@ import M from "./src/messageList";
 const port = process.env.PORT || 4001;
 const app = express();
 //the server doesn't serve any HTML, but it needs a route to listen for incoming connections
+app.use(cors);
 app.use(index);
-app.use(cors());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: process.env.CLIENT_URL,
+    methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 

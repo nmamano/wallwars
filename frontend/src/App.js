@@ -9,7 +9,12 @@ const App = () => {
   const BACKEND_ENDPOINT =
     process.env.REACT_APP_BACKEND_URL || "localhost:4001";
   console.log(`connecting to backend at ${BACKEND_ENDPOINT}`);
-  const [socket] = useState(socketIoClient(BACKEND_ENDPOINT));
+  const [socket] = useState(
+    socketIoClient(BACKEND_ENDPOINT, {
+      transports: ["websocket", "polling", "flashsocket"],
+      
+    })
+  );
 
   return (
     <React.StrictMode>
