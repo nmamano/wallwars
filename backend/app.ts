@@ -1,6 +1,7 @@
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
+import cors from "cors";
 
 import { initialRating } from "./src/rating";
 import * as db from "./src/database";
@@ -35,12 +36,11 @@ const port = process.env.PORT || 4001;
 const app = express();
 //the server doesn't serve any HTML, but it needs a route to listen for incoming connections
 app.use(index);
+app.use(cors());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "*",
-    methods: ["GET", "POST"],
-    credentials: true,
   },
 });
 
