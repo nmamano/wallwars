@@ -77,6 +77,7 @@ export type dbFinishReason =
   | "abandon";
 
 export type dbFinishedGame = {
+  _id: string;
   socketIds: [string, string];
   joinCode: string;
   timeControl: dbTimeControl;
@@ -281,6 +282,7 @@ export async function getRecentGameSummaries(
 
 // The data returned by the database for a game.
 type gameDocument = {
+  _id: mongoose.Types.ObjectId;
   winner: string;
   finishReason: string;
   timeControl?: {
@@ -329,6 +331,7 @@ function gameModelToDBGame(game: gameDocument): dbFinishedGameWithoutEloId {
   const boardSettings = game.boardSettings as dbBoardSettings;
 
   return {
+    _id: game._id.toString(),
     socketIds: game.socketIds as [string, string],
     joinCode: game.joinCode,
     timeControl: game.timeControl as dbTimeControl,
