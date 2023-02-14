@@ -42,7 +42,7 @@ export default function IconButton({
     );
   }
 
-  let actions: JSX.Element[] = []; //arst changed this type.
+  let actions: JSX.Element[] = [];
   if (modalConfirmButtonText && modalConfirmButtonText !== "") {
     actions = [
       <Button

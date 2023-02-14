@@ -1,4 +1,3 @@
-import React from "react";
 import { Table } from "react-materialize";
 import { prettyDate } from "../shared/utils";
 import {

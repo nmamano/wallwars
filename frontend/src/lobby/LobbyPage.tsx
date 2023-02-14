@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { Row, Col, Button } from "react-materialize";
 import { useMediaQuery } from "react-responsive";
 import { ToastContainer } from "react-toastify";

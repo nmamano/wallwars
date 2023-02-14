@@ -1,5 +1,3 @@
-import React from "react";
-
 const gameHelp: JSX.Element = (
   <div>
     <h6>

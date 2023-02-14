@@ -192,8 +192,7 @@ export function isDistanceAtMost(
 ): boolean {
   // Implements the BFS algorithm.
   if (posEq(start, target)) {
-    console.log("lalalalalalalalala"); //arst remove log
-    return false; //arst bug, should return true
+    return true;
   }
   const C = grid[0].length;
   const posToKey = (pos: Pos): number => pos[0] * C + pos[1];

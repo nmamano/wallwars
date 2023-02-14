@@ -1,6 +1,5 @@
 // @ts-nocheck (necessary because of a problem with the <tr> tag)
-
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useImmer } from "use-immer";
 import { Table } from "react-materialize";
 import { getColor, MenuThemeName } from "../shared/colorThemes";

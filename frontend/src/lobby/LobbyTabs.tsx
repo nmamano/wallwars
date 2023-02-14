@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useImmer } from "use-immer";
 import { useMediaQuery } from "react-responsive";
 import cloneDeep from "lodash.clonedeep";

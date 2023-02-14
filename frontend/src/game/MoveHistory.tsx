@@ -1,4 +1,3 @@
-import React from "react";
 import { Table } from "react-materialize";
 import { useMediaQuery } from "react-responsive";
 import { CopyToClipboard } from "react-copy-to-clipboard";

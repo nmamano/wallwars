@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Row, Col } from "react-materialize";
 import { useImmer } from "use-immer";
 import UIfx from "uifx";
@@ -956,7 +956,7 @@ export default function GamePage({
     handleLeaveGame();
   };
   useEffect(() => {
-    window.history.pushState(null, "", window.location.pathname); //arst changed null to ""
+    window.history.pushState(null, "", window.location.pathname);
     window.addEventListener("popstate", onBackButtonEvent);
     return () => window.removeEventListener("popstate", onBackButtonEvent);
   });

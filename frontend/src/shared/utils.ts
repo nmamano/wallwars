@@ -4,10 +4,7 @@ export function roundNum(num: number): number {
   return Math.round((num + Number.EPSILON) * 100) / 100;
 }
 
-export function prettyDate(
-  date: Date, //arst the inferred type also contained string | number
-  longFormat: boolean
-): string {
+export function prettyDate(date: Date, longFormat: boolean): string {
   if (!date) return "-";
   const curTime = new Date().getTime();
   const dateTime = new Date(date).getTime();

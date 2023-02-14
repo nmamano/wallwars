@@ -1,4 +1,3 @@
-import React from "react";
 import IconButton from "../shared/IconButton";
 import { BoardThemeName, getColor, MenuThemeName } from "../shared/colorThemes";
 import { LifeCycleStage, RoleEnum } from "./gameState";

@@ -1,6 +1,4 @@
 // @ts-nocheck (necessary because of a problem with the <tr> tag)
-
-import React from "react";
 import { Table } from "react-materialize";
 import { TimeControl, timeControlToString } from "../shared/gameLogicUtils";
 import { prettyDate } from "../shared/utils";

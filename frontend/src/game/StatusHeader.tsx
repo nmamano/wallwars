@@ -1,4 +1,3 @@
-import React from "react";
 import { roundNum } from "../shared/utils";
 import { getColor, MenuThemeName } from "../shared/colorThemes";
 import { TimeControl } from "../shared/gameLogicUtils";

@@ -1,4 +1,3 @@
-import React from "react";
 import { getColor, MenuThemeName, BoardThemeName } from "../shared/colorThemes";
 import { LifeCycleStage } from "./gameState";
 

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useImmer } from "use-immer";
 import Board from "../game/Board";
 import { cellSizes, defaultBoardSettings } from "../shared/globalSettings";
