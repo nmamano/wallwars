@@ -10,7 +10,7 @@ import { getColor } from "./colorThemes";
 const contextEnum = {
   player: "player",
   spectator: "spectator",
-  lobby: "lobby"
+  lobby: "lobby",
 };
 
 function Header({
@@ -81,7 +81,7 @@ function Header({
             height: "auto",
             display: "grid",
             padding: "5px",
-            gridTemplateColumns: `repeat(${isLargeScreen ? 4 : 3}, 1fr)`,
+            gridTemplateColumns: `repeat(${isLargeScreen ? 5 : 4}, 1fr)`,
             gridTemplateRows: `auto`,
             columnGap: "5px",
             rowGap: "5px",
@@ -143,6 +143,15 @@ function Header({
               isDarkModeOn={isDarkModeOn}
             />
           )}
+          <IconButton
+            icon="account_circle"
+            tooltip="Log in"
+            onClick={() => showToastNotification("Not implemented yet")}
+            bgColor={buttonCol}
+            padding={padding}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
+          />
         </div>
       </div>
     </div>
