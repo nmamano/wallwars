@@ -31,11 +31,11 @@ import M from "./src/messageList";
 import { auth } from "express-openid-connect";
 
 ////////////////////////////////////
-// Boilerplate server setup
+// Boilerplate server setup.
 ////////////////////////////////////
 const port = process.env.PORT || 4001;
 const app = express();
-//the server doesn't serve any HTML, but it needs a route to listen for incoming connections
+// The server doesn't serve any HTML, but it needs a route to listen for incoming connections.
 app.use(cors);
 app.use(index);
 
@@ -61,23 +61,23 @@ const io = new Server(server, {
   },
 });
 
-//global object containing all the games
+// Global object containing all the games.
 const GM = new GameManager();
 
-//for informing clients about new challenges
+// For informing clients about new challenges.
 const ChallengeBC = new ChallengeBroadcast();
 
 io.on(M.connectionMsg, function (socket: any): void {
   let clientEloId: string | null = null;
 
   ////////////////////////////////////
-  //new connection start-up
+  // New connection start-up.
   ////////////////////////////////////
   logReceivedMessage(M.connectionMsg);
   ChallengeBC.addSubscriber(socket);
 
   ////////////////////////////////////
-  //process incoming messages
+  // Process incoming messages.
   ////////////////////////////////////
   socket.on(
     M.createGameMsg,
@@ -111,7 +111,7 @@ io.on(M.connectionMsg, function (socket: any): void {
       clientEloId = eloId;
       const ongoingGame = GM.getOngoingGameByEloId(clientEloId);
       if (ongoingGame) await dealWithLingeringGame(ongoingGame);
-      GM.removeGamesByEloId(clientEloId); //ensure there's no other game for this client
+      GM.removeGamesByEloId(clientEloId); // Ensure there's no other game for this client.
       const creatorPseudoPlayer = await db.getPseudoPlayer(clientEloId);
       const creatorRating = creatorPseudoPlayer
         ? creatorPseudoPlayer.rating
@@ -167,7 +167,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         emitMessage(M.joinSelfGameFailedMsg);
         return;
       }
-      GM.removeGamesByEloId(eloId); //ensure there's no other game for this client
+      GM.removeGamesByEloId(eloId); // Ensure there's no other game for this client.
       clientEloId = eloId;
       const joinerPseudoPlayer = await db.getPseudoPlayer(clientEloId);
       const joinerRating = joinerPseudoPlayer
@@ -479,7 +479,7 @@ io.on(M.connectionMsg, function (socket: any): void {
     M.getGameMsg,
     async function ({ gameId }: { gameId: string }): Promise<void> {
       logReceivedMessage(M.getGameMsg, { gameId });
-      // In the future, this should also handle live games
+      // In the future, this should also handle live games.
       const game = await db.getGame(gameId);
       if (game) emitMessage(M.requestedGameMsg, { game: game });
       else emitMessage(M.gameNotFoundErrorMsg);
@@ -592,7 +592,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         return;
       }
       game.arePlayersPresent[idx] = true;
-      //when a client returns to a game, we need to update its socket id
+      // When a client returns to a game, we need to update its socket id.
       game.socketIds[idx] = socket.id;
       let gameWithoutEloIds = JSON.parse(JSON.stringify(game));
       delete gameWithoutEloIds.eloIds;
@@ -606,7 +606,7 @@ io.on(M.connectionMsg, function (socket: any): void {
   );
 
   ////////////////////////////////////
-  //utility functions
+  // Utility functions.
   ////////////////////////////////////
 
   function isValidEloId(eloId: string | null | undefined): boolean {
@@ -670,7 +670,7 @@ io.on(M.connectionMsg, function (socket: any): void {
     return emitMessage(M.gameNotFoundErrorMsg);
   }
 
-  // assumes `game` has both eloIds and both players already exist in the DB
+  // Assumes `game` has both eloIds and both players already exist in the DB.
   async function getPseudoPlayersFromDB(
     game: GameState
   ): Promise<[db.dbPseudoPlayer | null, db.dbPseudoPlayer | null]> {
@@ -681,8 +681,8 @@ io.on(M.connectionMsg, function (socket: any): void {
     return [creator, joiner];
   }
 
-  // stores game to db, updates pseudoplayers in db, messages both players about
-  // new ratings
+  // Stores game to db, updates pseudoplayers in db, messages both players about
+  // new ratings.
   async function storeGameAndNotifyRatings(game: GameState): Promise<void> {
     if (!clientEloId) return;
 
@@ -707,8 +707,8 @@ io.on(M.connectionMsg, function (socket: any): void {
     });
   }
 
-  //communicate the the opponent that the client is not coming back
-  //and store the game to the DB if it had started
+  // Communicate the the opponent that the client is not coming back
+  // and store the game to the DB if it had started.
   async function dealWithLingeringGame(game: GameState): Promise<void> {
     if (!clientEloId) return;
 

@@ -2,7 +2,7 @@ import { logMessage } from "./logUtils";
 import M from "./messageList";
 import { GameState } from "./gameState";
 
-class ChallengeBroadcast {
+export default class ChallengeBroadcast {
   subscribedSockets: any[];
 
   constructor() {
@@ -57,5 +57,3 @@ function emitMessageSubscriber(
     messageParams: msgParams,
   });
 }
-
-export default ChallengeBroadcast;
