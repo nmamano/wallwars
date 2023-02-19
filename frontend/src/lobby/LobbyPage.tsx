@@ -32,6 +32,7 @@ import {
 } from "../shared/gameLogicUtils";
 import { Puzzle } from "../game/puzzleLogic";
 import { RoleEnum } from "../game/gameState";
+import handleLogin from "../shared/auth";
 
 const boardTheme = "monochromeBoard";
 const maxPlayerNameLen = 9;
@@ -604,6 +605,7 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
             aboutText={aboutText}
             handleToggleDarkMode={handleToggleDarkMode}
             handleToggleTheme={handleToggleTheme}
+            handleLogin={handleLogin}
           />
           <LobbyForm
             // @ts-ignore

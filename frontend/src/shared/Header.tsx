@@ -22,6 +22,7 @@ function Header({
   isDarkModeOn,
   handleToggleDarkMode,
   handleToggleTheme,
+  handleLogin,
 }: {
   context: string;
   helpText: JSX.Element;
@@ -33,6 +34,7 @@ function Header({
   isDarkModeOn: boolean;
   handleToggleDarkMode: () => void;
   handleToggleTheme: () => void;
+  handleLogin: () => void;
 }): JSX.Element {
   let mainText;
   if (context === contextEnum.lobby) {
@@ -92,7 +94,7 @@ function Header({
             height: "auto",
             display: "grid",
             padding: "5px",
-            gridTemplateColumns: `repeat(${isLargeScreen ? 4 : 3}, 1fr)`,
+            gridTemplateColumns: `repeat(${isLargeScreen ? 5 : 4}, 1fr)`,
             gridTemplateRows: `auto`,
             columnGap: "5px",
             rowGap: "5px",
@@ -154,6 +156,15 @@ function Header({
               isDarkModeOn={isDarkModeOn}
             />
           )}
+          <IconButton
+            icon="account_circle"
+            tooltip="Login"
+            onClick={handleLogin}
+            bgColor={buttonCol}
+            padding={padding}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
+          />
         </div>
       </div>
     </div>
