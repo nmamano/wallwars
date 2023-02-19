@@ -32,8 +32,8 @@ export const aboutText = (
   <div>
     <h6>
       Wallwars is an online 2-player strategy board game. The player who gets to
-      their goal before first wins. You can place walls to reshape the terrain
-      to your advantage.
+      their goal first wins. You can place walls to reshape the terrain to your
+      advantage.
     </h6>
     <h6>
       WallWars is inspired by board games like Blockade and Quoridor. The main
