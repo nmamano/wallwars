@@ -100,6 +100,13 @@ const LobbyPage = ({ socket }) => {
       path: "/",
     });
   };
+
+  // first step in authorization code flow
+  // https://auth0.com/docs/get-started/authentication-and-authorization-flow/authorization-code-flow
+  const handleLogin = () => {
+    console.log("Login clicked");
+  };
+
   const handlePlayerName = (name) => {
     updateState((draftState) => {
       draftState.playerName = name.slice(0, maxPlayerNameLen);
@@ -534,6 +541,7 @@ const LobbyPage = ({ socket }) => {
             aboutText={aboutText}
             handleToggleDarkMode={handleToggleDarkMode}
             handleToggleTheme={handleToggleTheme}
+            handleLogin={handleLogin}
           />
           <LobbyForm
             clientParams={state}

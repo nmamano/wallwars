@@ -28,6 +28,7 @@ import {
   setResult,
 } from "./src/gameState";
 import M from "./src/messageList";
+import { auth } from "express-openid-connect";
 
 ////////////////////////////////////
 // Boilerplate server setup
@@ -37,6 +38,20 @@ const app = express();
 //the server doesn't serve any HTML, but it needs a route to listen for incoming connections
 app.use(cors);
 app.use(index);
+
+const authConfig = {
+  authRequired: false,
+  auth0Logout: true,
+  secret: process.env.AUTH0_SECRET,
+  baseURL: process.env.AUTH0_BASE_URL,
+  clientID: process.env.AUTH0_CLIENT_ID,
+  issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
+};
+app.use(auth(authConfig));
+app.get("/wallwars/", (req, res) => {
+  res.send(req.oidc.isAuthenticated() ? "Logged in" : "Logged out");
+});
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {

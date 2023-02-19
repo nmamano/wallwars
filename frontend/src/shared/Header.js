@@ -24,6 +24,7 @@ function Header({
   isDarkModeOn,
   handleToggleDarkMode,
   handleToggleTheme,
+  handleLogin,
 }) {
   let mainText;
   if (context === contextEnum.lobby) {
@@ -145,8 +146,8 @@ function Header({
           )}
           <IconButton
             icon="account_circle"
-            tooltip="Log in"
-            onClick={() => showToastNotification("Not implemented yet")}
+            tooltip="Login"
+            onClick={handleLogin}
             bgColor={buttonCol}
             padding={padding}
             menuTheme={menuTheme}
