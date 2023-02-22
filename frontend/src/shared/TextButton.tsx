@@ -1,5 +1,6 @@
-import { Button } from "react-materialize";
 import { getColor, MenuThemeName } from "./colorThemes";
+import Button from "@mui/material/Button";
+import Tooltip from "@mui/material/Tooltip";
 
 function TextButton({
   text,
@@ -17,19 +18,19 @@ function TextButton({
   isDisabled?: boolean;
 }): JSX.Element {
   return (
-    <Button
-      style={{
-        backgroundColor: getColor(menuTheme, "button", isDarkModeOn),
-        color: "#FFFFFF",
-      }}
-      node="button"
-      waves="light"
-      onClick={onClick}
-      tooltip={tooltip}
-      disabled={isDisabled}
-    >
-      {text}
-    </Button>
+    <Tooltip title={tooltip}>
+      <Button
+        variant="contained"
+        style={{
+          backgroundColor: getColor(menuTheme, "button", isDarkModeOn),
+          color: "#FFFFFF",
+        }}
+        onClick={onClick}
+        disabled={isDisabled}
+      >
+        {text}
+      </Button>
+    </Tooltip>
   );
 }
 
