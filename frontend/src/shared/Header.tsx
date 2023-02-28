@@ -1,7 +1,7 @@
 import "materialize-css";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import "react-toastify/dist/ReactToastify.css";
-import { IconButtonWithTooltip, IconButtonWithInfoModal } from "./IconButton";
+import { IconButtonWithTooltip, IconButtonWithInfoModal } from "./Buttons";
 import showToastNotification from "./showToastNotification";
 import { getColor, MenuThemeName } from "./colorThemes";
 

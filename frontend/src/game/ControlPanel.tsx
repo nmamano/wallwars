@@ -1,7 +1,4 @@
-import {
-  IconButtonWithDialog,
-  IconButtonWithTooltip,
-} from "../shared/IconButton";
+import { IconButtonWithDialog, IconButtonWithTooltip } from "../shared/Buttons";
 import { BoardThemeName, getColor, MenuThemeName } from "../shared/colorThemes";
 import { LifeCycleStage, RoleEnum } from "./gameState";
 import { MoveHistory } from "../shared/gameLogicUtils";

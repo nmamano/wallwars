@@ -32,7 +32,6 @@ import WbSunny from "@mui/icons-material/WbSunny";
 import Brightness2 from "@mui/icons-material/Brightness2";
 import Help from "@mui/icons-material/Help";
 import Info from "@mui/icons-material/Info";
-import TextButton from "./TextButton";
 
 function getIcon(icon: string): JSX.Element {
   switch (icon) {
@@ -75,6 +74,45 @@ function getIcon(icon: string): JSX.Element {
     default:
       return <Icon>{icon}</Icon>;
   }
+}
+
+export function TextButton({
+  text,
+  tooltip,
+  menuTheme,
+  isDarkModeOn,
+  disabled,
+  isImportant,
+  onClick,
+}: {
+  text: string;
+  tooltip?: string;
+  menuTheme: MenuThemeName;
+  isDarkModeOn: boolean;
+  disabled?: boolean;
+  isImportant?: boolean; // If true, the button takes a more prominent color.
+  onClick: () => void;
+}): JSX.Element {
+  return (
+    <Tooltip title={tooltip}>
+      <Button
+        variant="contained"
+        style={{
+          backgroundColor: getColor(
+            menuTheme,
+            isImportant ? "importantButton" : "button",
+            isDarkModeOn
+          ),
+          color: "#FFFFFF",
+        }}
+        onClick={onClick}
+        disabled={disabled}
+        size={isImportant ? "large" : "medium"}
+      >
+        {text}
+      </Button>
+    </Tooltip>
+  );
 }
 
 export function IconButtonWithTooltip({
@@ -178,7 +216,7 @@ export function IconButtonWithInfoModal({
     p: 4,
     color: "black",
     overflow: "scroll",
-    height: "80%",
+    maxHeight: "80%",
   };
 
   return (

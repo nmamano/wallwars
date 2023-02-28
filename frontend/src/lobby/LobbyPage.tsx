@@ -32,7 +32,7 @@ import {
 } from "../shared/gameLogicUtils";
 import { Puzzle } from "../game/puzzleLogic";
 import { RoleEnum } from "../game/gameState";
-import TextButton from "../shared/TextButton";
+import { TextButton } from "../shared/Buttons";
 
 const boardTheme = "monochromeBoard";
 const maxPlayerNameLen = 9;

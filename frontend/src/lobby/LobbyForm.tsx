@@ -12,7 +12,7 @@ import {
 } from "react-materialize";
 import { getColor } from "../shared/colorThemes";
 import showToastNotification from "../shared/showToastNotification";
-import TextButton from "../shared/TextButton";
+import { TextButton } from "../shared/Buttons";
 import { maxBoardDims } from "../shared/globalSettings";
 import CoordinateSlider from "../shared/CoordinateSlider";
 import BoardSizeSlider from "../shared/BoardSizeSlider";
@@ -575,10 +575,10 @@ export default function LobbyForm({
           <Col className="center" s={5} m={4}>
             <TextButton
               text="Join Game"
-              onClick={handleJoinGame}
               menuTheme={menuTheme}
               isDarkModeOn={isDarkModeOn}
-              isDisabled={clientParams.joinCode === ""}
+              disabled={clientParams.joinCode === ""}
+              onClick={handleJoinGame}
             />
           </Col>
           <Col s={6} m={5}>

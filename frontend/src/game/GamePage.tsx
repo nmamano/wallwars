@@ -62,7 +62,7 @@ import {
 } from "../shared/gameLogicUtils";
 import createModule from "../ai.mjs";
 import { ClientParams } from "../lobby/LobbyPage";
-import TextButton from "../shared/TextButton";
+import { TextButton } from "../shared/Buttons";
 
 const moveSound = new UIfx(moveSoundAudio);
 function playMoveSound() {
@@ -1143,11 +1143,11 @@ export default function GamePage({
               <TextButton
                 text="Rematch"
                 tooltip="Ask the other player for a rematch"
-                onClick={handleRematchButton}
                 menuTheme={menuTheme}
                 isDarkModeOn={isDarkModeOn}
-                isDisabled={!isOpponentPresent(state)}
+                disabled={!isOpponentPresent(state)}
                 isImportant={true}
+                onClick={handleRematchButton}
               />
               <Button
                 large
