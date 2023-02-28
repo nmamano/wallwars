@@ -105,8 +105,6 @@ function Header({
               icon={"color_lens"}
               tooltip={"Change theme"}
               bgColor={buttonCol}
-              menuTheme={menuTheme}
-              isDarkModeOn={isDarkModeOn}
               horizontalPadding={padding}
               onClick={handleToggleTheme}
             />
@@ -117,8 +115,6 @@ function Header({
               isDarkModeOn ? "Turn off night mode" : "Turn on night mode"
             }
             bgColor={buttonCol}
-            menuTheme={menuTheme}
-            isDarkModeOn={isDarkModeOn}
             horizontalPadding={padding}
             onClick={handleToggleDarkMode}
           />
@@ -126,8 +122,6 @@ function Header({
             icon="help"
             tooltip="Help"
             bgColor={buttonCol}
-            menuTheme={menuTheme}
-            isDarkModeOn={isDarkModeOn}
             horizontalPadding={padding}
             modalTitle="Help"
             modalBody={helpText}
@@ -137,8 +131,6 @@ function Header({
               icon="info"
               tooltip="About"
               bgColor={buttonCol}
-              menuTheme={menuTheme}
-              isDarkModeOn={isDarkModeOn}
               horizontalPadding={padding}
               modalTitle="About"
               modalBody={aboutText!}
@@ -149,8 +141,6 @@ function Header({
               icon="home"
               tooltip="Leave game"
               bgColor={buttonCol}
-              menuTheme={menuTheme}
-              isDarkModeOn={isDarkModeOn}
               horizontalPadding={padding}
               onClick={handleLeaveGame!}
             />

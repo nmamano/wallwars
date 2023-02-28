@@ -33,7 +33,27 @@ import Brightness2 from "@mui/icons-material/Brightness2";
 import Help from "@mui/icons-material/Help";
 import Info from "@mui/icons-material/Info";
 
-function getIcon(icon: string): JSX.Element {
+type iconStr =
+  | "flag"
+  | "local_florist"
+  | "replay"
+  | "add_alarm"
+  | "fast_rewind"
+  | "navigate_before"
+  | "navigate_next"
+  | "fast_forward"
+  | "volume_up"
+  | "volume_off"
+  | "zoom_out"
+  | "zoom_in"
+  | "home"
+  | "color_lens"
+  | "wb_sunny"
+  | "brightness_2"
+  | "help"
+  | "info";
+
+function getIcon(icon: iconStr): JSX.Element {
   switch (icon) {
     case "flag":
       return <Flag />;
@@ -72,7 +92,7 @@ function getIcon(icon: string): JSX.Element {
     case "info":
       return <Info />;
     default:
-      return <Icon>{icon}</Icon>;
+      return <Icon></Icon>;
   }
 }
 
@@ -125,16 +145,16 @@ export function IconButtonWithTooltip({
   horizontalPadding,
   onClick,
 }: {
-  icon: string;
+  icon: iconStr;
   tooltip: string;
-  bgColor?: string; // If not provided, uses the theme's default button color.
+  bgColor?: string; // If not provided, uses the button color based on `menuTheme` and `isDarkModeOn`.
+  menuTheme?: MenuThemeName; // Omit if `bgColor` is provided.
+  isDarkModeOn?: boolean; // Omit if `bgColor` is provided.
   disabled?: boolean;
-  menuTheme: MenuThemeName;
-  isDarkModeOn?: boolean;
   horizontalPadding?: number;
   onClick: () => void;
 }): JSX.Element {
-  if (!bgColor) bgColor = getColor(menuTheme, "button", isDarkModeOn || false);
+  if (!bgColor) bgColor = getColor(menuTheme!, "button", isDarkModeOn || false);
   const style = {
     backgroundColor: disabled ? "lightgray" : bgColor,
     color: disabled ? "gray" : "white",
@@ -183,18 +203,14 @@ export function IconButtonWithInfoModal({
   tooltip,
   bgColor,
   disabled,
-  menuTheme,
-  isDarkModeOn,
   horizontalPadding,
   modalTitle,
   modalBody,
 }: {
-  icon: string;
+  icon: iconStr;
   tooltip: string;
-  bgColor?: string; // If not provided, uses the theme's default button color.
+  bgColor: string;
   disabled?: boolean;
-  menuTheme: MenuThemeName;
-  isDarkModeOn?: boolean;
   horizontalPadding: number;
   modalTitle: string;
   modalBody: JSX.Element | string;
@@ -202,7 +218,6 @@ export function IconButtonWithInfoModal({
   const [isOpen, setIsOpen] = React.useState(false);
   const handleOpen = () => setIsOpen(true);
   const handleClose = () => setIsOpen(false);
-  if (!bgColor) bgColor = getColor(menuTheme, "button", isDarkModeOn || false);
 
   const modalBoxStyle = {
     position: "absolute" as "absolute",
@@ -226,8 +241,6 @@ export function IconButtonWithInfoModal({
         tooltip={tooltip}
         bgColor={bgColor}
         disabled={disabled}
-        menuTheme={menuTheme}
-        isDarkModeOn={isDarkModeOn}
         horizontalPadding={horizontalPadding}
         onClick={handleOpen}
       />
@@ -244,8 +257,6 @@ export function IconButtonWithInfoModal({
 export function IconButtonWithDialog({
   icon,
   tooltip,
-  bgColor,
-  horizontalPadding,
   disabled,
   menuTheme,
   isDarkModeOn,
@@ -254,13 +265,11 @@ export function IconButtonWithDialog({
   modalConfirmButtonText,
   onClick,
 }: {
-  icon: string;
+  icon: iconStr;
   tooltip: string;
-  bgColor?: string; // If not provided, uses the theme's default button color.
   disabled?: boolean;
   menuTheme: MenuThemeName;
-  isDarkModeOn?: boolean;
-  horizontalPadding?: number;
+  isDarkModeOn: boolean;
   modalTitle: string;
   modalBody: string;
   modalConfirmButtonText: string;
@@ -269,17 +278,14 @@ export function IconButtonWithDialog({
   const [isOpen, setIsOpen] = React.useState(false);
   const handleOpen = () => setIsOpen(true);
   const handleClose = () => setIsOpen(false);
-  if (!bgColor) bgColor = getColor(menuTheme, "button", isDarkModeOn || false);
   return (
     <>
       <IconButtonWithTooltip
         icon={icon}
         tooltip={tooltip}
-        bgColor={bgColor}
         disabled={disabled}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
-        horizontalPadding={horizontalPadding}
         onClick={handleOpen}
       />
       <Dialog open={isOpen} onClose={handleClose}>

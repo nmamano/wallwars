@@ -7,24 +7,25 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import { TextButton } from "./Buttons";
 
-export function NewDialog({
+// A dialog to choose whether to accept an action or not.
+export function BooleanDialog({
   title,
   body,
   acceptButtonText,
   rejectButtonText,
   isOpen,
-  callback,
   menuTheme,
   isDarkModeOn,
+  callback,
 }: {
   title: string;
   body: string;
-  acceptButtonText?: string; // Defaults to Accept.
-  rejectButtonText?: string; // Defaults to Cancel.
+  acceptButtonText: string;
+  rejectButtonText: string;
   isOpen: boolean;
-  callback: (accepted: boolean) => void;
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
+  callback: (accepted: boolean) => void;
 }): JSX.Element {
   return (
     <Dialog open={isOpen} onClose={() => callback(false)}>
@@ -35,11 +36,9 @@ export function NewDialog({
         <DialogContentText style={{ color: "black" }}>{body}</DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => callback(false)}>
-          {rejectButtonText || "Cancel"}
-        </Button>
+        <Button onClick={() => callback(false)}>{rejectButtonText}</Button>
         <TextButton
-          text={acceptButtonText || "Accept"}
+          text={acceptButtonText}
           onClick={() => callback(true)}
           menuTheme={menuTheme}
           isDarkModeOn={isDarkModeOn || false}

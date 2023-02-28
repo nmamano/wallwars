@@ -46,13 +46,13 @@ import {
 import { lastPuzzleMoveIsCorrect } from "./puzzleLogic";
 import Board from "./Board";
 import Header from "../shared/Header";
-import { NewDialog } from "../shared/Dialog";
+import { BooleanDialog } from "../shared/Dialog";
 import StatusHeader from "./StatusHeader";
 import TimerHeader from "./TimerHeader";
 import gameHelp from "./gameHelp";
 import puzzleHelp from "./puzzleHelp";
 import ControlPanel from "./ControlPanel";
-import { getColor, BoardThemeName } from "../shared/colorThemes";
+import { BoardThemeName } from "../shared/colorThemes";
 import {
   BoardSettings,
   CellType,
@@ -1153,7 +1153,7 @@ export default function GamePage({
           </Row>
         )}
       <div style={{ height: "100%" }}></div>
-      <NewDialog
+      <BooleanDialog
         isOpen={state.showDrawDialog}
         title="Draw offer received"
         body="The opponent offered a draw."
@@ -1163,7 +1163,7 @@ export default function GamePage({
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
       />
-      <NewDialog
+      <BooleanDialog
         isOpen={state.showRematchDialog}
         title="Rematch offer received"
         body="The opponent would like a rematch."
@@ -1173,7 +1173,7 @@ export default function GamePage({
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
       />
-      <NewDialog
+      <BooleanDialog
         isOpen={state.showTakebackDialog}
         title="Takeback request received"
         body={
