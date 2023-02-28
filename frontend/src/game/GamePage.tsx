@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Row, Col } from "react-materialize";
+import { Row, Col } from "react-materialize";
 import { useImmer } from "use-immer";
 import UIfx from "uifx";
 import moveSoundAudio from "./../static/moveSound.mp3";
@@ -46,7 +46,7 @@ import {
 import { lastPuzzleMoveIsCorrect } from "./puzzleLogic";
 import Board from "./Board";
 import Header from "../shared/Header";
-import Dialog from "../shared/Dialog";
+import { NewDialog } from "../shared/Dialog";
 import StatusHeader from "./StatusHeader";
 import TimerHeader from "./TimerHeader";
 import gameHelp from "./gameHelp";
@@ -1149,27 +1149,11 @@ export default function GamePage({
                 isImportant={true}
                 onClick={handleRematchButton}
               />
-              <Button
-                large
-                style={{
-                  backgroundColor: getColor(
-                    menuTheme,
-                    "importantButton",
-                    isDarkModeOn
-                  ),
-                }}
-                node="button"
-                waves="light"
-                onClick={handleRematchButton}
-                disabled={!isOpponentPresent(state)}
-              >
-                Rematch
-              </Button>
             </Col>
           </Row>
         )}
       <div style={{ height: "100%" }}></div>
-      <Dialog
+      <NewDialog
         isOpen={state.showDrawDialog}
         title="Draw offer received"
         body="The opponent offered a draw."
@@ -1179,7 +1163,7 @@ export default function GamePage({
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
       />
-      <Dialog
+      <NewDialog
         isOpen={state.showRematchDialog}
         title="Rematch offer received"
         body="The opponent would like a rematch."
@@ -1189,7 +1173,7 @@ export default function GamePage({
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
       />
-      <Dialog
+      <NewDialog
         isOpen={state.showTakebackDialog}
         title="Takeback request received"
         body={

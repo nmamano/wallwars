@@ -1,7 +1,13 @@
-import { Button, Modal } from "react-materialize";
-import { getColor, MenuThemeName } from "./colorThemes";
+import Button from "@mui/material/Button";
+import { MenuThemeName } from "./colorThemes";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
+import { TextButton } from "./Buttons";
 
-export default function Dialog({
+export function NewDialog({
   title,
   body,
   acceptButtonText,
@@ -20,57 +26,25 @@ export default function Dialog({
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
 }): JSX.Element {
-  const buttonCol = getColor(menuTheme, "button", isDarkModeOn);
   return (
-    <Modal
-      // @ts-ignore
-      style={{ color: "black", backgroundColor: "#e0e0e0" }}
-      header={title}
-      open={isOpen}
-      options={{
-        dismissible: false,
-        endingTop: "10%",
-        inDuration: 250,
-        opacity: 0.4,
-        outDuration: 250,
-        preventScrolling: true,
-        startingTop: "4%",
-      }}
-      actions={[
-        <Button
-          style={{
-            backgroundColor: buttonCol,
-            color: "white",
-            marginRight: "1rem",
-          }}
-          flat
-          modal="close"
-          node="button"
-          waves="green"
-          onClick={() => {
-            callback(true);
-          }}
-        >
-          {acceptButtonText || "Accept"}
-        </Button>,
-        <Button
-          style={{
-            backgroundColor: buttonCol,
-            color: "white",
-          }}
-          flat
-          modal="close"
-          node="button"
-          waves="green"
-          onClick={() => {
-            callback(false);
-          }}
-        >
+    <Dialog open={isOpen} onClose={() => callback(false)}>
+      <DialogTitle variant="h5" style={{ color: "black" }}>
+        {title}
+      </DialogTitle>
+      <DialogContent>
+        <DialogContentText style={{ color: "black" }}>{body}</DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => callback(false)}>
           {rejectButtonText || "Cancel"}
-        </Button>,
-      ]}
-    >
-      {<div>{body}</div>}
-    </Modal>
+        </Button>
+        <TextButton
+          text={acceptButtonText || "Accept"}
+          onClick={() => callback(true)}
+          menuTheme={menuTheme}
+          isDarkModeOn={isDarkModeOn || false}
+        />
+      </DialogActions>
+    </Dialog>
   );
 }

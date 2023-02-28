@@ -1,10 +1,10 @@
+import * as React from "react";
 import { getColor, MenuThemeName } from "./colorThemes";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import Button from "@mui/material/Button";
 import Icon from "@mui/material/Icon";
 import Modal from "@mui/material/Modal";
-import * as React from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Dialog from "@mui/material/Dialog";
@@ -199,9 +199,9 @@ export function IconButtonWithInfoModal({
   modalTitle: string;
   modalBody: JSX.Element | string;
 }): JSX.Element {
-  const [open, setOpen] = React.useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const [isOpen, setIsOpen] = React.useState(false);
+  const handleOpen = () => setIsOpen(true);
+  const handleClose = () => setIsOpen(false);
   if (!bgColor) bgColor = getColor(menuTheme, "button", isDarkModeOn || false);
 
   const modalBoxStyle = {
@@ -231,7 +231,7 @@ export function IconButtonWithInfoModal({
         horizontalPadding={horizontalPadding}
         onClick={handleOpen}
       />
-      <Modal open={open} onClose={handleClose}>
+      <Modal open={isOpen} onClose={handleClose}>
         <Box sx={modalBoxStyle}>
           <Typography variant="h4">{modalTitle}</Typography>
           {modalBody}
@@ -266,9 +266,9 @@ export function IconButtonWithDialog({
   modalConfirmButtonText: string;
   onClick: () => void; // Action triggered when confirming the dialog.
 }): JSX.Element {
-  const [open, setOpen] = React.useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const [isOpen, setIsOpen] = React.useState(false);
+  const handleOpen = () => setIsOpen(true);
+  const handleClose = () => setIsOpen(false);
   if (!bgColor) bgColor = getColor(menuTheme, "button", isDarkModeOn || false);
   return (
     <>
@@ -282,8 +282,10 @@ export function IconButtonWithDialog({
         horizontalPadding={horizontalPadding}
         onClick={handleOpen}
       />
-      <Dialog open={open} onClose={handleClose}>
-        <DialogTitle style={{ color: "black" }}>{modalTitle}</DialogTitle>
+      <Dialog open={isOpen} onClose={handleClose}>
+        <DialogTitle variant="h5" style={{ color: "black" }}>
+          {modalTitle}
+        </DialogTitle>
         <DialogContent>
           <DialogContentText style={{ color: "black" }}>
             {modalBody}
