@@ -9,6 +9,7 @@ export default function TextButton({
   menuTheme,
   isDarkModeOn,
   isDisabled,
+  isImportant,
 }: {
   text: string;
   tooltip?: string;
@@ -16,17 +17,23 @@ export default function TextButton({
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
   isDisabled?: boolean;
+  isImportant?: boolean; // If true, the button takes a more prominent color.
 }): JSX.Element {
   return (
     <Tooltip title={tooltip}>
       <Button
         variant="contained"
         style={{
-          backgroundColor: getColor(menuTheme, "button", isDarkModeOn),
+          backgroundColor: getColor(
+            menuTheme,
+            isImportant ? "importantButton" : "button",
+            isDarkModeOn
+          ),
           color: "#FFFFFF",
         }}
         onClick={onClick}
         disabled={isDisabled}
+        size={isImportant ? "large" : "medium"}
       >
         {text}
       </Button>

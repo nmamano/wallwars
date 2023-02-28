@@ -62,6 +62,7 @@ import {
 } from "../shared/gameLogicUtils";
 import createModule from "../ai.mjs";
 import { ClientParams } from "../lobby/LobbyPage";
+import TextButton from "../shared/TextButton";
 
 const moveSound = new UIfx(moveSoundAudio);
 function playMoveSound() {
@@ -1139,6 +1140,15 @@ export default function GamePage({
         clientParams.clientRole !== RoleEnum.puzzle && (
           <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
             <Col className="center" s={12}>
+              <TextButton
+                text="Rematch"
+                tooltip="Ask the other player for a rematch"
+                onClick={handleRematchButton}
+                menuTheme={menuTheme}
+                isDarkModeOn={isDarkModeOn}
+                isDisabled={!isOpponentPresent(state)}
+                isImportant={true}
+              />
               <Button
                 large
                 style={{
