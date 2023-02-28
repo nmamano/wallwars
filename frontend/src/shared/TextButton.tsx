@@ -2,7 +2,7 @@ import { getColor, MenuThemeName } from "./colorThemes";
 import Button from "@mui/material/Button";
 import Tooltip from "@mui/material/Tooltip";
 
-function TextButton({
+export default function TextButton({
   text,
   tooltip,
   onClick,
@@ -33,5 +33,3 @@ function TextButton({
     </Tooltip>
   );
 }
-
-export default TextButton;
