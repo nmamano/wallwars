@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useEffect } from "react";
 import {
   Row,
@@ -5,7 +6,6 @@ import {
   TextInput,
   Button,
   Icon,
-  Dropdown,
   Checkbox,
   Switch,
   Modal,
@@ -18,43 +18,7 @@ import CoordinateSlider from "../shared/CoordinateSlider";
 import BoardSizeSlider from "../shared/BoardSizeSlider";
 import { eloIdAboutText } from "./lobbyHelp";
 import { ClientParams, PosSetting } from "./LobbyPage";
-
-// Some icons until we find a nicer set.
-const tokens = [
-  "school",
-  "default",
-  "face",
-  "outlet",
-  "mood",
-  "mood_bad",
-  "child_care",
-  "pets",
-  "whatshot",
-  "toys",
-  "spa",
-  "stop",
-  "star",
-  "lens",
-  "favorite",
-  "visibility",
-  "group_work",
-  "flare",
-  "flash_on",
-  "ac_unit",
-  "filter_vintage",
-  "camera",
-  "casino",
-  "free_breakfast",
-  "local_pizza",
-  "music_note",
-  "directions_boat",
-  "directions_bus",
-  "directions_car",
-  "motorcycle",
-  "event_seat",
-  "adb",
-  "bug_report",
-];
+import TokenDropdown from "./TokenDropdown";
 
 export default function LobbyForm({
   clientParams,
@@ -128,6 +92,9 @@ export default function LobbyForm({
       </i>
     </div>
   );
+
+  const [tokenDropdownAnchorEl, setTokenDropdownAnchorEl] =
+    React.useState<null | HTMLElement>(null);
 
   return (
     <div
@@ -266,80 +233,13 @@ export default function LobbyForm({
             )}
           </Col>
           <Col s={4} m={4}>
-            <div>
-              <Dropdown
-                id="Dropdown_6"
-                options={{
-                  alignment: "left",
-                  autoTrigger: true,
-                  closeOnClick: true,
-                  constrainWidth: true,
-                  container: null,
-                  coverTrigger: true,
-                  hover: false,
-                  inDuration: 150, // @ts-ignore
-                  onCloseEnd: null, // @ts-ignore
-                  onCloseStart: null, // @ts-ignore
-                  onOpenEnd: null, // @ts-ignore
-                  onOpenStart: null,
-                  outDuration: 250,
-                }}
-                trigger={
-                  <Button
-                    node="button"
-                    style={{
-                      backgroundColor: getColor(
-                        menuTheme,
-                        "button",
-                        isDarkModeOn
-                      ),
-                    }}
-                  >
-                    Change
-                  </Button>
-                }
-              >
-                {tokens.map((token) => {
-                  return (
-                    <div
-                      style={{
-                        width: "100%",
-                        color: "white",
-                        backgroundColor: getColor(
-                          menuTheme,
-                          "button",
-                          isDarkModeOn
-                        ),
-                      }}
-                      key={token} // @ts-ignore
-                      node="button"
-                      onClick={() => handleToken(token)}
-                    >
-                      <div
-                        className="center"
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "center",
-                          padding: "4px 0",
-                        }}
-                      >
-                        {token === "default" ? (
-                          defaultToken
-                        ) : (
-                          <i
-                            className={`material-icons white-text`}
-                            style={{ height: `100%` }}
-                          >
-                            {token}
-                          </i>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </Dropdown>
-            </div>
+            {TokenDropdown(
+              tokenDropdownAnchorEl,
+              setTokenDropdownAnchorEl,
+              handleToken,
+              menuTheme,
+              isDarkModeOn
+            )}
           </Col>
           <Col s={1} m={2}></Col>
         </Row>

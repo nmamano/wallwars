@@ -3,7 +3,6 @@ import { getColor, MenuThemeName } from "./colorThemes";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import Button from "@mui/material/Button";
-import Icon from "@mui/material/Icon";
 import Modal from "@mui/material/Modal";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -12,6 +11,7 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
 // Icons:
 import Flag from "@mui/icons-material/Flag";
@@ -92,7 +92,7 @@ function getIcon(icon: iconStr): JSX.Element {
     case "info":
       return <Info />;
     default:
-      return <Icon></Icon>;
+      return <></>;
   }
 }
 
@@ -103,6 +103,8 @@ export function TextButton({
   isDarkModeOn,
   disabled,
   isImportant,
+  dropdownIcon,
+  id,
   onClick,
 }: {
   text: string;
@@ -111,23 +113,42 @@ export function TextButton({
   isDarkModeOn: boolean;
   disabled?: boolean;
   isImportant?: boolean; // If true, the button takes a more prominent color.
-  onClick: () => void;
+  dropdownIcon?: boolean; // If true, shows a little dropdown arrow to the right of the text.
+  id?: string;
+  onClick: (() => void) | ((event: React.MouseEvent<HTMLElement>) => void);
 }): JSX.Element {
-  return (
-    <Tooltip title={tooltip}>
+  const style = {
+    backgroundColor: getColor(
+      menuTheme,
+      isImportant ? "importantButton" : "button",
+      isDarkModeOn
+    ),
+    color: "#FFFFFF",
+  };
+  if (disabled)
+    return (
       <Button
+        id={id}
         variant="contained"
-        style={{
-          backgroundColor: getColor(
-            menuTheme,
-            isImportant ? "importantButton" : "button",
-            isDarkModeOn
-          ),
-          color: "#FFFFFF",
-        }}
+        style={style}
         onClick={onClick}
         disabled={disabled}
         size={isImportant ? "large" : "medium"}
+        endIcon={dropdownIcon ? <KeyboardArrowDownIcon /> : undefined}
+      >
+        {text}
+      </Button>
+    );
+  return (
+    <Tooltip title={tooltip}>
+      <Button
+        id={id}
+        variant="contained"
+        style={style}
+        onClick={onClick}
+        disabled={disabled}
+        size={isImportant ? "large" : "medium"}
+        endIcon={dropdownIcon ? <KeyboardArrowDownIcon /> : undefined}
       >
         {text}
       </Button>
