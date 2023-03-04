@@ -1,7 +1,7 @@
 import "materialize-css";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import "react-toastify/dist/ReactToastify.css";
-import IconButton from "./IconButton";
+import { IconButtonWithTooltip, IconButtonWithInfoModal } from "./Buttons";
 import showToastNotification from "./showToastNotification";
 import { getColor, MenuThemeName } from "./colorThemes";
 import AuthButton from "./AuthButton";
@@ -60,6 +60,7 @@ function Header({
           text={joinCode}
           onCopy={() => showToastNotification("Join code copied to clipboard!")}
         >
+          {/* Todo: do not show "Code" for local AI, and puzzle games */}
           <span>Code {joinCode}</span>
         </CopyToClipboard>
       </span>
@@ -101,58 +102,48 @@ function Header({
           }}
         >
           {isLargeScreen && (
-            <IconButton
+            <IconButtonWithTooltip
               icon={"color_lens"}
               tooltip={"Change theme"}
-              onClick={handleToggleTheme}
               bgColor={buttonCol}
-              padding={padding}
-              menuTheme={menuTheme}
-              isDarkModeOn={isDarkModeOn}
+              horizontalPadding={padding}
+              onClick={handleToggleTheme}
             />
           )}
-          <IconButton
+          <IconButtonWithTooltip
             icon={isDarkModeOn ? "wb_sunny" : "brightness_2"}
             tooltip={
               isDarkModeOn ? "Turn off night mode" : "Turn on night mode"
             }
-            onClick={handleToggleDarkMode}
             bgColor={buttonCol}
-            padding={padding}
-            menuTheme={menuTheme}
-            isDarkModeOn={isDarkModeOn}
+            horizontalPadding={padding}
+            onClick={handleToggleDarkMode}
           />
-          <IconButton
+          <IconButtonWithInfoModal
             icon="help"
             tooltip="Help"
+            bgColor={buttonCol}
+            horizontalPadding={padding}
             modalTitle="Help"
             modalBody={helpText}
-            bgColor={buttonCol}
-            padding={padding}
-            menuTheme={menuTheme}
-            isDarkModeOn={isDarkModeOn}
           />
           {context === contextEnum.lobby && (
-            <IconButton
+            <IconButtonWithInfoModal
               icon="info"
               tooltip="About"
-              modalTitle="About"
-              modalBody={aboutText}
               bgColor={buttonCol}
-              padding={padding}
-              menuTheme={menuTheme}
-              isDarkModeOn={isDarkModeOn}
+              horizontalPadding={padding}
+              modalTitle="About"
+              modalBody={aboutText!}
             />
           )}
           {context !== contextEnum.lobby && (
-            <IconButton
+            <IconButtonWithTooltip
               icon="home"
               tooltip="Leave game"
-              onClick={handleLeaveGame}
               bgColor={buttonCol}
-              padding={padding}
-              menuTheme={menuTheme}
-              isDarkModeOn={isDarkModeOn}
+              horizontalPadding={padding}
+              onClick={handleLeaveGame!}
             />
           )}
           <AuthButton

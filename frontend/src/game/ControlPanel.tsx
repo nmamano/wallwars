@@ -1,4 +1,4 @@
-import IconButton from "../shared/IconButton";
+import { IconButtonWithDialog, IconButtonWithTooltip } from "../shared/Buttons";
 import { BoardThemeName, getColor, MenuThemeName } from "../shared/colorThemes";
 import { LifeCycleStage, RoleEnum } from "./gameState";
 import { MoveHistory } from "../shared/gameLogicUtils";
@@ -89,47 +89,47 @@ export default function GameControlPanel({
         gridArea: "panel",
       }}
     >
-      <IconButton
+      <IconButtonWithDialog
         icon={"flag"}
         tooltip={"Resign"}
+        disabled={isSpectator || isPuzzle || lifeCycleStage !== 3}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
         modalTitle={"Resign"}
         modalBody={"Are you sure you want to resign?"}
         modalConfirmButtonText={"Resign"}
         onClick={handleResign}
-        disabled={isSpectator || isPuzzle || lifeCycleStage !== 3}
-        menuTheme={menuTheme}
-        isDarkModeOn={isDarkModeOn}
       />
-      <IconButton
+      <IconButtonWithDialog
         icon={"local_florist"}
         tooltip={"Offer Draw"}
-        modalTitle={"Offer Draw"}
-        modalBody={"Are you sure you want to offer a draw?"}
-        modalConfirmButtonText={"Offer draw"}
-        onClick={handleOfferDraw}
         disabled={
           isSpectator || isPuzzle || !isOpponentPresent || lifeCycleStage !== 3
         }
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
+        modalTitle={"Offer Draw"}
+        modalBody={"Are you sure you want to offer a draw?"}
+        modalConfirmButtonText={"Offer draw"}
+        onClick={handleOfferDraw}
       />
-      <IconButton
+      <IconButtonWithTooltip
         icon={"replay"}
         tooltip={"Request takeback"}
-        onClick={handleRequestTakeback}
         disabled={
           isSpectator || isPuzzle || !isOpponentPresent || !takebackEnabled
         }
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
+        onClick={handleRequestTakeback}
       />
-      <IconButton
+      <IconButtonWithTooltip
         icon={"add_alarm"}
         tooltip={"Give 60 seconds"}
-        onClick={handleGiveExtraTime}
         disabled={isSpectator || isPuzzle || lifeCycleStage !== 3}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
+        onClick={handleGiveExtraTime}
       />
       <div style={{ gridColumnStart: "1", gridColumnEnd: "5" }}>
         <MoveHistoryTable
@@ -143,66 +143,70 @@ export default function GameControlPanel({
           isDarkModeOn={isDarkModeOn}
         />
       </div>
-      <IconButton
+      <IconButtonWithTooltip
         icon={"fast_rewind"}
+        tooltip={"Go to first move"}
+        disabled={lifeCycleStage <= 1 || viewIndex === 0}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
         onClick={handleSeeFirstMove}
-        disabled={lifeCycleStage <= 1 || viewIndex === 0}
-        menuTheme={menuTheme}
-        isDarkModeOn={isDarkModeOn}
       />
-      <IconButton
+      <IconButtonWithTooltip
         icon={"navigate_before"}
-        onClick={handleSeePreviousMove}
+        tooltip={"Go to previous move"}
         disabled={lifeCycleStage <= 1 || viewIndex === 0}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
+        onClick={handleSeePreviousMove}
       />
-      <IconButton
+      <IconButtonWithTooltip
         icon={"navigate_next"}
+        tooltip={"Go to next move"}
+        disabled={lifeCycleStage <= 1 || viewIndex === turnCount}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
         onClick={handleSeeNextMove}
-        disabled={lifeCycleStage <= 1 || viewIndex === turnCount}
-        menuTheme={menuTheme}
-        isDarkModeOn={isDarkModeOn}
       />
-      <IconButton
+      <IconButtonWithTooltip
         icon={"fast_forward"}
-        onClick={handleSeeLastMove}
+        tooltip={"Go to last move"}
         disabled={lifeCycleStage <= 1 || viewIndex === turnCount}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
+        onClick={handleSeeLastMove}
       />
-      <IconButton
+      <IconButtonWithTooltip
         icon={isVolumeOn ? "volume_up" : "volume_off"}
         tooltip={
           isVolumeOn ? "Turn off sound effects" : "Turn on sound effects"
         }
-        onClick={handleToggleVolume}
         disabled={isSpectator}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
+        onClick={handleToggleVolume}
       />
-      <IconButton
+      <IconButtonWithTooltip
         icon={"zoom_out"}
         tooltip={"Decrease board size"}
-        onClick={handleDecreaseBoardSize}
         disabled={zoomLevel === 0}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
+        onClick={handleDecreaseBoardSize}
       />
-      <IconButton
+      <IconButtonWithTooltip
         icon={"zoom_in"}
         tooltip={"Increase board size"}
-        onClick={handleIncreaseBoardSize}
         disabled={zoomLevel === 10}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
+        onClick={handleIncreaseBoardSize}
       />
-      <IconButton
+      <IconButtonWithTooltip
         icon="home"
         tooltip="Return to lobby"
-        onClick={handleLeaveGame}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
+        onClick={handleLeaveGame}
       />
     </div>
   );

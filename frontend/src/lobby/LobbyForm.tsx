@@ -1,60 +1,24 @@
+import * as React from "react";
 import { useEffect } from "react";
 import {
   Row,
   Col,
-  TextInput,
   Button,
   Icon,
-  Dropdown,
   Checkbox,
   Switch,
   Modal,
 } from "react-materialize";
 import { getColor } from "../shared/colorThemes";
 import showToastNotification from "../shared/showToastNotification";
-import TextButton from "../shared/TextButton";
+import { TextButton } from "../shared/Buttons";
 import { maxBoardDims } from "../shared/globalSettings";
 import CoordinateSlider from "../shared/CoordinateSlider";
 import BoardSizeSlider from "../shared/BoardSizeSlider";
 import { eloIdAboutText } from "./lobbyHelp";
 import { ClientParams, PosSetting } from "./LobbyPage";
-
-// Some icons until we find a nicer set.
-const tokens = [
-  "school",
-  "default",
-  "face",
-  "outlet",
-  "mood",
-  "mood_bad",
-  "child_care",
-  "pets",
-  "whatshot",
-  "toys",
-  "spa",
-  "stop",
-  "star",
-  "lens",
-  "favorite",
-  "visibility",
-  "group_work",
-  "flare",
-  "flash_on",
-  "ac_unit",
-  "filter_vintage",
-  "camera",
-  "casino",
-  "free_breakfast",
-  "local_pizza",
-  "music_note",
-  "directions_boat",
-  "directions_bus",
-  "directions_car",
-  "motorcycle",
-  "event_seat",
-  "adb",
-  "bug_report",
-];
+import TokenDropdown from "./TokenDropdown";
+import TextInputField from "../shared/TextInputField";
 
 export default function LobbyForm({
   clientParams,
@@ -129,6 +93,11 @@ export default function LobbyForm({
     </div>
   );
 
+  const [tokenDropdownAnchorEl, setTokenDropdownAnchorEl] =
+    React.useState<null | HTMLElement>(null);
+
+  // todo: the isInvalid prop in TextInputField could be used to highlight invalid inputs.
+
   return (
     <div
       className="container"
@@ -145,13 +114,14 @@ export default function LobbyForm({
           </span>
         </Col>
         <Col s={6} m={3}>
-          <TextInput
-            id="nameInput"
-            value={clientParams.playerName}
-            onChange={(props) => {
-              handlePlayerName(props.target.value);
-            }}
-          />
+          <div style={{ paddingTop: "15px" }}>
+            <TextInputField
+              label=""
+              id="nameInput"
+              value={clientParams.playerName}
+              onChange={handlePlayerName}
+            />
+          </div>
         </Col>
         <Col s={1} m={1}>
           <Button
@@ -180,26 +150,22 @@ export default function LobbyForm({
           />
         </Col>
         <Col s={2} m={2} style={{ paddingRight: "0" }}>
-          <TextInput
-            id="durationInput"
+          <TextInputField
             label="Duration"
+            id="durationInput"
             value={`${clientParams.timeControl.duration}`}
-            onChange={(props) => {
-              handleDuration(props.target.value);
-            }}
+            onChange={handleDuration}
           />
         </Col>
         <Col s={1} m={1} style={{ paddingLeft: "0" }}>
           m
         </Col>
         <Col s={2} m={2} style={{ paddingRight: "0" }}>
-          <TextInput
-            id="incrementInput"
+          <TextInputField
             label="Increment"
+            id="incrementInput"
             value={`${clientParams.timeControl.increment}`}
-            onChange={(props) => {
-              handleIncrement(props.target.value);
-            }}
+            onChange={handleIncrement}
           />
         </Col>
         <Col s={1} m={1} style={{ paddingLeft: "0" }}>
@@ -266,96 +232,28 @@ export default function LobbyForm({
             )}
           </Col>
           <Col s={4} m={4}>
-            <div>
-              <Dropdown
-                id="Dropdown_6"
-                options={{
-                  alignment: "left",
-                  autoTrigger: true,
-                  closeOnClick: true,
-                  constrainWidth: true,
-                  container: null,
-                  coverTrigger: true,
-                  hover: false,
-                  inDuration: 150, // @ts-ignore
-                  onCloseEnd: null, // @ts-ignore
-                  onCloseStart: null, // @ts-ignore
-                  onOpenEnd: null, // @ts-ignore
-                  onOpenStart: null,
-                  outDuration: 250,
-                }}
-                trigger={
-                  <Button
-                    node="button"
-                    style={{
-                      backgroundColor: getColor(
-                        menuTheme,
-                        "button",
-                        isDarkModeOn
-                      ),
-                    }}
-                  >
-                    Change
-                  </Button>
-                }
-              >
-                {tokens.map((token) => {
-                  return (
-                    <div
-                      style={{
-                        width: "100%",
-                        color: "white",
-                        backgroundColor: getColor(
-                          menuTheme,
-                          "button",
-                          isDarkModeOn
-                        ),
-                      }}
-                      key={token} // @ts-ignore
-                      node="button"
-                      onClick={() => handleToken(token)}
-                    >
-                      <div
-                        className="center"
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "center",
-                          padding: "4px 0",
-                        }}
-                      >
-                        {token === "default" ? (
-                          defaultToken
-                        ) : (
-                          <i
-                            className={`material-icons white-text`}
-                            style={{ height: `100%` }}
-                          >
-                            {token}
-                          </i>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </Dropdown>
-            </div>
+            {TokenDropdown(
+              tokenDropdownAnchorEl,
+              setTokenDropdownAnchorEl,
+              handleToken,
+              menuTheme,
+              isDarkModeOn
+            )}
           </Col>
           <Col s={1} m={2}></Col>
         </Row>
       )}
       {showMoreOptions && (
-        <Row className="valign-wrapper">
+        <Row className="valign-wrapper" style={{ paddingBottom: "15px" }}>
           <Col className="center" s={4} m={4}>
             <span style={{ fontSize: "23px" }}>ELO id:</span>
           </Col>
           <Col s={6} m={3}>
-            <TextInput
+            <TextInputField
+              label=""
               id="eloIdInput"
               value={clientParams.eloId}
-              onChange={(props) => {
-                handleEloId(props.target.value);
-              }}
+              onChange={handleEloId}
             />
           </Col>
           <Col s={1} m={1}>
@@ -575,21 +473,19 @@ export default function LobbyForm({
           <Col className="center" s={5} m={4}>
             <TextButton
               text="Join Game"
-              onClick={handleJoinGame}
               menuTheme={menuTheme}
               isDarkModeOn={isDarkModeOn}
-              isDisabled={clientParams.joinCode === ""}
+              disabled={clientParams.joinCode === ""}
+              onClick={handleJoinGame}
             />
           </Col>
           <Col s={6} m={5}>
-            <TextInput
+            <TextInputField
               id="joinInput"
-              placeholder="Write game code here..."
+              label=""
               value={`${clientParams.joinCode}`}
-              onChange={(props) => {
-                console.log(props);
-                handleJoinCode(props.target.value);
-              }}
+              onChange={handleJoinCode}
+              placeholder="Write game code here..."
             />
           </Col>
           <Col s={1} m={3}></Col>

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Row, Col, Button } from "react-materialize";
+import { Row, Col } from "react-materialize";
 import { useMediaQuery } from "react-responsive";
 import { ToastContainer } from "react-toastify";
 import { useCookies } from "react-cookie";
@@ -32,6 +32,7 @@ import {
 } from "../shared/gameLogicUtils";
 import { Puzzle } from "../game/puzzleLogic";
 import { RoleEnum } from "../game/gameState";
+import { TextButton } from "../shared/Buttons";
 
 const boardTheme = "monochromeBoard";
 const maxPlayerNameLen = 9;
@@ -111,7 +112,7 @@ function initialLobbyState(cookies: Cookies): LobbyState {
       cookies.isDarkModeOn && cookies.isDarkModeOn === "true" ? true : false,
     menuTheme:
       cookies.menuTheme && cookies.menuTheme === "green" ? "green" : "blue",
-    showMoreOptions: false,
+    showMoreOptions: true, //flip
   };
 }
 
@@ -555,23 +556,14 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
     </div>
   );
   const returnToGameButton = (
-    <Button
-      large
-      style={{
-        backgroundColor: getColor(
-          state.menuTheme,
-          "importantButton",
-          state.isDarkModeOn
-        ),
-      }}
-      node="button"
-      waves="light"
-      onClick={() => {
-        handleReturnToGame();
-      }}
-    >
-      Return to game
-    </Button>
+    <TextButton
+      text="Return to game"
+      tooltip="Continue ongoing game"
+      onClick={handleReturnToGame}
+      menuTheme={state.menuTheme}
+      isDarkModeOn={state.isDarkModeOn}
+      isImportant={true}
+    />
   );
 
   return (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Row, Col } from "react-materialize";
+import { Row, Col } from "react-materialize";
 import { useImmer } from "use-immer";
 import UIfx from "uifx";
 import moveSoundAudio from "./../static/moveSound.mp3";
@@ -46,13 +46,13 @@ import {
 import { lastPuzzleMoveIsCorrect } from "./puzzleLogic";
 import Board from "./Board";
 import Header from "../shared/Header";
-import Dialog from "../shared/Dialog";
+import { BooleanDialog } from "../shared/Dialog";
 import StatusHeader from "./StatusHeader";
 import TimerHeader from "./TimerHeader";
 import gameHelp from "./gameHelp";
 import puzzleHelp from "./puzzleHelp";
 import ControlPanel from "./ControlPanel";
-import { getColor, BoardThemeName } from "../shared/colorThemes";
+import { BoardThemeName } from "../shared/colorThemes";
 import {
   BoardSettings,
   CellType,
@@ -62,6 +62,7 @@ import {
 } from "../shared/gameLogicUtils";
 import createModule from "../ai.mjs";
 import { ClientParams } from "../lobby/LobbyPage";
+import { TextButton } from "../shared/Buttons";
 
 const moveSound = new UIfx(moveSoundAudio);
 function playMoveSound() {
@@ -1139,27 +1140,20 @@ export default function GamePage({
         clientParams.clientRole !== RoleEnum.puzzle && (
           <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
             <Col className="center" s={12}>
-              <Button
-                large
-                style={{
-                  backgroundColor: getColor(
-                    menuTheme,
-                    "importantButton",
-                    isDarkModeOn
-                  ),
-                }}
-                node="button"
-                waves="light"
-                onClick={handleRematchButton}
+              <TextButton
+                text="Rematch"
+                tooltip="Ask the other player for a rematch"
+                menuTheme={menuTheme}
+                isDarkModeOn={isDarkModeOn}
                 disabled={!isOpponentPresent(state)}
-              >
-                Rematch
-              </Button>
+                isImportant={true}
+                onClick={handleRematchButton}
+              />
             </Col>
           </Row>
         )}
       <div style={{ height: "100%" }}></div>
-      <Dialog
+      <BooleanDialog
         isOpen={state.showDrawDialog}
         title="Draw offer received"
         body="The opponent offered a draw."
@@ -1169,7 +1163,7 @@ export default function GamePage({
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
       />
-      <Dialog
+      <BooleanDialog
         isOpen={state.showRematchDialog}
         title="Rematch offer received"
         body="The opponent would like a rematch."
@@ -1179,7 +1173,7 @@ export default function GamePage({
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
       />
-      <Dialog
+      <BooleanDialog
         isOpen={state.showTakebackDialog}
         title="Takeback request received"
         body={
