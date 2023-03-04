@@ -4,6 +4,7 @@ import "react-toastify/dist/ReactToastify.css";
 import IconButton from "./IconButton";
 import showToastNotification from "./showToastNotification";
 import { getColor, MenuThemeName } from "./colorThemes";
+import AuthButton from "./AuthButton";
 
 const contextEnum = {
   player: "player",
@@ -22,7 +23,6 @@ function Header({
   isDarkModeOn,
   handleToggleDarkMode,
   handleToggleTheme,
-  handleLogin,
 }: {
   context: string;
   helpText: JSX.Element;
@@ -34,7 +34,6 @@ function Header({
   isDarkModeOn: boolean;
   handleToggleDarkMode: () => void;
   handleToggleTheme: () => void;
-  handleLogin: () => void;
 }): JSX.Element {
   let mainText;
   if (context === contextEnum.lobby) {
@@ -156,15 +155,12 @@ function Header({
               isDarkModeOn={isDarkModeOn}
             />
           )}
-          <IconButton
-            icon="account_circle"
-            tooltip="Login"
-            onClick={handleLogin}
+          <AuthButton
             bgColor={buttonCol}
             padding={padding}
             menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn}
-          />
+          ></AuthButton>
         </div>
       </div>
     </div>

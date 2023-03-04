@@ -62,7 +62,6 @@ import {
 } from "../shared/gameLogicUtils";
 import createModule from "../ai.mjs";
 import { ClientParams } from "../lobby/LobbyPage";
-import handleLogin from "../shared/auth";
 
 const moveSound = new UIfx(moveSoundAudio);
 function playMoveSound() {
@@ -1050,7 +1049,6 @@ export default function GamePage({
         isDarkModeOn={isDarkModeOn}
         handleToggleDarkMode={handleToggleDarkMode}
         handleToggleTheme={handleToggleTheme}
-        handleLogin={handleLogin}
       />
       <div
         style={{
