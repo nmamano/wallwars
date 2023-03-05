@@ -1,24 +1,27 @@
 import * as React from "react";
 import { useEffect } from "react";
-import {
-  Row,
-  Col,
-  Button,
-  Icon,
-  Checkbox,
-  Switch,
-  Modal,
-} from "react-materialize";
+import Grid from "@mui/material/Grid";
 import { getColor } from "../shared/colorThemes";
 import showToastNotification from "../shared/showToastNotification";
-import { TextButton } from "../shared/Buttons";
+import {
+  TextButton,
+  IconButtonWithTooltip,
+  IconButtonWithInfoModal,
+} from "../shared/Buttons";
 import { maxBoardDims } from "../shared/globalSettings";
-import CoordinateSlider from "../shared/CoordinateSlider";
-import BoardSizeSlider from "../shared/BoardSizeSlider";
 import { eloIdAboutText } from "./lobbyHelp";
 import { ClientParams, PosSetting } from "./LobbyPage";
 import TokenDropdown from "./TokenDropdown";
 import TextInputField from "../shared/TextInputField";
+import Checkbox from "@mui/material/Checkbox";
+import { FormControlLabel } from "@mui/material";
+import CoordinateSelector from "../shared/CoordinateSelector";
+import {
+  internalToClassicBoardSize,
+  classicToInternalBoardSize,
+  internalToClassicCoord,
+  classicToInternalCoord,
+} from "../shared/gameLogicUtils";
 
 export default function LobbyForm({
   clientParams,
@@ -92,6 +95,21 @@ export default function LobbyForm({
       </i>
     </div>
   );
+  const customToken = (
+    <span className={"white-text"} style={{ fontSize: "30px" }}>
+      <i className={`material-icons white-text`} style={{ height: `100%` }}>
+        {clientParams.token}
+      </i>
+    </span>
+  );
+
+  const gridItemStyle = {
+    paddingLeft: "10px",
+    paddingRight: "10px",
+    paddingTop: "15px",
+    paddingBottom: "15px",
+  };
+  const horizontalSep = <span style={{ paddingLeft: "20px" }}></span>;
 
   const [tokenDropdownAnchorEl, setTokenDropdownAnchorEl] =
     React.useState<null | HTMLElement>(null);
@@ -100,408 +118,34 @@ export default function LobbyForm({
 
   return (
     <div
-      className="container"
       style={{
         marginTop: "2rem",
         paddingBottom: "0.6rem",
+        maxWidth: isLargeScreen ? "60%" : "80%",
+        marginLeft: "auto",
+        marginRight: "auto",
+        textAlign: "left",
         backgroundColor: getColor(menuTheme, "container", isDarkModeOn),
       }}
     >
-      <Row className="valign-wrapper">
-        <Col className="center" s={4} m={4}>
-          <span style={{ fontSize: "23px" }}>
-            {isLargeScreen ? "Your name:" : "Name:"}
-          </span>
-        </Col>
-        <Col s={6} m={3}>
-          <div style={{ paddingTop: "15px" }}>
-            <TextInputField
-              label=""
-              id="nameInput"
-              value={clientParams.playerName}
-              onChange={handlePlayerName}
-            />
-          </div>
-        </Col>
-        <Col s={1} m={1}>
-          <Button
-            node="button"
-            waves="light"
-            small
-            floating
-            style={{
-              color: "white",
-              backgroundColor: getColor(menuTheme, "button", isDarkModeOn),
-            }}
-            icon={<Icon>refresh</Icon>}
-            onClick={handleRefreshName}
-            tooltip={"Get a new name"}
-          />
-        </Col>
-        <Col s={1} m={4}></Col>
-      </Row>
-      <Row className="valign-wrapper">
-        <Col className="center" s={5} m={4}>
+      <Grid
+        container
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        textAlign="center"
+        spacing={0}
+      >
+        <Grid item style={gridItemStyle} xs={4}>
           <TextButton
             text="Create Game"
+            tooltip="Create challenge that others can join."
             onClick={handleCreateGame}
             menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn}
           />
-        </Col>
-        <Col s={2} m={2} style={{ paddingRight: "0" }}>
-          <TextInputField
-            label="Duration"
-            id="durationInput"
-            value={`${clientParams.timeControl.duration}`}
-            onChange={handleDuration}
-          />
-        </Col>
-        <Col s={1} m={1} style={{ paddingLeft: "0" }}>
-          m
-        </Col>
-        <Col s={2} m={2} style={{ paddingRight: "0" }}>
-          <TextInputField
-            label="Increment"
-            id="incrementInput"
-            value={`${clientParams.timeControl.increment}`}
-            onChange={handleIncrement}
-          />
-        </Col>
-        <Col s={1} m={1} style={{ paddingLeft: "0" }}>
-          s
-        </Col>
-        <Col s={1} m={2}></Col>
-      </Row>
-      {showMoreOptions && (
-        <Row className="valign-wrapper">
-          <Col className="center" s={5} m={4}>
-            {" "}
-            <Checkbox
-              id="isPrivateCheckbox"
-              label="PRIVATE"
-              value="PRIVATE"
-              checked={clientParams.isPrivate}
-              onChange={() => {
-                handleIsPrivate(!clientParams.isPrivate);
-              }}
-            />
-          </Col>
-          <Col s={2} m={2} style={{ paddingRight: "0" }}>
-            <BoardSizeSlider
-              label="Rows:"
-              min={3}
-              max={maxBoardDims[0]}
-              value={BS.dims[0]}
-              onChange={handleNumRows}
-            />
-          </Col>
-          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
-          <Col s={2} m={2} style={{ paddingRight: "0" }}>
-            <BoardSizeSlider
-              label="Columns:"
-              min={3}
-              max={maxBoardDims[1]}
-              value={BS.dims[1]}
-              onChange={handleNumCols}
-            />
-          </Col>
-          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
-          <Col s={1} m={2}></Col>
-        </Row>
-      )}
-      {showMoreOptions && (
-        <Row className="valign-wrapper">
-          <Col className="center" s={4} m={4}>
-            <span style={{ fontSize: "23px" }}>
-              {isLargeScreen ? "Your token:" : "Token:"}
-            </span>
-          </Col>
-          <Col s={3} m={2} className="center">
-            {clientParams.token === "default" ? (
-              defaultToken
-            ) : (
-              <div className={"white-text"} style={{ fontSize: "30px" }}>
-                <i
-                  className={`material-icons white-text`}
-                  style={{ height: `100%` }}
-                >
-                  {clientParams.token}
-                </i>
-              </div>
-            )}
-          </Col>
-          <Col s={4} m={4}>
-            {TokenDropdown(
-              tokenDropdownAnchorEl,
-              setTokenDropdownAnchorEl,
-              handleToken,
-              menuTheme,
-              isDarkModeOn
-            )}
-          </Col>
-          <Col s={1} m={2}></Col>
-        </Row>
-      )}
-      {showMoreOptions && (
-        <Row className="valign-wrapper" style={{ paddingBottom: "15px" }}>
-          <Col className="center" s={4} m={4}>
-            <span style={{ fontSize: "23px" }}>ELO id:</span>
-          </Col>
-          <Col s={6} m={3}>
-            <TextInputField
-              label=""
-              id="eloIdInput"
-              value={clientParams.eloId}
-              onChange={handleEloId}
-            />
-          </Col>
-          <Col s={1} m={1}>
-            <Modal // @ts-ignore
-              style={{ color: "black", backgroundColor: "white" }}
-              bottomSheet={false}
-              fixedFooter={false}
-              header={"About ELO ids"}
-              open={false}
-              options={{
-                dismissible: true,
-                endingTop: "10%",
-                inDuration: 250,
-                opacity: 0.4,
-                outDuration: 250,
-                preventScrolling: true,
-                startingTop: "4%",
-              }}
-              trigger={
-                <Button
-                  node="button"
-                  waves="light"
-                  small
-                  floating
-                  style={{
-                    color: "white",
-                    backgroundColor: getColor(
-                      menuTheme,
-                      "button",
-                      isDarkModeOn
-                    ),
-                  }}
-                  icon={<Icon>info</Icon>}
-                  onClick={handleRefreshName}
-                  tooltip={"About ELO ids"}
-                />
-              }
-            >
-              {<div>{eloIdAboutText}</div>}
-            </Modal>
-          </Col>
-          <Col s={1} m={4}></Col>
-        </Row>
-      )}
-      <Row className="valign-wrapper">
-        <Col className="center" s={5} m={4}>
-          <span style={{ fontSize: "15px" }}>{"More options:"}</span>
-          <Switch
-            id="MoreSwitch"
-            offLabel="Off" // @ts-ignore
-            onChange={handleShowMoreOptions}
-            onLabel="On"
-          />
-        </Col>
-        <Col
-          s={2}
-          m={2}
-          style={{ paddingRight: "0" }} // @ts-ignore
-          title="The row where Player 1 starts"
-        >
-          {showMoreOptions && (
-            <CoordinateSlider
-              label="P1 row:"
-              min={0}
-              max={BS.dims[0] - 1}
-              value={BS.startPos[0][0]}
-              onChange={(val) => {
-                handleStartPos({ player: 0, coord: 0, val });
-              }}
-            />
-          )}
-        </Col>
-        <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
-        <Col
-          s={2}
-          m={2}
-          style={{ paddingRight: "0" }} // @ts-ignore
-          title="The column where Player 1 starts"
-        >
-          {showMoreOptions && (
-            <CoordinateSlider
-              label="P1 col:"
-              min={0}
-              max={BS.dims[1] - 1}
-              value={BS.startPos[0][1]}
-              onChange={(val) => {
-                handleStartPos({ player: 0, coord: 1, val });
-              }}
-            />
-          )}
-        </Col>
-        <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
-        <Col s={1} m={2}></Col>
-      </Row>
-      {showMoreOptions && (
-        <Row className="valign-wrapper">
-          <Col className="center" s={5} m={4}></Col>
-          <Col
-            s={2}
-            m={2}
-            style={{ paddingRight: "0" }} // @ts-ignore
-            title="The row where Player 2 starts"
-          >
-            <CoordinateSlider
-              label="P2 row:"
-              min={0}
-              max={BS.dims[0] - 1}
-              value={BS.startPos[1][0]}
-              onChange={(val) => {
-                handleStartPos({ player: 1, coord: 0, val });
-              }}
-            />
-          </Col>
-          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
-          <Col
-            s={2}
-            m={2}
-            style={{ paddingRight: "0" }} // @ts-ignore
-            title="The column where Player 2 starts"
-          >
-            <CoordinateSlider
-              label="P2 col:"
-              min={0}
-              max={BS.dims[1] - 1}
-              value={BS.startPos[1][1]}
-              onChange={(val) => {
-                handleStartPos({ player: 1, coord: 1, val });
-              }}
-            />
-          </Col>
-          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
-          <Col s={1} m={2}></Col>
-        </Row>
-      )}
-      {showMoreOptions && (
-        <Row className="valign-wrapper">
-          <Col className="center" s={5} m={4}></Col>
-          <Col
-            s={2}
-            m={2}
-            style={{ paddingRight: "0" }} // @ts-ignore
-            title="The row of the goal of Player 1"
-          >
-            <CoordinateSlider
-              label="G1 row:"
-              min={0}
-              max={BS.dims[0] - 1}
-              value={BS.goalPos[0][0]}
-              onChange={(val) => {
-                handleGoalPos({ player: 0, coord: 0, val });
-              }}
-            />
-          </Col>
-          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
-          <Col
-            s={2}
-            m={2}
-            style={{ paddingRight: "0" }} // @ts-ignore
-            title="The column of the goal of Player 1"
-          >
-            <CoordinateSlider
-              label="G1 col:"
-              min={0}
-              max={BS.dims[1] - 1}
-              value={BS.goalPos[0][1]}
-              onChange={(val) => {
-                handleGoalPos({ player: 0, coord: 1, val });
-              }}
-            />
-          </Col>
-          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
-          <Col s={1} m={2}></Col>
-        </Row>
-      )}
-      {showMoreOptions && (
-        <Row className="valign-wrapper">
-          <Col className="center" s={5} m={4}></Col>
-          <Col
-            s={2}
-            m={2}
-            style={{ paddingRight: "0" }} // @ts-ignore
-            title="The row of the goal of Player 2"
-          >
-            <CoordinateSlider
-              label="G2 row:"
-              min={0}
-              max={BS.dims[0] - 1}
-              value={BS.goalPos[1][0]}
-              onChange={(val) => {
-                handleGoalPos({ player: 1, coord: 0, val });
-              }}
-            />
-          </Col>
-          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
-          <Col
-            s={2}
-            m={2}
-            style={{ paddingRight: "0" }} // @ts-ignore
-            title="The column of the goal of Player 2"
-          >
-            <CoordinateSlider
-              label="G2 Col:"
-              min={0}
-              max={BS.dims[1] - 1}
-              value={BS.goalPos[1][1]}
-              onChange={(val) => {
-                handleGoalPos({ player: 1, coord: 1, val });
-              }}
-            />
-          </Col>
-          <Col s={1} m={1} style={{ paddingLeft: "0" }}></Col>
-          <Col s={1} m={2}></Col>
-        </Row>
-      )}
-      {showMoreOptions && (
-        <Row className="valign-wrapper">
-          <Col className="center" s={5} m={4}>
-            <TextButton
-              text="Join Game"
-              menuTheme={menuTheme}
-              isDarkModeOn={isDarkModeOn}
-              disabled={clientParams.joinCode === ""}
-              onClick={handleJoinGame}
-            />
-          </Col>
-          <Col s={6} m={5}>
-            <TextInputField
-              id="joinInput"
-              label=""
-              value={`${clientParams.joinCode}`}
-              onChange={handleJoinCode}
-              placeholder="Write game code here..."
-            />
-          </Col>
-          <Col s={1} m={3}></Col>
-        </Row>
-      )}
-      <Row className="valign-wrapper">
-        <Col className="center" s={6} m={6}>
-          <TextButton
-            text="Offline game"
-            tooltip="Play offline as both players."
-            onClick={handleLocalGame}
-            menuTheme={menuTheme}
-            isDarkModeOn={isDarkModeOn}
-          />
-        </Col>
-        <Col className="center" s={6} m={6}>
+        </Grid>
+        <Grid item style={gridItemStyle} xs={4}>
           <TextButton
             text="Computer game"
             tooltip="Play offline versus the computer."
@@ -509,8 +153,278 @@ export default function LobbyForm({
             menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn}
           />
-        </Col>
-      </Row>
+        </Grid>
+        <Grid item style={gridItemStyle} xs={4}>
+          <TextButton
+            text="Offline game"
+            tooltip="Play offline as both players."
+            onClick={handleLocalGame}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
+          />
+        </Grid>
+      </Grid>
+      <div style={gridItemStyle}>
+        <span style={gridItemStyle}>
+          <TextInputField
+            label="Your name:"
+            id="nameInput"
+            value={clientParams.playerName}
+            onChange={handlePlayerName}
+          />
+        </span>
+        <span style={gridItemStyle}>
+          <IconButtonWithTooltip
+            icon="refresh"
+            tooltip="Get a new name"
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
+            circular={true}
+            onClick={handleRefreshName}
+          />
+        </span>
+      </div>
+      <div>
+        <FormControlLabel
+          style={{ color: "white" }}
+          label="More settings:"
+          labelPlacement="start"
+          control={
+            <Checkbox
+              sx={{ color: "white", paddingLeft: "24px" }}
+              checked={showMoreOptions}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                handleShowMoreOptions(event.target.checked);
+              }}
+              inputProps={{ "aria-label": "controlled" }}
+            />
+          }
+        />
+      </div>
+      {showMoreOptions && (
+        <>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <span
+              style={{
+                paddingLeft: "20px",
+                paddingRight: "20px",
+                fontSize: "20px",
+              }}
+            >
+              {isLargeScreen ? "Your token:" : "Token:"}
+            </span>
+            {clientParams.token === "default" ? defaultToken : customToken}
+            <span style={{ paddingLeft: "20px" }}></span>
+            {TokenDropdown(
+              tokenDropdownAnchorEl,
+              setTokenDropdownAnchorEl,
+              handleToken,
+              menuTheme,
+              isDarkModeOn
+            )}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              paddingTop: "20px",
+            }}
+          >
+            {horizontalSep}
+            <span
+              style={{
+                fontSize: "20px",
+              }}
+            >
+              {isLargeScreen ? "Time control:" : "Time:"}
+            </span>
+            {horizontalSep}
+            <TextInputField
+              label={isLargeScreen ? "Duration (minutes):" : "Duration (m):"}
+              id="durationInput"
+              value={`${clientParams.timeControl.duration}`}
+              onChange={handleDuration}
+            />
+            {horizontalSep}
+            <TextInputField
+              label={isLargeScreen ? "Increment (seconds):" : "Increment (s):"}
+              id="incrementInput"
+              value={`${clientParams.timeControl.increment}`}
+              onChange={handleIncrement}
+            />
+          </div>
+          <CoordinateSelector
+            label={isLargeScreen ? "Board dimensions:" : "Board:"}
+            labelWidth={isLargeScreen ? "170px" : "80px"}
+            rowLabel="Rows:"
+            colLabel="Columns:"
+            row={BS.dims[0]}
+            col={BS.dims[1]}
+            rowMin={3}
+            rowMax={maxBoardDims[0]}
+            colMin={3}
+            colMax={maxBoardDims[1]}
+            handleRow={handleNumRows}
+            handleCol={handleNumCols}
+            ToDisplay={internalToClassicBoardSize}
+            FromDisplay={classicToInternalBoardSize}
+          />
+          <CoordinateSelector
+            label={isLargeScreen ? "Creator start:" : "P1 start:"}
+            labelWidth={isLargeScreen ? "170px" : "80px"}
+            row={BS.startPos[0][0]}
+            col={BS.startPos[0][1]}
+            rowMin={0}
+            rowMax={BS.dims[0] - 1}
+            colMin={0}
+            colMax={BS.dims[1] - 1}
+            handleRow={(val) => {
+              handleStartPos({ player: 0, coord: 0, val });
+            }}
+            handleCol={(val) => {
+              handleStartPos({ player: 0, coord: 1, val });
+            }}
+            ToDisplay={internalToClassicCoord}
+            FromDisplay={classicToInternalCoord}
+          />
+          <CoordinateSelector
+            label={isLargeScreen ? "Joiner start:" : "P2 start:"}
+            labelWidth={isLargeScreen ? "170px" : "80px"}
+            row={BS.startPos[1][0]}
+            col={BS.startPos[1][1]}
+            rowMin={0}
+            rowMax={BS.dims[0] - 1}
+            colMin={0}
+            colMax={BS.dims[1] - 1}
+            handleRow={(val) => {
+              handleStartPos({ player: 1, coord: 0, val });
+            }}
+            handleCol={(val) => {
+              handleStartPos({ player: 1, coord: 1, val });
+            }}
+            ToDisplay={internalToClassicCoord}
+            FromDisplay={classicToInternalCoord}
+          />
+          <CoordinateSelector
+            label={isLargeScreen ? "Creator goal:" : "P1 goal:"}
+            labelWidth={isLargeScreen ? "170px" : "80px"}
+            row={BS.goalPos[0][0]}
+            col={BS.goalPos[0][1]}
+            rowMin={0}
+            rowMax={BS.dims[0] - 1}
+            colMin={0}
+            colMax={BS.dims[1] - 1}
+            handleRow={(val) => {
+              handleGoalPos({ player: 0, coord: 0, val });
+            }}
+            handleCol={(val) => {
+              handleGoalPos({ player: 0, coord: 1, val });
+            }}
+            ToDisplay={internalToClassicCoord}
+            FromDisplay={classicToInternalCoord}
+          />
+          <CoordinateSelector
+            label={isLargeScreen ? "Joiner goal:" : "P2 goal:"}
+            labelWidth={isLargeScreen ? "170px" : "80px"}
+            row={BS.goalPos[1][0]}
+            col={BS.goalPos[1][1]}
+            rowMin={0}
+            rowMax={BS.dims[0] - 1}
+            colMin={0}
+            colMax={BS.dims[1] - 1}
+            handleRow={(val) => {
+              handleGoalPos({ player: 1, coord: 0, val });
+            }}
+            handleCol={(val) => {
+              handleGoalPos({ player: 1, coord: 1, val });
+            }}
+            ToDisplay={internalToClassicCoord}
+            FromDisplay={classicToInternalCoord}
+          />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              paddingTop: "20px",
+            }}
+          >
+            {horizontalSep}
+            <span
+              style={{
+                fontSize: "20px",
+              }}
+            >
+              ELO id:
+            </span>
+            {horizontalSep}
+            <TextInputField
+              label=""
+              id="eloIdInput"
+              value={clientParams.eloId}
+              onChange={handleEloId}
+            />
+            {horizontalSep}
+            <IconButtonWithInfoModal
+              icon="info"
+              tooltip="About ELO ids"
+              menuTheme={menuTheme}
+              isDarkModeOn={isDarkModeOn}
+              circular={true}
+              modalTitle="About ELO ids"
+              modalBody={eloIdAboutText}
+            />
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              paddingTop: "20px",
+            }}
+          >
+            {horizontalSep}
+            <span
+              style={{
+                fontSize: "20px",
+              }}
+            >
+              Private game:
+            </span>
+            {horizontalSep}
+            <TextInputField
+              id="joinInput"
+              label=""
+              value={`${clientParams.joinCode}`}
+              onChange={handleJoinCode}
+              placeholder="Write game code here..."
+            />
+            {horizontalSep}
+            <TextButton
+              text="Join Game"
+              menuTheme={menuTheme}
+              isDarkModeOn={isDarkModeOn}
+              disabled={clientParams.joinCode === ""}
+              onClick={handleJoinGame}
+            />
+          </div>
+          <div style={gridItemStyle}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  id="isPrivateCheckbox"
+                  sx={{ color: "white", paddingLeft: "24px" }}
+                  checked={clientParams.isPrivate}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                    handleIsPrivate(event.target.checked);
+                  }}
+                  inputProps={{ "aria-label": "controlled" }}
+                />
+              }
+              label="Create Private Games"
+              style={{ color: "white" }}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

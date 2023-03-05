@@ -112,7 +112,7 @@ function initialLobbyState(cookies: Cookies): LobbyState {
       cookies.isDarkModeOn && cookies.isDarkModeOn === "true" ? true : false,
     menuTheme:
       cookies.menuTheme && cookies.menuTheme === "green" ? "green" : "blue",
-    showMoreOptions: true, //flip
+    showMoreOptions: false,
   };
 }
 
