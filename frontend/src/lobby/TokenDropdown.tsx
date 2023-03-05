@@ -308,7 +308,7 @@ export default function TokenDropdown(
   );
 
   return (
-    <div>
+    <>
       {dropdownButton(handleClick, menuTheme, isDarkModeOn)}
       <StyledMenu
         id="demo-customized-menu"
@@ -335,6 +335,6 @@ export default function TokenDropdown(
           );
         })}
       </StyledMenu>
-    </div>
+    </>
   );
 }

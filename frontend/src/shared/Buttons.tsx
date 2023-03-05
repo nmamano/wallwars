@@ -32,10 +32,8 @@ import WbSunny from "@mui/icons-material/WbSunny";
 import Brightness2 from "@mui/icons-material/Brightness2";
 import Help from "@mui/icons-material/Help";
 import Info from "@mui/icons-material/Info";
-import AccountCircle from "@mui/icons-material/AccountCircle";
-import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
 
-export type IconStr =
+type iconStr =
   | "flag"
   | "local_florist"
   | "replay"
@@ -55,8 +53,10 @@ export type IconStr =
   | "help"
   | "info"
   | "account_circle"
-  | "account_circle_outlined";
+  | "account_circle_outlined"
+  | "refresh";
 
+function getIcon(icon: IconStr): JSX.Element {
 function getIcon(icon: IconStr): JSX.Element {
   switch (icon) {
     case "flag":
@@ -99,6 +99,8 @@ function getIcon(icon: IconStr): JSX.Element {
       return <AccountCircle />;
     case "account_circle_outlined":
       return <AccountCircleOutlined />;
+    case "refresh":
+      return <Refresh />;
     default:
       return <></>;
   }
@@ -125,13 +127,14 @@ export function TextButton({
   id?: string;
   onClick: (() => void) | ((event: React.MouseEvent<HTMLElement>) => void);
 }): JSX.Element {
+  const bgColor = getColor(
+    menuTheme!,
+    isImportant ? "importantButton" : "button",
+    isDarkModeOn || false
+  );
   const style = {
-    backgroundColor: getColor(
-      menuTheme,
-      isImportant ? "importantButton" : "button",
-      isDarkModeOn
-    ),
-    color: "#FFFFFF",
+    backgroundColor: disabled ? "lightgray" : bgColor,
+    color: disabled ? "gray" : "white",
   };
   if (disabled)
     return (
@@ -140,7 +143,7 @@ export function TextButton({
         variant="contained"
         style={style}
         onClick={onClick}
-        disabled={disabled}
+        disabled={true}
         size={isImportant ? "large" : "medium"}
         endIcon={dropdownIcon ? <KeyboardArrowDownIcon /> : undefined}
       >
@@ -154,7 +157,7 @@ export function TextButton({
         variant="contained"
         style={style}
         onClick={onClick}
-        disabled={disabled}
+        disabled={false}
         size={isImportant ? "large" : "medium"}
         endIcon={dropdownIcon ? <KeyboardArrowDownIcon /> : undefined}
       >
@@ -172,6 +175,7 @@ export function IconButtonWithTooltip({
   menuTheme,
   isDarkModeOn,
   horizontalPadding,
+  circular,
   onClick,
 }: {
   icon: IconStr;
@@ -181,6 +185,7 @@ export function IconButtonWithTooltip({
   isDarkModeOn?: boolean; // Omit if `bgColor` is provided.
   disabled?: boolean;
   horizontalPadding?: number;
+  circular?: boolean;
   onClick: () => void;
 }): JSX.Element {
   if (!bgColor) bgColor = getColor(menuTheme!, "button", isDarkModeOn || false);
@@ -189,10 +194,11 @@ export function IconButtonWithTooltip({
     color: disabled ? "gray" : "white",
     padding: `0px ${horizontalPadding}px`,
     height: "36px", // All buttons have a consistent height across the app.
+    width: circular ? "36px" : "auto",
   };
   const sx = {
     boxShadow: 1,
-    borderRadius: 1,
+    borderRadius: circular ? 50 : 1,
   };
   if (disabled) {
     return (
@@ -200,7 +206,7 @@ export function IconButtonWithTooltip({
         style={style}
         sx={sx}
         onClick={onClick}
-        disabled={disabled}
+        disabled={true}
         centerRipple={false}
         size="small"
       >
@@ -214,7 +220,7 @@ export function IconButtonWithTooltip({
         style={style}
         sx={sx}
         onClick={onClick}
-        disabled={disabled}
+        disabled={false}
         centerRipple={false}
         size="small"
       >
@@ -231,16 +237,22 @@ export function IconButtonWithInfoModal({
   icon,
   tooltip,
   bgColor,
+  menuTheme,
+  isDarkModeOn,
   disabled,
   horizontalPadding,
+  circular,
   modalTitle,
   modalBody,
 }: {
   icon: IconStr;
   tooltip: string;
-  bgColor: string;
+  bgColor?: string; // If not provided, uses the button color based on `menuTheme` and `isDarkModeOn`.
+  menuTheme?: MenuThemeName; // Omit if `bgColor` is provided.
+  isDarkModeOn?: boolean; // Omit if `bgColor` is provided.
   disabled?: boolean;
-  horizontalPadding: number;
+  horizontalPadding?: number;
+  circular?: boolean;
   modalTitle: string;
   modalBody: JSX.Element | string;
 }): JSX.Element {
@@ -269,8 +281,11 @@ export function IconButtonWithInfoModal({
         icon={icon}
         tooltip={tooltip}
         bgColor={bgColor}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
         disabled={disabled}
         horizontalPadding={horizontalPadding}
+        circular={circular}
         onClick={handleOpen}
       />
       <Modal open={isOpen} onClose={handleClose}>
