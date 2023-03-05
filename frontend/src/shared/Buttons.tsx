@@ -32,8 +32,10 @@ import WbSunny from "@mui/icons-material/WbSunny";
 import Brightness2 from "@mui/icons-material/Brightness2";
 import Help from "@mui/icons-material/Help";
 import Info from "@mui/icons-material/Info";
+import AccountCircle from "@mui/icons-material/AccountCircle";
+import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
 
-type iconStr =
+export type IconStr =
   | "flag"
   | "local_florist"
   | "replay"
@@ -51,9 +53,11 @@ type iconStr =
   | "wb_sunny"
   | "brightness_2"
   | "help"
-  | "info";
+  | "info"
+  | "account_circle"
+  | "account_circle_outlined";
 
-function getIcon(icon: iconStr): JSX.Element {
+function getIcon(icon: IconStr): JSX.Element {
   switch (icon) {
     case "flag":
       return <Flag />;
@@ -91,6 +95,10 @@ function getIcon(icon: iconStr): JSX.Element {
       return <Help />;
     case "info":
       return <Info />;
+    case "account_circle":
+      return <AccountCircle />;
+    case "account_circle_outlined":
+      return <AccountCircleOutlined />;
     default:
       return <></>;
   }
@@ -166,7 +174,7 @@ export function IconButtonWithTooltip({
   horizontalPadding,
   onClick,
 }: {
-  icon: iconStr;
+  icon: IconStr;
   tooltip: string;
   bgColor?: string; // If not provided, uses the button color based on `menuTheme` and `isDarkModeOn`.
   menuTheme?: MenuThemeName; // Omit if `bgColor` is provided.
@@ -228,7 +236,7 @@ export function IconButtonWithInfoModal({
   modalTitle,
   modalBody,
 }: {
-  icon: iconStr;
+  icon: IconStr;
   tooltip: string;
   bgColor: string;
   disabled?: boolean;
@@ -286,7 +294,7 @@ export function IconButtonWithDialog({
   modalConfirmButtonText,
   onClick,
 }: {
-  icon: iconStr;
+  icon: IconStr;
   tooltip: string;
   disabled?: boolean;
   menuTheme: MenuThemeName;

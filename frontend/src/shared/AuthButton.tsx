@@ -1,24 +1,36 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import IconButton, { IconButtonProps } from "./IconButton";
+import { useState } from "react";
+import { IconStr } from "./Buttons";
+import { IconButtonWithTooltip } from "./Buttons";
 
 const AuthButton = ({
   bgColor,
-  padding,
-  menuTheme,
-  isDarkModeOn,
-}: Omit<IconButtonProps, "icon" | "tooltip" | "onClick">): JSX.Element => {
+  horizontalPadding,
+}: {
+  bgColor: string;
+  horizontalPadding: number;
+}): JSX.Element => {
   const { loginWithRedirect } = useAuth0();
+  const [isLoggedIn] = useState(false);
+
+  let icon: IconStr;
+  let tooltip: string;
+  if (isLoggedIn) {
+    tooltip = "Profile";
+    icon = "account_circle";
+  } else {
+    tooltip = "Login";
+    icon = "account_circle_outlined";
+  }
 
   return (
-    <IconButton
-      icon="account_circle"
-      tooltip="Login"
-      onClick={() => loginWithRedirect()}
+    <IconButtonWithTooltip
+      icon={icon}
+      tooltip={tooltip}
       bgColor={bgColor}
-      padding={padding}
-      menuTheme={menuTheme}
-      isDarkModeOn={isDarkModeOn}
-    />
+      horizontalPadding={horizontalPadding}
+      onClick={() => loginWithRedirect()}
+    ></IconButtonWithTooltip>
   );
 };
 

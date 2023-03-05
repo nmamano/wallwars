@@ -5,6 +5,8 @@ import { IconButtonWithTooltip, IconButtonWithInfoModal } from "./Buttons";
 import showToastNotification from "./showToastNotification";
 import { getColor, MenuThemeName } from "./colorThemes";
 import AuthButton from "./AuthButton";
+import UsernameIcon from "./UsernameIcon";
+import { useEffect, useState } from "react";
 
 const contextEnum = {
   player: "player",
@@ -68,6 +70,20 @@ function Header({
   }
   const padding = isLargeScreen ? 20 : 11;
   const buttonCol = getColor(menuTheme, "headerButton", isDarkModeOn);
+
+  const [username, setUsername] = useState("Loading...");
+  useEffect(() => {
+    fetch("https://randomuser.me/api/?results=1")
+      .then((results) => {
+        return results.json();
+      })
+      .then((data) => {
+        setUsername(
+          data.results[0].name.first + " " + data.results[0].name.last
+        );
+      });
+  }, []);
+
   return (
     <div>
       <div
@@ -89,69 +105,69 @@ function Header({
         >
           {mainText}
         </div>
-        <div
-          style={{
-            height: "auto",
-            display: "grid",
-            padding: "5px",
-            gridTemplateColumns: `repeat(${isLargeScreen ? 5 : 4}, 1fr)`,
-            gridTemplateRows: `auto`,
-            columnGap: "5px",
-            rowGap: "5px",
-            marginRight: isLargeScreen ? "15px" : "5px",
-          }}
-        >
-          {isLargeScreen && (
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <div
+            style={{
+              height: "auto",
+              display: "grid",
+              gridTemplateColumns: `repeat(${isLargeScreen ? 5 : 4}, 1fr)`,
+              gridTemplateRows: `auto`,
+              columnGap: "5px",
+              rowGap: "5px",
+              marginRight: "5px",
+            }}
+          >
+            {isLargeScreen && (
+              <IconButtonWithTooltip
+                icon={"color_lens"}
+                tooltip={"Change theme"}
+                bgColor={buttonCol}
+                horizontalPadding={padding}
+                onClick={handleToggleTheme}
+              />
+            )}
             <IconButtonWithTooltip
-              icon={"color_lens"}
-              tooltip={"Change theme"}
+              icon={isDarkModeOn ? "wb_sunny" : "brightness_2"}
+              tooltip={
+                isDarkModeOn ? "Turn off night mode" : "Turn on night mode"
+              }
               bgColor={buttonCol}
               horizontalPadding={padding}
-              onClick={handleToggleTheme}
+              onClick={handleToggleDarkMode}
             />
-          )}
-          <IconButtonWithTooltip
-            icon={isDarkModeOn ? "wb_sunny" : "brightness_2"}
-            tooltip={
-              isDarkModeOn ? "Turn off night mode" : "Turn on night mode"
-            }
-            bgColor={buttonCol}
-            horizontalPadding={padding}
-            onClick={handleToggleDarkMode}
-          />
-          <IconButtonWithInfoModal
-            icon="help"
-            tooltip="Help"
-            bgColor={buttonCol}
-            horizontalPadding={padding}
-            modalTitle="Help"
-            modalBody={helpText}
-          />
-          {context === contextEnum.lobby && (
             <IconButtonWithInfoModal
-              icon="info"
-              tooltip="About"
+              icon="help"
+              tooltip="Help"
               bgColor={buttonCol}
               horizontalPadding={padding}
-              modalTitle="About"
-              modalBody={aboutText!}
+              modalTitle="Help"
+              modalBody={helpText}
             />
-          )}
-          {context !== contextEnum.lobby && (
-            <IconButtonWithTooltip
-              icon="home"
-              tooltip="Leave game"
+            {context === contextEnum.lobby && (
+              <IconButtonWithInfoModal
+                icon="info"
+                tooltip="About"
+                bgColor={buttonCol}
+                horizontalPadding={padding}
+                modalTitle="About"
+                modalBody={aboutText!}
+              />
+            )}
+            {context !== contextEnum.lobby && (
+              <IconButtonWithTooltip
+                icon="home"
+                tooltip="Leave game"
+                bgColor={buttonCol}
+                horizontalPadding={padding}
+                onClick={handleLeaveGame!}
+              />
+            )}
+            <AuthButton
               bgColor={buttonCol}
               horizontalPadding={padding}
-              onClick={handleLeaveGame!}
-            />
-          )}
-          <AuthButton
-            bgColor={buttonCol}
-            padding={padding}
-            menuTheme={menuTheme}
-            isDarkModeOn={isDarkModeOn}
-          ></AuthButton>
+            ></AuthButton>
+          </div>
+          <UsernameIcon>{username}</UsernameIcon>
         </div>
       </div>
     </div>
