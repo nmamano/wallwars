@@ -12,7 +12,7 @@
 /build
 
 # em++ output
-src/ai.mjs
+# src/ai.mjs -- we include it now
 
 # misc
 .DS_Store
