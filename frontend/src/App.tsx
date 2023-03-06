@@ -12,7 +12,6 @@ const App = () => {
   const [socket] = useState(
     socketIoClient(BACKEND_ENDPOINT, {
       transports: ["websocket", "polling", "flashsocket"],
-      
     })
   );
 
@@ -22,14 +21,11 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             <Route
-              path="/wallwars/index.html" // @ts-ignore
+              path="/" // @ts-ignore
               exact
               element={<LobbyPage socket={socket} />}
             />
-            <Route
-              path="/wallwars"
-              element={<Navigate replace to="/wallwars/index.html" />}
-            />
+            <Route path="/wallwars" element={<Navigate replace to="/" />} />
           </Routes>
         </BrowserRouter>
       </CookiesProvider>
