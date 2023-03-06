@@ -1,7 +1,20 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { useState } from "react";
 import { IconStr } from "./Buttons";
 import { IconButtonWithTooltip } from "./Buttons";
+
+const setLoggedIn = (): [IconStr, string] => {
+  const icon = "account_circle";
+  const tooltip = "Log In";
+
+  return [icon, tooltip];
+};
+
+const setLoggedOut = (): [IconStr, string] => {
+  const icon = "account_circle_outlined";
+  const tooltip = "Profile";
+
+  return [icon, tooltip];
+};
 
 const AuthButton = ({
   bgColor,
@@ -10,18 +23,14 @@ const AuthButton = ({
   bgColor: string;
   horizontalPadding: number;
 }): JSX.Element => {
-  const { user, error, isAuthenticated, loginWithRedirect } = useAuth0();
-  console.log("user: ", user);
-  console.log("error: ", error);
+  let [icon, tooltip] = setLoggedOut();
 
-  let icon: IconStr;
-  let tooltip: string;
-  if (isAuthenticated) {
-    tooltip = "Profile";
-    icon = "account_circle";
-  } else {
-    tooltip = "Login";
-    icon = "account_circle_outlined";
+  const { user, error, isAuthenticated, loginWithRedirect } = useAuth0();
+  if (error) {
+    console.log("There was an error while authenticating:\n", error);
+  } else if (isAuthenticated) {
+    [icon, tooltip] = setLoggedIn();
+    console.log("user:\n", user);
   }
 
   return (
