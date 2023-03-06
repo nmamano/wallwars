@@ -1048,6 +1048,7 @@ export default function GamePage({
         isLargeScreen={isLargeScreen}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
+        username={clientParams.playerName}
         handleToggleDarkMode={handleToggleDarkMode}
         handleToggleTheme={handleToggleTheme}
       />

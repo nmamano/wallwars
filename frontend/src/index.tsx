@@ -8,8 +8,9 @@ ReactDOM.render(
   <Auth0Provider
     domain={"dev-l7k7kmidqclptw4l.us.auth0.com"}
     clientId={"Afvfy92FTCakhMDe8hf6Uv9mL0jsunYN"}
+    // responseType={"token id_token"}
     authorizationParams={{
-      redirect_uri: "https://professcore.com",
+      redirect_uri: "http://localhost:3000",
     }}
   >
     <App />

@@ -6,7 +6,6 @@ import showToastNotification from "./showToastNotification";
 import { getColor, MenuThemeName } from "./colorThemes";
 import AuthButton from "./AuthButton";
 import UsernameIcon from "./UsernameIcon";
-import { useEffect, useState } from "react";
 
 const contextEnum = {
   player: "player",
@@ -23,6 +22,7 @@ function Header({
   isLargeScreen,
   menuTheme,
   isDarkModeOn,
+  username,
   handleToggleDarkMode,
   handleToggleTheme,
 }: {
@@ -34,6 +34,7 @@ function Header({
   isLargeScreen: boolean;
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
+  username: string;
   handleToggleDarkMode: () => void;
   handleToggleTheme: () => void;
 }): JSX.Element {
@@ -70,19 +71,6 @@ function Header({
   }
   const padding = isLargeScreen ? 20 : 11;
   const buttonCol = getColor(menuTheme, "headerButton", isDarkModeOn);
-
-  const [username, setUsername] = useState("Loading...");
-  useEffect(() => {
-    fetch("https://randomuser.me/api/?results=1")
-      .then((results) => {
-        return results.json();
-      })
-      .then((data) => {
-        setUsername(
-          data.results[0].name.first + " " + data.results[0].name.last
-        );
-      });
-  }, []);
 
   return (
     <div>

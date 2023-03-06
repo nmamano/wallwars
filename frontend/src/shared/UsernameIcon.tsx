@@ -25,7 +25,7 @@ const UsernameIcon = ({ children }: { children: String }): JSX.Element => {
             textOverflow: "ellipsis",
           }}
         >
-          {children ?? "Loading..."}
+          {children}
         </p>
       </div>
     </>

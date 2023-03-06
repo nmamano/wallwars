@@ -594,6 +594,7 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
             isDarkModeOn={state.isDarkModeOn}
             helpText={lobbyHelpText}
             aboutText={aboutText}
+            username={state.playerName}
             handleToggleDarkMode={handleToggleDarkMode}
             handleToggleTheme={handleToggleTheme}
           />

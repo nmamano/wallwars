@@ -10,12 +10,13 @@ const AuthButton = ({
   bgColor: string;
   horizontalPadding: number;
 }): JSX.Element => {
-  const { loginWithRedirect } = useAuth0();
-  const [isLoggedIn] = useState(false);
+  const { user, error, isAuthenticated, loginWithRedirect } = useAuth0();
+  console.log("user: ", user);
+  console.log("error: ", error);
 
   let icon: IconStr;
   let tooltip: string;
-  if (isLoggedIn) {
+  if (isAuthenticated) {
     tooltip = "Profile";
     icon = "account_circle";
   } else {

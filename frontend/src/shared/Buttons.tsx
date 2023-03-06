@@ -32,8 +32,11 @@ import WbSunny from "@mui/icons-material/WbSunny";
 import Brightness2 from "@mui/icons-material/Brightness2";
 import Help from "@mui/icons-material/Help";
 import Info from "@mui/icons-material/Info";
+import AccountCircle from "@mui/icons-material/AccountCircle";
+import { AccountCircleOutlined } from "@mui/icons-material";
+import Refresh from "@mui/icons-material/Refresh";
 
-type iconStr =
+export type IconStr =
   | "flag"
   | "local_florist"
   | "replay"
@@ -56,7 +59,6 @@ type iconStr =
   | "account_circle_outlined"
   | "refresh";
 
-function getIcon(icon: IconStr): JSX.Element {
 function getIcon(icon: IconStr): JSX.Element {
   switch (icon) {
     case "flag":
