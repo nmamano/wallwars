@@ -69,6 +69,7 @@ const ChallengeBC = new ChallengeBroadcast();
 
 io.on(M.connectionMsg, function (socket: any): void {
   let clientEloId: string | null = null;
+  let clientIdToken: string | null = null; // for pseudo-global idToken access
 
   ////////////////////////////////////
   // New connection start-up.
@@ -87,6 +88,7 @@ io.on(M.connectionMsg, function (socket: any): void {
       timeControl,
       boardSettings,
       eloId,
+      idToken,
       isPublic,
     }: {
       name: string;
@@ -94,6 +96,7 @@ io.on(M.connectionMsg, function (socket: any): void {
       timeControl: TimeControl;
       boardSettings: BoardSettings;
       eloId: string;
+      idToken: string;
       isPublic: boolean;
     }): Promise<void> {
       logReceivedMessage(M.createGameMsg, {
@@ -102,6 +105,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         timeControl,
         boardSettings,
         eloId,
+        idToken,
         isPublic,
       });
       if (!isValidEloId(eloId)) {
@@ -109,6 +113,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         return;
       }
       clientEloId = eloId;
+      clientIdToken = idToken;
       const ongoingGame = GM.getOngoingGameByEloId(clientEloId);
       if (ongoingGame) await dealWithLingeringGame(ongoingGame);
       GM.removeGamesByEloId(clientEloId); // Ensure there's no other game for this client.
@@ -125,6 +130,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         timeControl,
         boardSettings,
         eloId: clientEloId,
+        idToken: clientIdToken,
         isPublic,
         rating: creatorRating,
       });
@@ -624,6 +630,7 @@ io.on(M.connectionMsg, function (socket: any): void {
     const game = GM.ongoingGameOfClient(clientEloId);
     logMessage({
       eloId: clientEloId,
+      idToken: clientIdToken,
       socketId: socket.id,
       game,
       sent: false,
@@ -638,6 +645,7 @@ io.on(M.connectionMsg, function (socket: any): void {
     const game = GM.ongoingGameOfClient(clientEloId);
     logMessage({
       eloId: clientEloId,
+      idToken: clientIdToken,
       socketId: socket.id,
       game,
       sent: true,
@@ -658,6 +666,7 @@ io.on(M.connectionMsg, function (socket: any): void {
     const game = GM.ongoingGameOfClient(clientEloId);
     logMessage({
       eloId: oppEloId,
+      idToken: "", // TODO: implement idToken for opponent
       socketId: oppSocketId,
       game,
       sent: true,

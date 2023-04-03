@@ -26,6 +26,7 @@ mongoose
 
 export type dbPseudoPlayer = {
   eloId: string;
+  idToken: string;
   name: string;
   rating: number;
   peakRating: number;
@@ -39,7 +40,7 @@ export type dbPseudoPlayer = {
   solvedPuzzles: string[];
 };
 
-export type dbPlayerWithoutEloId = Omit<dbPseudoPlayer, "eloId">;
+export type dbPlayerWithoutEloId = Omit<dbPseudoPlayer, "eloId" | "idToken">;
 
 // We should not send the eloIds to the client viewing the ranking.
 export type dbRanking = dbPlayerWithoutEloId[];
@@ -149,10 +150,14 @@ export async function getRanking(count: number): Promise<dbRanking | null> {
 }
 
 // Does not insert the player in the database, it just initializes some of the fields.
-export function createNewPseudoPlayer(eloId: string): dbPseudoPlayer {
+export function createNewPseudoPlayer(
+  eloId: string,
+  idToken: string
+): dbPseudoPlayer {
   const r = initialRating();
   return {
     eloId: eloId,
+    idToken: idToken,
     name: "",
     rating: r.rating,
     peakRating: r.rating,
@@ -181,7 +186,7 @@ export async function addPseudoPlayerSolvedPuzzle(
   if (!p) {
     const timestamp = Date.now();
     console.log("creating new pseudoPlayer");
-    p = new PseudoPlayer(createNewPseudoPlayer(eloId));
+    p = new PseudoPlayer(createNewPseudoPlayer(eloId, ""));
     p.name = name;
     p.firstGameDate = new Date(timestamp);
     p.lastGameDate = new Date(timestamp);
@@ -359,6 +364,7 @@ function gameModelToDBGame(game: gameDocument): dbFinishedGameWithoutEloId {
 
 const pseudoPlayerSchema = new Schema({
   eloId: { type: String, required: true },
+  idToken: { type: String, required: true },
   name: { type: String, required: true },
   rating: { type: Number, required: true },
   peakRating: { type: Number, required: true },
@@ -381,8 +387,11 @@ function updatePseudoPlayer(
   newRatingTuple: { rating: number; deviation: number; volatility: number }
 ) {
   const eloId = pseudoPlayer.eloId;
+  const idToken = pseudoPlayer.idToken;
+
   if (eloId !== game.eloIds[0] && eloId !== game.eloIds[1])
     console.error("player is not in this game");
+
   const pIndex = pseudoPlayer.eloId === game.eloIds[0] ? 0 : 1;
   pseudoPlayer.name = game.playerNames[pIndex] || "";
   pseudoPlayer.rating = newRatingTuple.rating;
@@ -411,15 +420,25 @@ async function updatePseudoPlayers(game: GameState): Promise<void> {
   }
 
   // Read the two players from db, or create new ones if not found
-  let p1 = await PseudoPlayer.findOne({ eloId: game.eloIds[0] });
+  let p1 = await PseudoPlayer.findOne({
+    eloId: game.eloIds[0],
+    idToken: game.idTokens[0],
+  });
   if (!p1) {
     console.log("creating new pseudoPlayer for creator");
-    p1 = new PseudoPlayer(createNewPseudoPlayer(game.eloIds[0]));
+    p1 = new PseudoPlayer(
+      createNewPseudoPlayer(game.eloIds[0], game.idTokens[0])
+    );
   }
-  let p2 = await PseudoPlayer.findOne({ eloId: game.eloIds[1] });
+  let p2 = await PseudoPlayer.findOne({
+    eloId: game.eloIds[1],
+    idToken: game.idTokens[1],
+  });
   if (!p2) {
     console.log("creating new pseudoPlayer for joiner");
-    p2 = new PseudoPlayer(createNewPseudoPlayer(game.eloIds[1]));
+    p2 = new PseudoPlayer(
+      createNewPseudoPlayer(game.eloIds[1], game.idTokens[1])
+    );
   }
 
   // Update the fields based on the result of the game
@@ -446,7 +465,7 @@ async function updatePseudoPlayers(game: GameState): Promise<void> {
   try {
     await p1.save();
     console.log(
-      `Stored pseudoplayer in DB ${process.env.DB_NAME}: name ${p1.name} eloId ${p1.eloId} freshness: ${p1.lastGameDate}`
+      `Stored pseudoplayer in DB ${process.env.DB_NAME}: name ${p1.name} eloId ${p1.eloId} idToken ${p1.idToken} freshness: ${p1.lastGameDate}`
     );
   } catch (err) {
     console.error(`Store pseudoplayer to DB ${process.env.DB_NAME} failed`);
@@ -455,7 +474,7 @@ async function updatePseudoPlayers(game: GameState): Promise<void> {
   try {
     await p2.save();
     console.log(
-      `Stored pseudoplayer in DB ${process.env.DB_NAME}: name ${p2.name} eloId ${p2.eloId} freshness: ${p2.lastGameDate}`
+      `Stored pseudoplayer in DB ${process.env.DB_NAME}: name ${p2.name} eloId ${p2.eloId} idToken ${p2.idToken} freshness: ${p2.lastGameDate}`
     );
   } catch (err) {
     console.error(`Store pseudoplayer to DB ${process.env.DB_NAME} failed`);
@@ -536,6 +555,14 @@ const gameSchema = new Schema(
       validate: [
         (ids: [string, string]) => ids.length === 2,
         "eloIds should have 2 entries",
+      ],
+    },
+    idTokens: {
+      type: [String],
+      required: true,
+      validate: [
+        (ids: [string, string]) => ids.length === 2,
+        "idTokens should have 2 entries",
       ],
     },
     playerTokens: {

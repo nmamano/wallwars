@@ -19,17 +19,21 @@ const setLoggedOut = (): [IconStr, string] => {
 const AuthButton = ({
   bgColor,
   horizontalPadding,
+  handleIdToken,
 }: {
   bgColor: string;
   horizontalPadding: number;
+  handleIdToken: (idToken: string) => void;
 }): JSX.Element => {
   let [icon, tooltip] = setLoggedOut();
 
   const { user, error, isAuthenticated, loginWithRedirect } = useAuth0();
+
   if (error) {
     console.log("There was an error while authenticating:\n", error);
   } else if (isAuthenticated) {
     [icon, tooltip] = setLoggedIn();
+    handleIdToken(user?.sub ? user!.sub : "");
     console.log("user:\n", user);
   }
 

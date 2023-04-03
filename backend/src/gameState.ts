@@ -21,6 +21,7 @@ export type GameState = {
   matchScore: [number, number];
   socketIds: [string | null, string | null];
   eloIds: [string | null, string | null];
+  idTokens: [string, string];
   playerNames: [string | null, string | null];
   playerTokens: [string, string];
   timeControl: TimeControl | null;
@@ -49,6 +50,7 @@ export function newGame(): GameState {
     matchScore: [0, 0],
     socketIds: [null, null], //socked ids of creator & joiner
     eloIds: [null, null],
+    idTokens: ["", ""],
     playerNames: [null, null],
     playerTokens: ["default", "default"],
     timeControl: null,
@@ -137,6 +139,7 @@ export function addCreator({
   timeControl,
   boardSettings,
   eloId,
+  idToken,
   isPublic,
   rating,
 }: {
@@ -147,6 +150,7 @@ export function addCreator({
   timeControl: TimeControl;
   boardSettings: BoardSettings;
   eloId: string;
+  idToken: string;
   isPublic: boolean;
   rating: number;
 }): void {
@@ -156,6 +160,7 @@ export function addCreator({
   game.timeControl = timeControl;
   game.boardSettings = boardSettings;
   game.eloIds[0] = eloId;
+  game.idTokens[0] = idToken;
   game.arePlayersPresent[0] = true;
   game.isPublic = isPublic;
   game.creationDate = new Date(Date.now());

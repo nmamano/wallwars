@@ -51,6 +51,7 @@ export type ClientParams = {
   isPrivate: boolean;
   token: string;
   eloId: string;
+  idToken: string;
   clientRole: RoleEnum;
   watchGameId: string | null;
   puzzle?: Puzzle;
@@ -68,6 +69,7 @@ export type LobbyState = {
   clientRole: RoleEnum;
   watchGameId: string | null;
   eloId: string;
+  idToken: string;
   isPrivate: boolean;
   isGamePageOpen: boolean;
   hasOngoingGame: boolean;
@@ -105,6 +107,7 @@ function initialLobbyState(cookies: Cookies): LobbyState {
       cookies.eloId.length <= maxEloIdLen
         ? cookies.eloId
         : randEloId(maxEloIdLen),
+    idToken: "",
     isPrivate: cookies.isPrivate && cookies.isPrivate === "true" ? true : false,
     isGamePageOpen: false,
     hasOngoingGame: false,
@@ -183,6 +186,11 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
   const handleEloId = (eloId: string) => {
     updateState((draftState) => {
       draftState.eloId = eloId.slice(0, maxEloIdLen);
+    });
+  };
+  const handleIdToken = (idToken: string) => {
+    updateState((draftState) => {
+      draftState.idToken = idToken;
     });
   };
   const handleToken = (icon: string) => {
@@ -597,6 +605,7 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
             username={state.playerName}
             handleToggleDarkMode={handleToggleDarkMode}
             handleToggleTheme={handleToggleTheme}
+            handleIdToken={handleIdToken}
           />
           <LobbyForm
             // @ts-ignore

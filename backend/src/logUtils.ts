@@ -35,6 +35,7 @@ const cropAndLogMessage = (txt: string) => {
 
 export function logMessage({
   eloId,
+  idToken,
   socketId,
   game,
   sent,
@@ -42,6 +43,7 @@ export function logMessage({
   messageParams,
 }: {
   eloId: string | null;
+  idToken: string | null;
   socketId: string;
   game: GameState | null;
   sent: boolean;
@@ -49,9 +51,10 @@ export function logMessage({
   messageParams: any;
 }) {
   let shortEloId = eloId ? eloId.substring(0, 3) : "";
+  let shortIdToken = idToken ? idToken.substring(0, 3) : ""; // TODO: change substring to remove the "Auth0|" that comes in front of idTokens
   while (shortEloId.length < 3) shortEloId = shortEloId + "_";
   const shortSocketId = socketId.substring(0, 2);
-  let client = shortSocketId + "," + shortEloId;
+  let client = shortSocketId + "," + shortIdToken; // change back to shortEloId
   const date = new Date();
   let [hs, ms, ss] = [date.getHours(), date.getMinutes(), date.getSeconds()];
   let msStr = ms < 10 ? "0" + ms : ms;

@@ -50,6 +50,7 @@ function emitMessageSubscriber(
   else subscribedSocket.emit(msgTitle);
   logMessage({
     eloId: "SUBSCRIBER",
+    idToken: "SUBSCRIBER", // what is this for?
     socketId: subscribedSocket.id,
     game: null,
     sent: true,

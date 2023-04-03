@@ -25,6 +25,7 @@ function Header({
   username,
   handleToggleDarkMode,
   handleToggleTheme,
+  handleIdToken,
 }: {
   context: string;
   helpText: JSX.Element;
@@ -37,6 +38,7 @@ function Header({
   username: string;
   handleToggleDarkMode: () => void;
   handleToggleTheme: () => void;
+  handleIdToken?: (idToken: string) => void; // undefined when authbutton not shown (on game page)
 }): JSX.Element {
   let mainText;
   if (context === contextEnum.lobby) {
@@ -132,14 +134,21 @@ function Header({
               modalBody={helpText}
             />
             {context === contextEnum.lobby && (
-              <IconButtonWithInfoModal
-                icon="info"
-                tooltip="About"
-                bgColor={buttonCol}
-                horizontalPadding={padding}
-                modalTitle="About"
-                modalBody={aboutText!}
-              />
+              <>
+                <IconButtonWithInfoModal
+                  icon="info"
+                  tooltip="About"
+                  bgColor={buttonCol}
+                  horizontalPadding={padding}
+                  modalTitle="About"
+                  modalBody={aboutText!}
+                />
+                <AuthButton
+                  bgColor={buttonCol}
+                  horizontalPadding={padding}
+                  handleIdToken={handleIdToken!}
+                ></AuthButton>
+              </>
             )}
             {context !== contextEnum.lobby && (
               <IconButtonWithTooltip
@@ -150,10 +159,6 @@ function Header({
                 onClick={handleLeaveGame!}
               />
             )}
-            <AuthButton
-              bgColor={buttonCol}
-              horizontalPadding={padding}
-            ></AuthButton>
           </div>
           <UsernameIcon>{username}</UsernameIcon>
         </div>

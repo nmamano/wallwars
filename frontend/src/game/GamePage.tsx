@@ -447,8 +447,10 @@ export default function GamePage({
         timeControl: clientParams.timeControl,
         boardSettings: clientParams.boardSettings,
         eloId: clientParams.eloId,
+        idToken: clientParams.idToken,
         isPublic: !clientParams.isPrivate,
       });
+      console.log("idToken: " + clientParams.idToken);
     } else if (clientParams.clientRole === RoleEnum.joiner) {
       updateState((draftState) => {
         applyAddJoiner({
