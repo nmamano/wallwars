@@ -1,5 +1,5 @@
 import cloneDeep from "lodash.clonedeep";
-import { Cookies } from "../lobby/LobbyPage";
+import { Cookies } from "../App";
 import {
   Pos,
   Move,

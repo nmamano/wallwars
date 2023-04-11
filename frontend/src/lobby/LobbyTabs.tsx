@@ -6,6 +6,7 @@ import ChallengeList from "./ChallengeList";
 import RecentGameList, { ServerGameSummary } from "./RecentGameList";
 import { getColor, MenuThemeName } from "../shared/colorThemes";
 import { BoardSettings, TimeControl } from "../shared/gameLogicUtils";
+import socket from "../socket";
 
 enum LobbyTabName {
   Recent = "recent",
@@ -22,14 +23,12 @@ export type Challenge = {
 };
 
 export default function LobbyTabs({
-  socket,
   isLargeScreen,
   menuTheme,
   isDarkModeOn,
   handleViewGame,
   handleAcceptChallenge,
 }: {
-  socket: any;
   isLargeScreen: boolean;
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
@@ -61,7 +60,7 @@ export default function LobbyTabs({
         count: 200,
       });
     }
-  }, [socket, updateState, state.needToRequestRecentGameSummaries]);
+  }, [updateState, state.needToRequestRecentGameSummaries]);
 
   useEffect(() => {
     if (state.needToRequestChallenges) {
@@ -70,7 +69,7 @@ export default function LobbyTabs({
       });
       socket.emit("requestCurrentChallenges");
     }
-  }, [socket, updateState, state.needToRequestChallenges]);
+  }, [updateState, state.needToRequestChallenges]);
 
   useEffect(() => {
     socket.once(
@@ -85,7 +84,7 @@ export default function LobbyTabs({
         });
       }
     );
-  }, [socket, updateState]);
+  }, [updateState]);
 
   useEffect(() => {
     socket.once(
@@ -128,7 +127,7 @@ export default function LobbyTabs({
       socket.off("newChallenge");
       socket.off("deadChallenge");
     };
-  }, [socket, updateState]);
+  }, [updateState]);
 
   const canHover = !useMediaQuery({ query: "(hover: none)" });
   const [hoveredTab, setHoveredTab] = useState<LobbyTabName | null>(null);

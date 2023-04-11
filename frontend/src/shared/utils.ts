@@ -39,3 +39,14 @@ export function randEloId(maxEloIdLen: number): string {
   const res = "elo_" + Math.random().toString(36).slice(2);
   return res.slice(0, maxEloIdLen);
 }
+
+export function parseFloatOrUndef(
+  val: string | undefined,
+  defaultVal: number
+): number {
+  if (val === undefined) {
+    return defaultVal;
+  }
+  const parsedVal = parseFloat(val);
+  return isNaN(parsedVal) ? defaultVal : parsedVal;
+}

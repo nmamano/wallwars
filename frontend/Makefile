@@ -6,8 +6,8 @@ src/ai.mjs: src/ai.cc
 		-s USE_ES6_IMPORT_META=0  \
 		-s EXPORTED_FUNCTIONS='["_GetMove"]'  \
 		-s EXPORTED_RUNTIME_METHODS='["cwrap"]'  \
-		-s TOTAL_MEMORY=2GB \
-		-s INITIAL_MEMORY=2GB \
+		-s TOTAL_MEMORY=600MB \
+		-s INITIAL_MEMORY=600MB \
 		-O3 \
 		-march=haswell \
 		-flto=full

@@ -34,6 +34,8 @@ function Header({
   handleToggleDarkMode: () => void;
   handleToggleTheme: () => void;
 }): JSX.Element {
+  const hasJoinCode =
+    joinCode !== "local" && joinCode !== "puzzle" && joinCode !== "AI";
   let mainText;
   if (context === contextEnum.lobby) {
     mainText = <span>WallWars</span>;
@@ -46,22 +48,25 @@ function Header({
   } else {
     mainText = (
       <span>
-        {isLargeScreen && (
+        {(isLargeScreen || !hasJoinCode) && (
           <span style={{ cursor: "pointer" }} onClick={handleLeaveGame}>
             WallWars
           </span>
         )}
         {isLargeScreen && <span>&nbsp;</span>}
-        <CopyToClipboard
-          // @ts-ignore
-          style={{ cursor: "pointer" }}
-          // @ts-ignore
-          text={joinCode}
-          onCopy={() => showToastNotification("Join code copied to clipboard!")}
-        >
-          {/* Todo: do not show "Code" for local AI, and puzzle games */}
-          <span>Code {joinCode}</span>
-        </CopyToClipboard>
+        {hasJoinCode && (
+          <CopyToClipboard
+            // @ts-ignore
+            style={{ cursor: "pointer" }}
+            // @ts-ignore
+            text={joinCode}
+            onCopy={() =>
+              showToastNotification("Join code copied to clipboard!")
+            }
+          >
+            <span>Code {joinCode}</span>
+          </CopyToClipboard>
+        )}
       </span>
     );
   }

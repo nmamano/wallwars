@@ -5,20 +5,18 @@ import { Table } from "react-materialize";
 import { getColor, MenuThemeName } from "../shared/colorThemes";
 import css from "../shared/hoverHighlight.module.css";
 import { puzzles } from "../game/puzzles";
-import { Puzzle } from "../game/puzzleLogic";
+import socket from "../socket";
 
 export default function PuzzleList({
-  socket,
   eloId,
   menuTheme,
   isDarkModeOn,
   handleSolvePuzzle,
 }: {
-  socket: any;
   eloId: string;
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
-  handleSolvePuzzle: (puzzle: Puzzle) => void;
+  handleSolvePuzzle: (puzzleId: string) => void;
 }): JSX.Element {
   const [state, updateState] = useImmer<{
     needToRequestSolvedPuzzles: boolean;
@@ -36,7 +34,7 @@ export default function PuzzleList({
         eloId: eloId,
       });
     }
-  }, [socket, eloId, updateState, state.needToRequestSolvedPuzzles]);
+  }, [eloId, updateState, state.needToRequestSolvedPuzzles]);
   useEffect(() => {
     socket.once(
       "requestedSolvedPuzzles",
@@ -46,7 +44,7 @@ export default function PuzzleList({
         });
       }
     );
-  }, [socket, updateState]);
+  }, [updateState]);
 
   const [col1, col2, colBg] = [
     getColor(menuTheme, "recentGamesBackground", isDarkModeOn),
@@ -94,7 +92,7 @@ export default function PuzzleList({
           {puzzles.map((puzzle, i) => {
             return (
               <tr
-                onClick={() => handleSolvePuzzle(puzzle)}
+                onClick={() => handleSolvePuzzle(puzzle.id)}
                 style={{
                   cursor: "pointer",
                   backgroundColor: i % 2 ? col1 : col2,
@@ -102,7 +100,7 @@ export default function PuzzleList({
                 className={css.hoveredGame}
                 key={i}
               >
-                <td style={entryStyle}>{i + 1}</td>
+                <td style={entryStyle}>{puzzle.id}</td>
                 <td style={entryStyle}>{puzzle.difficulty}</td>
                 <td style={entryStyle}>{puzzle.author}</td>
                 <td style={entryStyle}>

@@ -10,7 +10,7 @@ import {
 } from "../shared/Buttons";
 import { maxBoardDims } from "../shared/globalSettings";
 import { eloIdAboutText } from "./lobbyHelp";
-import { ClientParams, PosSetting } from "./LobbyPage";
+import { AppState, PosSetting } from "../App";
 import TokenDropdown from "./TokenDropdown";
 import TextInputField from "../shared/TextInputField";
 import Checkbox from "@mui/material/Checkbox";
@@ -24,17 +24,19 @@ import {
 } from "../shared/gameLogicUtils";
 
 export default function LobbyForm({
-  clientParams,
+  appState,
   isLargeScreen,
+  showMoreOptions,
+  inputtedDuration,
+  inputtedIncrement,
   handlePlayerName,
-  handleDuration,
-  handleIncrement,
+  handleInputtedDuration,
+  handleInputtedIncrement,
   handleIsPrivate,
   handleNumRows,
   handleNumCols,
   handleShowMoreOptions,
-  handleStartPos,
-  handleGoalPos,
+  handlePosSetting,
   handleJoinCode,
   handleCreateGame,
   handleJoinGame,
@@ -44,30 +46,31 @@ export default function LobbyForm({
   handleToken,
   handleEloId,
 }: {
-  clientParams: ClientParams;
+  appState: AppState;
   isLargeScreen: boolean;
+  showMoreOptions: boolean;
+  inputtedDuration: string;
+  inputtedIncrement: string;
   handlePlayerName: (name: string) => void;
-  handleDuration: (duration: string) => void;
-  handleIncrement: (increment: string) => void;
+  handleInputtedDuration: (duration: string) => void;
+  handleInputtedIncrement: (increment: string) => void;
   handleIsPrivate: (isPrivate: boolean) => void;
   handleNumRows: (numRows: number) => void;
   handleNumCols: (numCols: number) => void;
   handleShowMoreOptions: (showMoreOptions: boolean) => void;
-  handleStartPos: (startPos: PosSetting) => void;
-  handleGoalPos: (goalPos: PosSetting) => void;
+  handlePosSetting: (posSetting: PosSetting) => void;
   handleJoinCode: (joinCode: string) => void;
-  handleCreateGame: () => void;
+  handleCreateGame: (strDur: string, strInc: string) => void;
   handleJoinGame: () => void;
-  handleLocalGame: () => void;
+  handleLocalGame: (strDur: string, strInc: string) => void;
   handleComputerGame: () => void;
   handleRefreshName: () => void;
   handleToken: (token: string) => void;
   handleEloId: (eloId: string) => void;
 }): JSX.Element {
-  const menuTheme = clientParams.menuTheme;
-  const isDarkModeOn = clientParams.isDarkModeOn;
-  const showMoreOptions = clientParams.showMoreOptions;
-  const BS = clientParams.boardSettings;
+  const menuTheme = appState.menuTheme;
+  const isDarkModeOn = appState.isDarkModeOn;
+  const BS = appState.boardSettings;
 
   useEffect(() => {
     window.addEventListener("keydown", downHandler);
@@ -77,10 +80,10 @@ export default function LobbyForm({
   });
   const downHandler = ({ key }: { key: string }) => {
     if (key !== "Enter") return;
-    if (clientParams.joinCode.length > 0) handleJoinGame();
+    if (appState.joinCode.length > 0) handleJoinGame();
     else {
       showToastNotification("Created new game", 5000);
-      handleCreateGame();
+      handleCreateGame(inputtedDuration, inputtedIncrement);
     }
   };
 
@@ -98,7 +101,7 @@ export default function LobbyForm({
   const customToken = (
     <span className={"white-text"} style={{ fontSize: "30px" }}>
       <i className={`material-icons white-text`} style={{ height: `100%` }}>
-        {clientParams.token}
+        {appState.token}
       </i>
     </span>
   );
@@ -113,8 +116,6 @@ export default function LobbyForm({
 
   const [tokenDropdownAnchorEl, setTokenDropdownAnchorEl] =
     React.useState<null | HTMLElement>(null);
-
-  // todo: the isInvalid prop in TextInputField could be used to highlight invalid inputs.
 
   return (
     <div
@@ -140,7 +141,9 @@ export default function LobbyForm({
           <TextButton
             text="Create Game"
             tooltip="Create challenge that others can join."
-            onClick={handleCreateGame}
+            onClick={() =>
+              handleCreateGame(inputtedDuration, inputtedIncrement)
+            }
             menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn}
           />
@@ -158,7 +161,7 @@ export default function LobbyForm({
           <TextButton
             text="Offline game"
             tooltip="Play offline as both players."
-            onClick={handleLocalGame}
+            onClick={() => handleLocalGame(inputtedDuration, inputtedIncrement)}
             menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn}
           />
@@ -169,7 +172,7 @@ export default function LobbyForm({
           <TextInputField
             label="Your name:"
             id="nameInput"
-            value={clientParams.playerName}
+            value={appState.playerName}
             onChange={handlePlayerName}
           />
         </span>
@@ -213,7 +216,7 @@ export default function LobbyForm({
             >
               {isLargeScreen ? "Your token:" : "Token:"}
             </span>
-            {clientParams.token === "default" ? defaultToken : customToken}
+            {appState.token === "default" ? defaultToken : customToken}
             <span style={{ paddingLeft: "20px" }}></span>
             {TokenDropdown(
               tokenDropdownAnchorEl,
@@ -242,15 +245,15 @@ export default function LobbyForm({
             <TextInputField
               label={isLargeScreen ? "Duration (minutes):" : "Duration (m):"}
               id="durationInput"
-              value={`${clientParams.timeControl.duration}`}
-              onChange={handleDuration}
+              value={`${inputtedDuration}`}
+              onChange={handleInputtedDuration}
             />
             {horizontalSep}
             <TextInputField
               label={isLargeScreen ? "Increment (seconds):" : "Increment (s):"}
               id="incrementInput"
-              value={`${clientParams.timeControl.increment}`}
-              onChange={handleIncrement}
+              value={`${inputtedIncrement}`}
+              onChange={handleInputtedIncrement}
             />
           </div>
           <CoordinateSelector
@@ -279,10 +282,20 @@ export default function LobbyForm({
             colMin={0}
             colMax={BS.dims[1] - 1}
             handleRow={(val) => {
-              handleStartPos({ player: 0, coord: 0, val });
+              handlePosSetting({
+                player: "creator",
+                coord: "row",
+                posType: "start",
+                val,
+              });
             }}
             handleCol={(val) => {
-              handleStartPos({ player: 0, coord: 1, val });
+              handlePosSetting({
+                player: "creator",
+                coord: "col",
+                posType: "start",
+                val,
+              });
             }}
             ToDisplay={internalToClassicCoord}
             FromDisplay={classicToInternalCoord}
@@ -297,10 +310,20 @@ export default function LobbyForm({
             colMin={0}
             colMax={BS.dims[1] - 1}
             handleRow={(val) => {
-              handleStartPos({ player: 1, coord: 0, val });
+              handlePosSetting({
+                player: "joiner",
+                coord: "row",
+                posType: "start",
+                val,
+              });
             }}
             handleCol={(val) => {
-              handleStartPos({ player: 1, coord: 1, val });
+              handlePosSetting({
+                player: "joiner",
+                coord: "col",
+                posType: "start",
+                val,
+              });
             }}
             ToDisplay={internalToClassicCoord}
             FromDisplay={classicToInternalCoord}
@@ -315,10 +338,20 @@ export default function LobbyForm({
             colMin={0}
             colMax={BS.dims[1] - 1}
             handleRow={(val) => {
-              handleGoalPos({ player: 0, coord: 0, val });
+              handlePosSetting({
+                player: "creator",
+                coord: "row",
+                posType: "goal",
+                val,
+              });
             }}
             handleCol={(val) => {
-              handleGoalPos({ player: 0, coord: 1, val });
+              handlePosSetting({
+                player: "creator",
+                coord: "col",
+                posType: "goal",
+                val,
+              });
             }}
             ToDisplay={internalToClassicCoord}
             FromDisplay={classicToInternalCoord}
@@ -333,10 +366,20 @@ export default function LobbyForm({
             colMin={0}
             colMax={BS.dims[1] - 1}
             handleRow={(val) => {
-              handleGoalPos({ player: 1, coord: 0, val });
+              handlePosSetting({
+                player: "joiner",
+                coord: "row",
+                posType: "goal",
+                val,
+              });
             }}
             handleCol={(val) => {
-              handleGoalPos({ player: 1, coord: 1, val });
+              handlePosSetting({
+                player: "joiner",
+                coord: "col",
+                posType: "goal",
+                val,
+              });
             }}
             ToDisplay={internalToClassicCoord}
             FromDisplay={classicToInternalCoord}
@@ -360,7 +403,7 @@ export default function LobbyForm({
             <TextInputField
               label=""
               id="eloIdInput"
-              value={clientParams.eloId}
+              value={appState.eloId}
               onChange={handleEloId}
             />
             {horizontalSep}
@@ -393,7 +436,7 @@ export default function LobbyForm({
             <TextInputField
               id="joinInput"
               label=""
-              value={`${clientParams.joinCode}`}
+              value={`${appState.joinCode}`}
               onChange={handleJoinCode}
               placeholder="Write game code here..."
             />
@@ -402,7 +445,7 @@ export default function LobbyForm({
               text="Join Game"
               menuTheme={menuTheme}
               isDarkModeOn={isDarkModeOn}
-              disabled={clientParams.joinCode === ""}
+              disabled={appState.joinCode === ""}
               onClick={handleJoinGame}
             />
           </div>
@@ -412,7 +455,7 @@ export default function LobbyForm({
                 <Checkbox
                   id="isPrivateCheckbox"
                   sx={{ color: "white", paddingLeft: "24px" }}
-                  checked={clientParams.isPrivate}
+                  checked={appState.isPrivate}
                   onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                     handleIsPrivate(event.target.checked);
                   }}
