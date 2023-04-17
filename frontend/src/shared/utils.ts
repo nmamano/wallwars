@@ -34,8 +34,3 @@ export function randPlayerName(maxPlayerNameLen: number): string {
     length: 1,
   }).slice(0, maxPlayerNameLen);
 }
-
-export function randEloId(maxEloIdLen: number): string {
-  const res = "elo_" + Math.random().toString(36).slice(2);
-  return res.slice(0, maxEloIdLen);
-}

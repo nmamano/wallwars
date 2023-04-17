@@ -73,7 +73,8 @@ function Header({
   }
   const padding = isLargeScreen ? 20 : 11;
   const buttonCol = getColor(menuTheme, "headerButton", isDarkModeOn);
-
+  let buttonColCount = isLargeScreen ? 5 : 4;
+  if (context !== contextEnum.lobby) buttonColCount--;
   return (
     <div>
       <div
@@ -100,7 +101,7 @@ function Header({
             style={{
               height: "auto",
               display: "grid",
-              gridTemplateColumns: `repeat(${isLargeScreen ? 5 : 4}, 1fr)`,
+              gridTemplateColumns: `repeat(${buttonColCount}, 1fr)`,
               gridTemplateRows: `auto`,
               columnGap: "5px",
               rowGap: "5px",

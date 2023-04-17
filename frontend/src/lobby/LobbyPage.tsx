@@ -4,7 +4,7 @@ import { useMediaQuery } from "react-responsive";
 import { ToastContainer } from "react-toastify";
 import { useCookies } from "react-cookie";
 import { useImmer } from "use-immer";
-import { randPlayerName, randEloId } from "../shared/utils";
+import { randPlayerName } from "../shared/utils";
 import { getColor, MenuThemeName } from "../shared/colorThemes";
 import blueBgDark from "./../static/blueBgDark.jfif";
 import blueBgLight from "./../static/blueBgLight.jfif";
@@ -36,8 +36,6 @@ import { TextButton } from "../shared/Buttons";
 
 const boardTheme = "monochromeBoard";
 const maxPlayerNameLen = 9;
-const minEloIdLen = 4;
-const maxEloIdLen = 16;
 
 // Fields that are passed to the GamePage when it is opened.
 export type ClientParams = {
@@ -50,7 +48,6 @@ export type ClientParams = {
   timeControl: TimeControl;
   isPrivate: boolean;
   token: string;
-  eloId: string;
   idToken: string;
   clientRole: RoleEnum;
   watchGameId: string | null;
@@ -68,7 +65,6 @@ export type LobbyState = {
   joinCode: string;
   clientRole: RoleEnum;
   watchGameId: string | null;
-  eloId: string;
   idToken: string;
   isPrivate: boolean;
   isGamePageOpen: boolean;
@@ -101,12 +97,6 @@ function initialLobbyState(cookies: Cookies): LobbyState {
     joinCode: "",
     clientRole: RoleEnum.none,
     watchGameId: null,
-    eloId:
-      cookies.eloId &&
-      cookies.eloId.length >= minEloIdLen &&
-      cookies.eloId.length <= maxEloIdLen
-        ? cookies.eloId
-        : randEloId(maxEloIdLen),
     idToken: "",
     isPrivate: cookies.isPrivate && cookies.isPrivate === "true" ? true : false,
     isGamePageOpen: false,
@@ -136,7 +126,6 @@ export type Cookies = {
   increment?: string;
   numRows?: string;
   numCols?: string;
-  eloId?: string;
   isPrivate?: string;
   isVolumeOn?: string;
   zoomLevel?: string;
@@ -152,7 +141,6 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
     "increment",
     "numRows",
     "numCols",
-    "eloId",
     "isPrivate",
   ]);
   const [state, updateState] = useImmer(initialLobbyState(cookies));
@@ -183,12 +171,7 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
       draftState.playerName = randPlayerName(maxPlayerNameLen);
     });
   };
-  const handleEloId = (eloId: string) => {
-    updateState((draftState) => {
-      draftState.eloId = eloId.slice(0, maxEloIdLen);
-    });
-  };
-  const handleIdToken = (idToken: string) => {
+  const handleChangeIdToken = (idToken: string) => {
     updateState((draftState) => {
       draftState.idToken = idToken;
     });
@@ -275,7 +258,6 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
     const inc = validateIncrement();
     const bs = validateBoardSettings();
     const name = validateName();
-    const eloId = validateEloId();
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.creator;
       // Duration and increment are converted from string to number here.
@@ -283,30 +265,28 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
       draftState.timeControl.increment = inc;
       draftState.boardSettings = bs;
       draftState.playerName = name;
-      draftState.eloId = eloId;
+      if (state.idToken === "") draftState.idToken = socket.id;
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = true;
     });
   };
   const handleJoinGame = () => {
     const name = validateName();
-    const eloId = validateEloId();
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.joiner;
       draftState.playerName = name;
-      draftState.eloId = eloId;
+      if (state.idToken === "") draftState.idToken = socket.id;
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = true;
     });
   };
   const handleAcceptChallenge = (joinCode: string) => {
     const name = validateName();
-    const eloId = validateEloId();
     updateState((draftState) => {
       draftState.joinCode = joinCode;
       draftState.clientRole = RoleEnum.joiner;
       draftState.playerName = name;
-      draftState.eloId = eloId;
+      if (state.idToken === "") draftState.idToken = socket.id;
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = true;
     });
@@ -340,7 +320,6 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
     const inc = validateIncrement();
     const bs = validateBoardSettings();
     const name = validateName();
-    const eloId = validateEloId();
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.offline;
       // Duration and increment are converted from string to number here.
@@ -348,14 +327,13 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
       draftState.timeControl.increment = inc;
       draftState.boardSettings = bs;
       draftState.playerName = name;
-      draftState.eloId = eloId;
+      if (state.idToken === "") draftState.idToken = socket.id;
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = true;
     });
   };
   const handleComputerGame = () => {
     const name = validateName();
-    const eloId = validateEloId();
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.computer;
       // Overwrite dimensions for computer game (can only be 7x7).
@@ -367,18 +345,17 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
         goalPos: defaultGoalPos([internal_dim, internal_dim]),
       };
       draftState.playerName = name;
-      draftState.eloId = eloId;
+      if (state.idToken === "") draftState.idToken = socket.id;
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = true;
     });
   };
   const handleSolvePuzzle = (puzzle: Puzzle) => {
     const name = validateName();
-    const eloId = validateEloId();
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.puzzle;
       draftState.playerName = name;
-      draftState.eloId = eloId;
+      if (state.idToken === "") draftState.idToken = socket.id;
       draftState.hasOngoingGame = false;
       draftState.isGamePageOpen = true;
       draftState.puzzle = puzzle;
@@ -390,13 +367,6 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
     if (name === "") name = "Anon";
     else setCookie("playerName", name, { path: "/" });
     return name;
-  };
-  const validateEloId = () => {
-    let eloId = state.eloId;
-    if (eloId.length < minEloIdLen || eloId.length > maxEloIdLen)
-      eloId = randEloId(maxEloIdLen);
-    else setCookie("eloId", eloId, { path: "/" });
-    return eloId;
   };
   const validateDuration = () => {
     let dur = parseFloat(`${state.timeControl.duration}`);
@@ -450,9 +420,9 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
   // Determine if the "Return To Game" button needs to be shown.
   useEffect(() => {
     if (!state.hasOngoingGame && !state.isGamePageOpen) {
-      socket.emit("checkHasOngoingGame", { eloId: state.eloId });
+      socket.emit("checkHasOngoingGame", { idToken: state.idToken });
     }
-  }, [socket, state.hasOngoingGame, state.isGamePageOpen, state.eloId]);
+  }, [socket, state.hasOngoingGame, state.isGamePageOpen, state.idToken]);
   useEffect(() => {
     socket.on("respondHasOngoingGame", ({ res }: { res: boolean }) => {
       updateState((draftState) => {
@@ -605,7 +575,7 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
             username={state.playerName}
             handleToggleDarkMode={handleToggleDarkMode}
             handleToggleTheme={handleToggleTheme}
-            handleIdToken={handleIdToken}
+            handleIdToken={handleChangeIdToken}
           />
           <LobbyForm
             // @ts-ignore
@@ -627,9 +597,9 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
             handleComputerGame={handleComputerGame}
             handleRefreshName={handleRefreshName}
             handleToken={handleToken}
-            handleEloId={handleEloId}
+            handleIdToken={handleChangeIdToken}
           />
-          {state.hasOngoingGame && ( // todo: do we need to check here if the eloId matches?
+          {state.hasOngoingGame && ( // todo: do we need to check here if the idToken matches?
             <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
               <Col className="center" s={12}>
                 {returnToGameButton}
@@ -702,7 +672,7 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
           >
             <PuzzleList
               socket={socket}
-              eloId={state.eloId}
+              idToken={state.idToken}
               menuTheme={state.menuTheme}
               isDarkModeOn={state.isDarkModeOn}
               handleSolvePuzzle={handleSolvePuzzle}

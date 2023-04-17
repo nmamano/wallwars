@@ -43,7 +43,10 @@ const AuthButton = ({
       tooltip={tooltip}
       bgColor={bgColor}
       horizontalPadding={horizontalPadding}
-      onClick={() => loginWithRedirect()}
+      onClick={() => /*loginWithRedirect()*/ {
+        const testToken = `Auth0|${Math.random().toString()}`;
+        handleIdToken(testToken);
+      }}
     ></IconButtonWithTooltip>
   );
 };

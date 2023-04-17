@@ -20,7 +20,6 @@ export type GameState = {
   joinCode: string;
   matchScore: [number, number];
   socketIds: [string | null, string | null];
-  eloIds: [string | null, string | null];
   idTokens: [string, string];
   playerNames: [string | null, string | null];
   playerTokens: [string, string];
@@ -49,7 +48,6 @@ export function newGame(): GameState {
     //excluding the current one.
     matchScore: [0, 0],
     socketIds: [null, null], //socked ids of creator & joiner
-    eloIds: [null, null],
     idTokens: ["", ""],
     playerNames: [null, null],
     playerTokens: ["default", "default"],
@@ -98,9 +96,9 @@ export function playerToMoveHasTimeLeft(game: GameState): boolean {
   return tLeft * 1000 - elapsedMs >= 0;
 }
 
-export function clientIndex(game: GameState, eloId: string): 0 | 1 | null {
-  if (game.eloIds[0] === eloId) return 0;
-  if (game.eloIds[1] === eloId) return 1;
+export function clientIndex(game: GameState, idToken: string): 0 | 1 | null {
+  if (game.idTokens[0] === idToken) return 0;
+  if (game.idTokens[1] === idToken) return 1;
   return null;
 }
 
@@ -138,7 +136,6 @@ export function addCreator({
   token,
   timeControl,
   boardSettings,
-  eloId,
   idToken,
   isPublic,
   rating,
@@ -149,7 +146,6 @@ export function addCreator({
   token: string;
   timeControl: TimeControl;
   boardSettings: BoardSettings;
-  eloId: string;
   idToken: string;
   isPublic: boolean;
   rating: number;
@@ -159,7 +155,6 @@ export function addCreator({
   game.playerTokens[0] = token;
   game.timeControl = timeControl;
   game.boardSettings = boardSettings;
-  game.eloIds[0] = eloId;
   game.idTokens[0] = idToken;
   game.arePlayersPresent[0] = true;
   game.isPublic = isPublic;
@@ -172,20 +167,20 @@ export function addJoiner({
   socketId,
   name,
   token,
-  eloId,
+  idToken,
   rating,
 }: {
   game: GameState;
   socketId: string;
   name: string;
   token: string;
-  eloId: string;
+  idToken: string;
   rating: number;
 }): void {
   game.socketIds[1] = socketId;
   game.playerNames[1] = name;
   game.playerTokens[1] = token;
-  game.eloIds[1] = eloId;
+  game.idTokens[1] = idToken;
   game.arePlayersPresent[1] = true;
   game.ratings[1] = rating;
 }
@@ -233,9 +228,9 @@ export function addMove({
   game.finalDists = distances;
 }
 
-export function applyTakeback(game: GameState, requesterEloId: string): void {
+export function applyTakeback(game: GameState, requesterIdToken: string): void {
   const requesterToMove =
-    requesterEloId === game.eloIds[creatorToMove(game) ? 0 : 1];
+    requesterIdToken === game.idTokens[creatorToMove(game) ? 0 : 1];
   const numMovesToUndo = requesterToMove ? 2 : 1;
   for (let k = 0; k < numMovesToUndo; k++) game.moveHistory.pop();
   game.numMoves = game.moveHistory.length;
@@ -245,11 +240,11 @@ export function applyTakeback(game: GameState, requesterEloId: string): void {
 
 export function applyGiveExtraTime(
   game: GameState,
-  receiverEloId: string
+  receiverIdToken: string
 ): void {
   if (game.moveHistory.length <= 1) return;
   const receiverToMove =
-    receiverEloId === game.eloIds[creatorToMove(game) ? 0 : 1];
+    receiverIdToken === game.idTokens[creatorToMove(game) ? 0 : 1];
   const lastMoveIdx = game.moveHistory.length - (receiverToMove ? 2 : 1);
   game.moveHistory[lastMoveIdx].remainingTime += 60;
 }

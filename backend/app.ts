@@ -68,7 +68,6 @@ const GM = new GameManager();
 const ChallengeBC = new ChallengeBroadcast();
 
 io.on(M.connectionMsg, function (socket: any): void {
-  let clientEloId: string | null = null;
   let clientIdToken: string | null = null; // for pseudo-global idToken access
 
   ////////////////////////////////////
@@ -87,7 +86,6 @@ io.on(M.connectionMsg, function (socket: any): void {
       token,
       timeControl,
       boardSettings,
-      eloId,
       idToken,
       isPublic,
     }: {
@@ -95,7 +93,6 @@ io.on(M.connectionMsg, function (socket: any): void {
       token: string;
       timeControl: TimeControl;
       boardSettings: BoardSettings;
-      eloId: string;
       idToken: string;
       isPublic: boolean;
     }): Promise<void> {
@@ -104,22 +101,20 @@ io.on(M.connectionMsg, function (socket: any): void {
         token,
         timeControl,
         boardSettings,
-        eloId,
         idToken,
         isPublic,
       });
-      if (!isValidEloId(eloId)) {
-        emitMessage(M.invalidEloIdErrorMsg);
+      if (!isValidIdToken(idToken)) {
+        emitMessage(M.invalidIdTokenErrorMsg);
         return;
       }
-      clientEloId = eloId;
       clientIdToken = idToken;
-      const ongoingGame = GM.getOngoingGameByEloId(clientEloId);
+      const ongoingGame = GM.getOngoingGameByIdToken(clientIdToken);
       if (ongoingGame) await dealWithLingeringGame(ongoingGame);
-      GM.removeGamesByEloId(clientEloId); // Ensure there's no other game for this client.
-      const creatorPseudoPlayer = await db.getPseudoPlayer(clientEloId);
-      const creatorRating = creatorPseudoPlayer
-        ? creatorPseudoPlayer.rating
+      GM.removeGamesByIdToken(clientIdToken); // Ensure there's no other game for this client.
+      const creatorPlayer = await db.getPlayer(clientIdToken);
+      const creatorRating = creatorPlayer
+        ? creatorPlayer.rating
         : initialRating().rating;
       const game = newGame();
       addCreator({
@@ -129,7 +124,6 @@ io.on(M.connectionMsg, function (socket: any): void {
         token,
         timeControl,
         boardSettings,
-        eloId: clientEloId,
         idToken: clientIdToken,
         isPublic,
         rating: creatorRating,
@@ -150,45 +144,45 @@ io.on(M.connectionMsg, function (socket: any): void {
       joinCode,
       name,
       token,
-      eloId,
+      idToken,
     }: {
       joinCode: string;
       name: string;
       token: string;
-      eloId: string;
+      idToken: string;
     }): Promise<void> {
-      logReceivedMessage(M.joinGameMsg, { joinCode, name, token, eloId });
-      if (!isValidEloId(eloId)) {
-        emitMessage(M.invalidEloIdErrorMsg);
+      logReceivedMessage(M.joinGameMsg, { joinCode, name, token, idToken });
+      if (!isValidIdToken(idToken)) {
+        emitMessage(M.invalidIdTokenErrorMsg);
         return;
       }
-      const ongoingGame = GM.getOngoingGameByEloId(eloId);
+      const ongoingGame = GM.getOngoingGameByIdToken(idToken);
       if (ongoingGame) await dealWithLingeringGame(ongoingGame);
       const game = GM.unjoinedGame(joinCode);
-      if (!game || !game.eloIds[0]) {
+      if (!game || !game.idTokens[0]) {
         emitMessage(M.gameJoinFailedMsg);
         return;
       }
-      if (game.eloIds[0] === eloId) {
+      if (game.idTokens[0] === idToken) {
         emitMessage(M.joinSelfGameFailedMsg);
         return;
       }
-      GM.removeGamesByEloId(eloId); // Ensure there's no other game for this client.
-      clientEloId = eloId;
-      const joinerPseudoPlayer = await db.getPseudoPlayer(clientEloId);
-      const joinerRating = joinerPseudoPlayer
-        ? joinerPseudoPlayer.rating
+      GM.removeGamesByIdToken(idToken); // Ensure there's no other game for this client.
+      clientIdToken = idToken;
+      const joinerPlayer = await db.getPlayer(clientIdToken);
+      const joinerRating = joinerPlayer
+        ? joinerPlayer.rating
         : initialRating().rating;
-      const creatorPseudoPlayer = await db.getPseudoPlayer(game.eloIds[0]);
-      const creatorRating = creatorPseudoPlayer
-        ? creatorPseudoPlayer.rating
+      const creatorPlayer = await db.getPlayer(game.idTokens[0]);
+      const creatorRating = creatorPlayer
+        ? creatorPlayer.rating
         : initialRating().rating;
       addJoiner({
         game,
         socketId: socket.id,
         name,
         token,
-        eloId,
+        idToken,
         rating: joinerRating,
       });
       GM.moveGameFromUnjoinedToOngoing(joinCode);
@@ -207,7 +201,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         joinerToken: token,
         joinerRating: joinerRating,
       });
-      if (game.isPublic) {
+      if (!game.isPublic) {
         ChallengeBC.notifyDeadChallenge(game.joinCode);
       }
     }
@@ -224,12 +218,12 @@ io.on(M.connectionMsg, function (socket: any): void {
       remainingTime: number;
       distances: [number, number];
     }): void {
-      if (!clientEloId) {
-        console.log("error: received move without clientEloId");
+      if (!clientIdToken) {
+        console.log("error: received move without clientIdToken");
         return;
       }
       logReceivedMessage(M.moveMsg, { actions, remainingTime });
-      const game = GM.ongoingGameOfClient(clientEloId);
+      const game = GM.ongoingGameOfClient(clientIdToken);
       if (!game) {
         emitGameNotFoundError();
         return;
@@ -249,11 +243,11 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.offerRematchMsg, function (): void {
     logReceivedMessage(M.offerRematchMsg);
-    if (!clientEloId) {
-      console.log("error: received rematch offer without clientEloId");
+    if (!clientIdToken) {
+      console.log("error: received rematch offer without clientIdToken");
       return;
     }
-    if (!GM.hasOngoingGame(clientEloId)) {
+    if (!GM.hasOngoingGame(clientIdToken)) {
       emitGameNotFoundError();
       return;
     }
@@ -262,11 +256,11 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.rejectRematchMsg, function (): void {
     logReceivedMessage(M.rejectRematchMsg);
-    if (!clientEloId) {
-      console.log("error: received reject rematch without clientEloId");
+    if (!clientIdToken) {
+      console.log("error: received reject rematch without clientIdToken");
       return;
     }
-    if (!GM.hasOngoingGame(clientEloId)) {
+    if (!GM.hasOngoingGame(clientIdToken)) {
       emitGameNotFoundError();
       return;
     }
@@ -275,33 +269,35 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.acceptRematchMsg, async function (): Promise<void> {
     logReceivedMessage(M.acceptRematchMsg);
-    const game = GM.ongoingGameOfClient(clientEloId);
+    const game = GM.ongoingGameOfClient(clientIdToken);
     if (!game) {
       emitGameNotFoundError();
       return;
     }
-    const [creatorPseudoPlayer, joinerPseudoPlayer] =
-      await getPseudoPlayersFromDB(game);
-    if (!creatorPseudoPlayer || !joinerPseudoPlayer) {
-      return;
+    const [creatorPlayer, joinerPlayer] = await getPlayersFromDB(game);
+    if (creatorPlayer && joinerPlayer) {
+      const newRatings: [number, number] = [
+        creatorPlayer.rating,
+        joinerPlayer.rating,
+      ];
+      setupRematch(game, newRatings);
+    } else {
+      // Game has guest(s)
+      setupRematch(game, [0, 0]);
     }
-    const newRatings: [number, number] = [
-      creatorPseudoPlayer.rating,
-      joinerPseudoPlayer.rating,
-    ];
-    setupRematch(game, newRatings);
+
     emitMessageOpponent(M.rematchAcceptedMsg);
   });
 
   socket.on(M.resignMsg, async function (): Promise<void> {
     logReceivedMessage(M.resignMsg);
-    const game = GM.ongoingGameOfClient(clientEloId);
+    const game = GM.ongoingGameOfClient(clientIdToken);
     if (!game) {
       emitGameNotFoundError();
       return;
     }
     if (game.winner !== "") return;
-    const winner = clientEloId === game.eloIds[0] ? "joiner" : "creator";
+    const winner = clientIdToken === game.idTokens[0] ? "joiner" : "creator";
     emitMessageOpponent(M.resignedMsg);
     setResult(game, winner, "resign");
     await storeGameAndNotifyRatings(game);
@@ -309,11 +305,11 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.offerDrawMsg, function (): void {
     logReceivedMessage(M.offerDrawMsg);
-    if (!clientEloId) {
-      console.log("error: received draw offer without clientEloId");
+    if (!clientIdToken) {
+      console.log("error: received draw offer without clientIdToken");
       return;
     }
-    if (!GM.hasOngoingGame(clientEloId)) {
+    if (!GM.hasOngoingGame(clientIdToken)) {
       emitGameNotFoundError();
       return;
     }
@@ -322,7 +318,7 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.acceptDrawMsg, async function (): Promise<void> {
     logReceivedMessage(M.acceptDrawMsg);
-    const game = GM.ongoingGameOfClient(clientEloId);
+    const game = GM.ongoingGameOfClient(clientIdToken);
     if (!game) {
       emitGameNotFoundError();
       return;
@@ -335,11 +331,11 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.rejectDrawMsg, function (): void {
     logReceivedMessage(M.rejectDrawMsg);
-    if (!clientEloId) {
-      console.log("error: received reject draw message without clientEloId");
+    if (!clientIdToken) {
+      console.log("error: received reject draw message without clientIdToken");
       return;
     }
-    if (!GM.hasOngoingGame(clientEloId)) {
+    if (!GM.hasOngoingGame(clientIdToken)) {
       emitGameNotFoundError();
       return;
     }
@@ -348,11 +344,11 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.requestTakebackMsg, function (): void {
     logReceivedMessage(M.requestTakebackMsg);
-    if (!clientEloId) {
-      console.log("error: received takeback request without clientEloId");
+    if (!clientIdToken) {
+      console.log("error: received takeback request without clientIdToken");
       return;
     }
-    if (!GM.hasOngoingGame(clientEloId)) {
+    if (!GM.hasOngoingGame(clientIdToken)) {
       emitGameNotFoundError();
       return;
     }
@@ -361,30 +357,30 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.acceptTakebackMsg, function (): void {
     logReceivedMessage(M.acceptTakebackMsg);
-    const game = GM.ongoingGameOfClient(clientEloId);
+    const game = GM.ongoingGameOfClient(clientIdToken);
     if (!game) {
       emitGameNotFoundError();
       return;
     }
-    const oppEloId = GM.getOpponentEloId(clientEloId);
-    if (!oppEloId) {
-      console.log("error: opponent eloId not found");
+    const oppIdToken = GM.getOpponentIdToken(clientIdToken);
+    if (!oppIdToken) {
+      console.log("error: opponent idToken not found");
       return;
     }
-    applyTakeback(game, oppEloId);
+    applyTakeback(game, oppIdToken);
     emitMessageOpponent(M.takebackAcceptedMsg);
   });
 
   socket.on(M.rejectTakebackMsg, function (): void {
     logReceivedMessage(M.rejectTakebackMsg);
-    if (!clientEloId) {
+    if (!clientIdToken) {
       console.log(
-        "error: received takeback rejected message without clientEloId"
+        "error: received takeback rejected message without clientIdToken"
       );
       return;
     }
 
-    if (!GM.hasOngoingGame(clientEloId)) {
+    if (!GM.hasOngoingGame(clientIdToken)) {
       emitGameNotFoundError();
       return;
     }
@@ -393,23 +389,23 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.giveExtraTimeMsg, function (): void {
     logReceivedMessage(M.giveExtraTimeMsg);
-    if (!clientEloId) {
-      console.log("error: extra time without clientEloId");
+    if (!clientIdToken) {
+      console.log("error: extra time without clientIdToken");
       return;
     }
 
-    const game = GM.ongoingGameOfClient(clientEloId);
+    const game = GM.ongoingGameOfClient(clientIdToken);
     if (!game) {
       emitGameNotFoundError();
       return;
     }
 
-    const oppEloId = GM.getOpponentEloId(clientEloId);
-    if (!oppEloId) {
-      console.log("error: opponent eloId not found");
+    const oppIdToken = GM.getOpponentIdToken(clientIdToken);
+    if (!oppIdToken) {
+      console.log("error: opponent idToken not found");
       return;
     }
-    applyGiveExtraTime(game, oppEloId);
+    applyGiveExtraTime(game, oppIdToken);
     emitMessageOpponent(M.extraTimeReceivedMsg);
   });
 
@@ -421,7 +417,7 @@ io.on(M.connectionMsg, function (socket: any): void {
       winner: "creator" | "joiner";
     }): Promise<void> {
       logReceivedMessage(M.playerWonOnTimeMsg, { winner });
-      const game = GM.ongoingGameOfClient(clientEloId);
+      const game = GM.ongoingGameOfClient(clientIdToken);
       if (!game) {
         emitGameNotFoundError();
         return;
@@ -440,7 +436,7 @@ io.on(M.connectionMsg, function (socket: any): void {
       winner: "creator" | "joiner" | "draw";
     }): Promise<void> {
       logReceivedMessage(M.playerReachedGoalMsg, { winner });
-      const game = GM.ongoingGameOfClient(clientEloId);
+      const game = GM.ongoingGameOfClient(clientIdToken);
       if (!game) {
         emitGameNotFoundError();
         return;
@@ -452,17 +448,17 @@ io.on(M.connectionMsg, function (socket: any): void {
   );
 
   function handleClientLeaving(): void {
-    if (!clientEloId) return;
+    if (!clientIdToken) return;
     const unjoinedGame = GM.getUnjoinedGamesBySocketId(socket.id);
     if (unjoinedGame) ChallengeBC.notifyDeadChallenge(unjoinedGame.joinCode);
-    GM.removeUnjoinedGamesByEloId(clientEloId);
-    const game = GM.ongoingGameOfClient(clientEloId);
+    GM.removeUnjoinedGamesByIdToken(clientIdToken);
+    const game = GM.ongoingGameOfClient(clientIdToken);
     if (!game) return;
-    const idx = clientIndex(game, clientEloId);
+    const idx = clientIndex(game, clientIdToken);
     if (idx === null) return;
     game.arePlayersPresent[idx] = false;
     emitMessageOpponent(M.leftGameMsg);
-    if (game.winner !== "") GM.removeOngoingGamesByEloId(clientEloId);
+    if (game.winner !== "") GM.removeOngoingGamesByIdToken(clientIdToken);
   }
 
   socket.on(M.leaveGameMsg, function (): void {
@@ -525,12 +521,12 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(
     M.getSolvedPuzzlesMsg,
-    async function ({ eloId }: { eloId: string }): Promise<void> {
-      logReceivedMessage(M.getSolvedPuzzlesMsg, { eloId });
-      const pseudoPlayer = await db.getPseudoPlayer(eloId);
-      if (pseudoPlayer) {
+    async function ({ idToken }: { idToken: string }): Promise<void> {
+      logReceivedMessage(M.getSolvedPuzzlesMsg, { idToken });
+      const Player = await db.getPlayer(idToken);
+      if (Player) {
         emitMessage(M.requestedSolvedPuzzlesMsg, {
-          solvedPuzzles: pseudoPlayer.solvedPuzzles,
+          solvedPuzzles: Player.solvedPuzzles,
         });
       } else emitMessage(M.solvedPuzzlesNotFoundMsg);
     }
@@ -539,16 +535,16 @@ io.on(M.connectionMsg, function (socket: any): void {
   socket.on(
     M.solvedPuzzleMsg,
     async function ({
-      eloId,
+      idToken,
       name,
       puzzleId,
     }: {
-      eloId: string;
+      idToken: string;
       name: string;
       puzzleId: string;
     }): Promise<void> {
-      logReceivedMessage(M.solvedPuzzleMsg, { eloId, name, puzzleId });
-      await db.addPseudoPlayerSolvedPuzzle(eloId, name, puzzleId);
+      logReceivedMessage(M.solvedPuzzleMsg, { idToken, name, puzzleId });
+      await db.addPlayerSolvedPuzzle(idToken, name, puzzleId);
     }
   );
 
@@ -567,32 +563,32 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(
     M.checkHasOngoingGameMsg,
-    function ({ eloId }: { eloId: string }): void {
-      logReceivedMessage(M.checkHasOngoingGameMsg, { eloId });
-      if (!isValidEloId(eloId)) {
+    function ({ idToken }: { idToken: string }): void {
+      logReceivedMessage(M.checkHasOngoingGameMsg, { idToken });
+      if (!isValidIdToken(idToken)) {
         emitMessage(M.respondHasOngoingGameMsg, { res: false });
         return;
       }
-      const game = GM.getOngoingGameByEloId(eloId);
+      const game = GM.getOngoingGameByIdToken(idToken);
       emitMessage(M.respondHasOngoingGameMsg, { res: game !== null });
     }
   );
 
   socket.on(
     M.returnToOngoingGameMsg,
-    function ({ eloId }: { eloId: string }): void {
-      logReceivedMessage(M.returnToOngoingGameMsg, { eloId });
-      if (!isValidEloId(eloId)) {
+    function ({ idToken }: { idToken: string }): void {
+      logReceivedMessage(M.returnToOngoingGameMsg, { idToken });
+      if (!isValidIdToken(idToken)) {
         emitMessage(M.ongoingGameNotFoundMsg);
         return;
       }
-      clientEloId = eloId;
-      const game = GM.getOngoingGameByEloId(clientEloId);
+      clientIdToken = idToken;
+      const game = GM.getOngoingGameByIdToken(clientIdToken);
       if (!game) {
         emitMessage(M.ongoingGameNotFoundMsg);
         return;
       }
-      const idx = clientIndex(game, clientEloId);
+      const idx = clientIndex(game, clientIdToken);
       if (idx === null) {
         console.log("Client index not found");
         return;
@@ -600,10 +596,10 @@ io.on(M.connectionMsg, function (socket: any): void {
       game.arePlayersPresent[idx] = true;
       // When a client returns to a game, we need to update its socket id.
       game.socketIds[idx] = socket.id;
-      let gameWithoutEloIds = JSON.parse(JSON.stringify(game));
-      delete gameWithoutEloIds.eloIds;
+      let gameWithoutIdTokens = JSON.parse(JSON.stringify(game));
+      delete gameWithoutIdTokens.idTokens;
       emitMessage(M.returnedToOngoingGameMsg, {
-        ongoingGame: gameWithoutEloIds,
+        ongoingGame: gameWithoutIdTokens,
         isCreator: idx === 0,
         timeLeft: timeLeftByPlayer(game),
       });
@@ -615,21 +611,13 @@ io.on(M.connectionMsg, function (socket: any): void {
   // Utility functions.
   ////////////////////////////////////
 
-  function isValidEloId(eloId: string | null | undefined): boolean {
-    return (
-      eloId !== null &&
-      eloId !== undefined &&
-      eloId !== "" &&
-      eloId !== "undefined" &&
-      eloId.length >= 4 &&
-      eloId !== "elo_"
-    );
+  function isValidIdToken(idToken: string | null | undefined): boolean {
+    return idToken !== null && idToken !== undefined && idToken !== "undefined";
   }
 
   function logReceivedMessage(msgTitle: string, msgParams?: any): void {
-    const game = GM.ongoingGameOfClient(clientEloId);
+    const game = GM.ongoingGameOfClient(clientIdToken);
     logMessage({
-      eloId: clientEloId,
       idToken: clientIdToken,
       socketId: socket.id,
       game,
@@ -642,9 +630,8 @@ io.on(M.connectionMsg, function (socket: any): void {
   function emitMessage(msgTitle: string, msgParams?: any): void {
     if (msgParams) socket.emit(msgTitle, msgParams);
     else socket.emit(msgTitle);
-    const game = GM.ongoingGameOfClient(clientEloId);
+    const game = GM.ongoingGameOfClient(clientIdToken);
     logMessage({
-      eloId: clientEloId,
       idToken: clientIdToken,
       socketId: socket.id,
       game,
@@ -655,18 +642,17 @@ io.on(M.connectionMsg, function (socket: any): void {
   }
 
   function emitMessageOpponent(msgTitle: string, msgParams?: any): void {
-    const oppSocketId = GM.getOpponentSocketId(clientEloId);
-    const oppEloId = GM.getOpponentEloId(clientEloId);
+    const oppSocketId = GM.getOpponentSocketId(clientIdToken);
+    const oppIdToken = GM.getOpponentIdToken(clientIdToken);
     if (!oppSocketId) {
       console.log(`error: couldn't send message ${msgTitle} to opponent`);
       return;
     }
     if (msgParams) io.to(oppSocketId).emit(msgTitle, msgParams);
     else io.to(oppSocketId).emit(msgTitle);
-    const game = GM.ongoingGameOfClient(clientEloId);
+    const game = GM.ongoingGameOfClient(clientIdToken);
     logMessage({
-      eloId: oppEloId,
-      idToken: "", // TODO: implement idToken for opponent
+      idToken: oppIdToken,
       socketId: oppSocketId,
       game,
       sent: true,
@@ -679,30 +665,29 @@ io.on(M.connectionMsg, function (socket: any): void {
     return emitMessage(M.gameNotFoundErrorMsg);
   }
 
-  // Assumes `game` has both eloIds and both players already exist in the DB.
-  async function getPseudoPlayersFromDB(
+  // Assumes `game` has both idTokens and both players already exist in the DB.
+  async function getPlayersFromDB(
     game: GameState
-  ): Promise<[db.dbPseudoPlayer | null, db.dbPseudoPlayer | null]> {
-    if (!game.eloIds[0] || !game.eloIds[1]) return [null, null];
+  ): Promise<[db.dbPlayer | null, db.dbPlayer | null]> {
+    if (!game.idTokens[0] || !game.idTokens[1]) return [null, null];
 
-    const creator = await db.getPseudoPlayer(game.eloIds[0]);
-    const joiner = await db.getPseudoPlayer(game.eloIds[1]);
+    const creator = await db.getPlayer(game.idTokens[0]);
+    const joiner = await db.getPlayer(game.idTokens[1]);
     return [creator, joiner];
   }
 
-  // Stores game to db, updates pseudoplayers in db, messages both players about
+  // Stores game to db, updates players in db, messages both players about
   // new ratings.
   async function storeGameAndNotifyRatings(game: GameState): Promise<void> {
-    if (!clientEloId) return;
+    if (!clientIdToken) return;
 
     const oldRatings = game.ratings;
     await db.storeGame(game);
-    const [creatorPseudoPlayer, joinerPseudoPlayer] =
-      await getPseudoPlayersFromDB(game);
-    if (!creatorPseudoPlayer || !joinerPseudoPlayer) return;
+    const [creatorPlayer, joinerPlayer] = await getPlayersFromDB(game);
+    if (!creatorPlayer || !joinerPlayer) return;
 
-    const newRatings = [creatorPseudoPlayer.rating, joinerPseudoPlayer.rating];
-    const clientIdx = clientIndex(game, clientEloId);
+    const newRatings = [creatorPlayer.rating, joinerPlayer.rating];
+    const clientIdx = clientIndex(game, clientIdToken);
     const opponentIdx = clientIdx === 0 ? 1 : 0;
     emitMessage(M.newRatingsNotificationMsg, {
       clientIdx: clientIdx,
@@ -719,15 +704,16 @@ io.on(M.connectionMsg, function (socket: any): void {
   // Communicate the the opponent that the client is not coming back
   // and store the game to the DB if it had started.
   async function dealWithLingeringGame(game: GameState): Promise<void> {
-    if (!clientEloId) return;
+    if (!clientIdToken) return;
 
-    const idx = clientIndex(game, clientEloId);
+    const idx = clientIndex(game, clientIdToken);
     if (game.winner === "" && game.arePlayersPresent[idx === 0 ? 1 : 0])
       emitMessageOpponent(M.abandonedGameMsg);
 
     if (game.winner === "" && game.moveHistory.length > 1) {
       if (playerToMoveHasTimeLeft(game)) {
-        const winner = clientEloId === game.eloIds[0] ? "joiner" : "creator";
+        const winner =
+          clientIdToken === game.idTokens[0] ? "joiner" : "creator";
         setResult(game, winner, "abandon");
       } else {
         const winner = creatorToMove(game) ? "joiner" : "creator";

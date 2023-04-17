@@ -210,8 +210,8 @@ export default function GamePage({
       handleReturnToLobby();
     });
 
-    socket.on("invalidEloIdError", () => {
-      showToastNotification("This ELO id is not valid.", 5000);
+    socket.on("invalidIdTokenError", () => {
+      showToastNotification("This Id token is not valid.", 5000);
       handleReturnToLobby();
     });
 
@@ -446,11 +446,9 @@ export default function GamePage({
         token: clientParams.token,
         timeControl: clientParams.timeControl,
         boardSettings: clientParams.boardSettings,
-        eloId: clientParams.eloId,
         idToken: clientParams.idToken,
         isPublic: !clientParams.isPrivate,
       });
-      console.log("idToken: " + clientParams.idToken);
     } else if (clientParams.clientRole === RoleEnum.joiner) {
       updateState((draftState) => {
         applyAddJoiner({
@@ -465,13 +463,13 @@ export default function GamePage({
         joinCode: clientParams.joinCode,
         name: clientParams.playerName,
         token: clientParams.token,
-        eloId: clientParams.eloId,
+        idToken: clientParams.idToken,
       });
     } else if (clientParams.clientRole === RoleEnum.spectator) {
       console.log("getGame: " + clientParams.watchGameId);
       socket.emit("getGame", { gameId: clientParams.watchGameId });
     } else if (clientParams.clientRole === RoleEnum.returner) {
-      socket.emit("returnToOngoingGame", { eloId: clientParams.eloId });
+      socket.emit("returnToOngoingGame", { idToken: clientParams.idToken });
     } else if (clientParams.clientRole === RoleEnum.offline) {
       updateState((draftState) => {
         applyCreatedLocally({
@@ -784,7 +782,7 @@ export default function GamePage({
       });
     } else if (state.lifeCycleStage === 4) {
       socket.emit("solvedPuzzle", {
-        eloId: clientParams.eloId,
+        idToken: clientParams.idToken,
         name: state.names[clientParams.puzzle!.playAsCreator ? 0 : 1],
         puzzleId: clientParams.puzzle!.id,
       });

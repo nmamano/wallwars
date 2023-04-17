@@ -9,7 +9,7 @@ import {
   IconButtonWithInfoModal,
 } from "../shared/Buttons";
 import { maxBoardDims } from "../shared/globalSettings";
-import { eloIdAboutText } from "./lobbyHelp";
+import { idTokenAboutText } from "./lobbyHelp";
 import { ClientParams, PosSetting } from "./LobbyPage";
 import TokenDropdown from "./TokenDropdown";
 import TextInputField from "../shared/TextInputField";
@@ -42,7 +42,7 @@ export default function LobbyForm({
   handleComputerGame,
   handleRefreshName,
   handleToken,
-  handleEloId,
+  handleIdToken,
 }: {
   clientParams: ClientParams;
   isLargeScreen: boolean;
@@ -62,7 +62,7 @@ export default function LobbyForm({
   handleComputerGame: () => void;
   handleRefreshName: () => void;
   handleToken: (token: string) => void;
-  handleEloId: (eloId: string) => void;
+  handleIdToken: (idToken: string) => void;
 }): JSX.Element {
   const menuTheme = clientParams.menuTheme;
   const isDarkModeOn = clientParams.isDarkModeOn;
@@ -359,9 +359,9 @@ export default function LobbyForm({
             {horizontalSep}
             <TextInputField
               label=""
-              id="eloIdInput"
-              value={clientParams.eloId}
-              onChange={handleEloId}
+              id="idTokenInput"
+              value={clientParams.idToken}
+              onChange={handleIdToken}
             />
             {horizontalSep}
             <IconButtonWithInfoModal
@@ -371,7 +371,7 @@ export default function LobbyForm({
               isDarkModeOn={isDarkModeOn}
               circular={true}
               modalTitle="About ELO ids"
-              modalBody={eloIdAboutText}
+              modalBody={idTokenAboutText}
             />
           </div>
           <div

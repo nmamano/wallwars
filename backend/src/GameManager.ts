@@ -22,40 +22,40 @@ export class GameManager {
     return null;
   }
 
-  ongoingGameOfClient(eloId: string | null): GameState | null {
+  ongoingGameOfClient(idToken: string | null): GameState | null {
     for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
-      const [id1, id2] = game.eloIds;
-      if (eloId === id1 || eloId === id2) return game;
+      const [idToken1, idToken2] = game.idTokens;
+      if (idToken === idToken1 || idToken === idToken2) return game;
     }
     return null;
   }
 
-  getOngoingGameByEloId(eloId: string): GameState | null {
+  getOngoingGameByIdToken(idToken: string): GameState | null {
     for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
-      const [id1, id2] = game.eloIds;
-      if (eloId === id1 || eloId === id2) return game;
+      const [idToken1, idToken2] = game.idTokens;
+      if (idToken === idToken1 || idToken === idToken2) return game;
     }
     return null;
   }
 
-  getOpponentSocketId(eloId: string | null): string | null {
-    const game = this.ongoingGameOfClient(eloId);
+  getOpponentSocketId(IdToken: string | null): string | null {
+    const game = this.ongoingGameOfClient(IdToken);
     if (!game) return null;
     const [socketId1, socketId2] = game.socketIds;
-    return eloId === game.eloIds[0] ? socketId2 : socketId1;
+    return IdToken === game.idTokens[0] ? socketId2 : socketId1;
   }
 
-  getOpponentEloId(eloId: string | null): string | null {
-    const game = this.ongoingGameOfClient(eloId);
+  getOpponentIdToken(idToken: string | null): string | null {
+    const game = this.ongoingGameOfClient(idToken);
     if (!game) return null;
-    const [eloId1, eloId2] = game.eloIds;
-    return eloId === eloId1 ? eloId2 : eloId1;
+    const [idToken1, idToken2] = game.idTokens;
+    return idToken === idToken1 ? idToken2 : idToken1;
   }
 
-  hasOngoingGame(eloId: string): boolean {
-    return this.ongoingGameOfClient(eloId) !== null;
+  hasOngoingGame(IdToken: string): boolean {
+    return this.ongoingGameOfClient(IdToken) !== null;
   }
 
   addUnjoinedGame(game: GameState): void {
@@ -76,18 +76,18 @@ export class GameManager {
     );
   }
 
-  removeGamesByEloId(eloId: string): void {
-    this.removeUnjoinedGamesByEloId(eloId);
-    this.removeOngoingGamesByEloId(eloId);
+  removeGamesByIdToken(IdToken: string): void {
+    this.removeUnjoinedGamesByIdToken(IdToken);
+    this.removeOngoingGamesByIdToken(IdToken);
   }
 
   //in theory, clients can only have one unjoined game at a time,
   //but we check all to be sure
-  removeUnjoinedGamesByEloId(eloId: string): void {
-    if (!eloId) return;
+  removeUnjoinedGamesByIdToken(IdToken: string): void {
+    if (!IdToken) return;
     for (let i = 0; i < this.unjoinedGames.length; i++) {
       const game = this.unjoinedGames[i];
-      if (game.eloIds[0] === eloId) {
+      if (game.idTokens[0] === IdToken) {
         console.log("remove unjoined game: ", JSON.stringify(game));
         this.unjoinedGames.splice(i, 1);
         i--;
@@ -119,11 +119,11 @@ export class GameManager {
 
   //in theory, clients can only have one ongoing game at a time,
   //but we check all to be sure
-  removeOngoingGamesByEloId(eloId: string): void {
-    if (!eloId) return;
+  removeOngoingGamesByIdToken(IdToken: string): void {
+    if (!IdToken) return;
     for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
-      if (game.eloIds[0] === eloId || game.eloIds[1] === eloId) {
+      if (game.idTokens[0] === IdToken || game.idTokens[1] === IdToken) {
         this.ongoingGames.splice(i, 1);
         console.log("removed ongoing game: ", JSON.stringify(game));
         i--;

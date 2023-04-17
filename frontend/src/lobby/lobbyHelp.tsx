@@ -54,43 +54,48 @@ export const aboutText = (
   </div>
 );
 
-export const eloIdAboutText = (
-  <div>
-    <h6>
-      <b>WARNING:</b> do NOT use a password that you use in another website as
-      your ELO id. Your ELO id is not shown to other players, but it is also not
-      treated securely like a password should.
-    </h6>
-    <h6>
-      ELO ratings are a system used to measure the strength of players based on
-      their game record. Players gain ELO points for winning games and lose ELO
-      points for losing games. How many ELO points you gain or lose depends on
-      the ELO ratings of the opponent.
-    </h6>
-    <h6>
-      Since WallWars does not have an account system, ELO ratings cannot be
-      linked to player accounts. Instead, ELO ids allow players to keep their
-      ELO ratings across sessions and devices. All games played with the same
-      ELO id count toward the same ELO ratings, even if the player name changes.
-    </h6>
-    <h6>
-      The lobby has an ELO ranking. The ELO rating for each ELO id appears in
-      the ranking. However, the ELO id itself is secret. Instead, the last name
-      player used with that ELO id is shown. If you want to be ranked fairly,
-      always use the same ELO id when playing (and, conversely, if you do not
-      want a game to count towards your rating, you can leave the ELO id empty).
-    </h6>
-    <h6>
-      WallWars saves your ELO id in a cookie so that next time you play, it will
-      automatically be filled for you. However, in case the cookie is deleted,
-      if you care about your rating, it is strongly recommended to write down
-      your ELO id outside the WallWars website. You will also need to remember
-      your ELO id if you want to use it in a different device or browser.
-    </h6>
-    <h6>
-      The ELO id can be anything, so you can change it to something that is easy
-      to remember. However, it should not be easy to guess or use by chance by
-      other players (like your name), or they could affect your ELO rating.
-    </h6>
-  </div>
-);
+export const idTokenAboutText = // TODO: remove this?
+  (
+    <div>
+      <h6>
+        <b>WARNING:</b> do NOT use a password that you use in another website as
+        your ELO id. Your ELO id is not shown to other players, but it is also
+        not treated securely like a password should.
+      </h6>
+      <h6>
+        ELO ratings are a system used to measure the strength of players based
+        on their game record. Players gain ELO points for winning games and lose
+        ELO points for losing games. How many ELO points you gain or lose
+        depends on the ELO ratings of the opponent.
+      </h6>
+      <h6>
+        Since WallWars does not have an account system, ELO ratings cannot be
+        linked to player accounts. Instead, ELO ids allow players to keep their
+        ELO ratings across sessions and devices. All games played with the same
+        ELO id count toward the same ELO ratings, even if the player name
+        changes.
+      </h6>
+      <h6>
+        The lobby has an ELO ranking. The ELO rating for each ELO id appears in
+        the ranking. However, the ELO id itself is secret. Instead, the last
+        name player used with that ELO id is shown. If you want to be ranked
+        fairly, always use the same ELO id when playing (and, conversely, if you
+        do not want a game to count towards your rating, you can leave the ELO
+        id empty).
+      </h6>
+      <h6>
+        WallWars saves your ELO id in a cookie so that next time you play, it
+        will automatically be filled for you. However, in case the cookie is
+        deleted, if you care about your rating, it is strongly recommended to
+        write down your ELO id outside the WallWars website. You will also need
+        to remember your ELO id if you want to use it in a different device or
+        browser.
+      </h6>
+      <h6>
+        The ELO id can be anything, so you can change it to something that is
+        easy to remember. However, it should not be easy to guess or use by
+        chance by other players (like your name), or they could affect your ELO
+        rating.
+      </h6>
+    </div>
+  );

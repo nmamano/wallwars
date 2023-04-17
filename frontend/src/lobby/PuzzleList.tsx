@@ -9,13 +9,13 @@ import { Puzzle } from "../game/puzzleLogic";
 
 export default function PuzzleList({
   socket,
-  eloId,
+  idToken,
   menuTheme,
   isDarkModeOn,
   handleSolvePuzzle,
 }: {
   socket: any;
-  eloId: string;
+  idToken: string;
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
   handleSolvePuzzle: (puzzle: Puzzle) => void;
@@ -33,10 +33,10 @@ export default function PuzzleList({
         draftState.needToRequestSolvedPuzzles = false;
       });
       socket.emit("getSolvedPuzzles", {
-        eloId: eloId,
+        idToken: idToken,
       });
     }
-  }, [socket, eloId, updateState, state.needToRequestSolvedPuzzles]);
+  }, [socket, idToken, updateState, state.needToRequestSolvedPuzzles]);
   useEffect(() => {
     socket.once(
       "requestedSolvedPuzzles",
