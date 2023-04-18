@@ -34,3 +34,7 @@ export function randPlayerName(maxPlayerNameLen: number): string {
     length: 1,
   }).slice(0, maxPlayerNameLen);
 }
+
+export function checkIsLoggedIn(idToken: string): boolean {
+  return idToken.substring(0, 6) === "Auth0|";
+}

@@ -104,7 +104,7 @@ export type GameState = {
   matchScore: [number, number];
 
   // Players can return to a game even if they close the browser
-  // (as long as they use the same elo id) but if they create/join another
+  // (as long as they use the same id token) but if they create/join another
   // game, this counts as abandonment and they cannot join anymore.
   opponentAbandoned: boolean;
 

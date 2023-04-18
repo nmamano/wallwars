@@ -4,7 +4,7 @@ import { useMediaQuery } from "react-responsive";
 import { ToastContainer } from "react-toastify";
 import { useCookies } from "react-cookie";
 import { useImmer } from "use-immer";
-import { randPlayerName } from "../shared/utils";
+import { checkIsLoggedIn, randPlayerName } from "../shared/utils";
 import { getColor, MenuThemeName } from "../shared/colorThemes";
 import blueBgDark from "./../static/blueBgDark.jfif";
 import blueBgLight from "./../static/blueBgLight.jfif";
@@ -576,6 +576,8 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
             handleToggleDarkMode={handleToggleDarkMode}
             handleToggleTheme={handleToggleTheme}
             handleIdToken={handleChangeIdToken}
+            hasOngoingGame={state.hasOngoingGame}
+            isLoggedIn={checkIsLoggedIn(state.idToken)}
           />
           <LobbyForm
             // @ts-ignore

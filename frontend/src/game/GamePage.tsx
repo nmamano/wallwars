@@ -63,6 +63,7 @@ import {
 import createModule from "../ai.mjs";
 import { ClientParams } from "../lobby/LobbyPage";
 import { TextButton } from "../shared/Buttons";
+import { checkIsLoggedIn } from "../shared/utils";
 
 const moveSound = new UIfx(moveSoundAudio);
 function playMoveSound() {
@@ -1051,6 +1052,8 @@ export default function GamePage({
         username={clientParams.playerName}
         handleToggleDarkMode={handleToggleDarkMode}
         handleToggleTheme={handleToggleTheme}
+        hasOngoingGame={true}
+        isLoggedIn={checkIsLoggedIn(clientParams.idToken)}
       />
       <div
         style={{

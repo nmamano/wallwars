@@ -22,6 +22,8 @@ function Header({
   isLargeScreen,
   menuTheme,
   isDarkModeOn,
+  hasOngoingGame,
+  isLoggedIn,
   username,
   handleToggleDarkMode,
   handleToggleTheme,
@@ -35,6 +37,8 @@ function Header({
   isLargeScreen: boolean;
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
+  hasOngoingGame: boolean;
+  isLoggedIn: boolean;
   username: string;
   handleToggleDarkMode: () => void;
   handleToggleTheme: () => void;
@@ -74,7 +78,9 @@ function Header({
   const padding = isLargeScreen ? 20 : 11;
   const buttonCol = getColor(menuTheme, "headerButton", isDarkModeOn);
   let buttonColCount = isLargeScreen ? 5 : 4;
-  if (context !== contextEnum.lobby) buttonColCount--;
+  const allowToggleLogin =
+    context === contextEnum.lobby && (!hasOngoingGame || isLoggedIn); // should be able to log out midgame?
+  if (!allowToggleLogin) buttonColCount--;
   return (
     <div>
       <div
@@ -144,11 +150,13 @@ function Header({
                   modalTitle="About"
                   modalBody={aboutText!}
                 />
-                <AuthButton
-                  bgColor={buttonCol}
-                  horizontalPadding={padding}
-                  handleIdToken={handleIdToken!}
-                ></AuthButton>
+                {allowToggleLogin && (
+                  <AuthButton
+                    bgColor={buttonCol}
+                    horizontalPadding={padding}
+                    handleIdToken={handleIdToken!}
+                  ></AuthButton>
+                )}
               </>
             )}
             {context !== contextEnum.lobby && (

@@ -1,6 +1,7 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { IconStr } from "./Buttons";
 import { IconButtonWithTooltip } from "./Buttons";
+import { useState } from "react";
 
 const setLoggedIn = (): [IconStr, string] => {
   const icon = "account_circle";
@@ -32,11 +33,11 @@ const AuthButton = ({
   if (error) {
     console.log("There was an error while authenticating:\n", error);
   } else if (isAuthenticated) {
-    [icon, tooltip] = setLoggedIn();
+    // [icon, tooltip] = setLoggedIn();
     handleIdToken(user?.sub ? user!.sub : "");
     console.log("user:\n", user);
   }
-
+  const [loggedIn, setLoggedIn] = useState(false);
   return (
     <IconButtonWithTooltip
       icon={icon}
@@ -44,8 +45,15 @@ const AuthButton = ({
       bgColor={bgColor}
       horizontalPadding={horizontalPadding}
       onClick={() => /*loginWithRedirect()*/ {
-        const testToken = `Auth0|${Math.random().toString()}`;
-        handleIdToken(testToken);
+        // for testing purposes
+        if (!loggedIn) {
+          const testToken = `Auth0|${Math.random().toString()}`;
+          handleIdToken(testToken);
+          setLoggedIn(true);
+        } else {
+          handleIdToken("");
+          setLoggedIn(false);
+        }
       }}
     ></IconButtonWithTooltip>
   );
