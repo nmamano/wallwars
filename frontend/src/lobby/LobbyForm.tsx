@@ -3,13 +3,8 @@ import { useEffect } from "react";
 import Grid from "@mui/material/Grid";
 import { getColor } from "../shared/colorThemes";
 import showToastNotification from "../shared/showToastNotification";
-import {
-  TextButton,
-  IconButtonWithTooltip,
-  IconButtonWithInfoModal,
-} from "../shared/Buttons";
+import { TextButton, IconButtonWithTooltip } from "../shared/Buttons";
 import { maxBoardDims } from "../shared/globalSettings";
-import { idTokenAboutText } from "./lobbyHelp";
 import { ClientParams, PosSetting } from "./LobbyPage";
 import TokenDropdown from "./TokenDropdown";
 import TextInputField from "../shared/TextInputField";
@@ -341,39 +336,6 @@ export default function LobbyForm({
             ToDisplay={internalToClassicCoord}
             FromDisplay={classicToInternalCoord}
           />
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              paddingTop: "20px",
-            }}
-          >
-            {horizontalSep}
-            <span
-              style={{
-                fontSize: "20px",
-              }}
-            >
-              ELO id:
-            </span>
-            {horizontalSep}
-            <TextInputField
-              label=""
-              id="idTokenInput"
-              value={clientParams.idToken}
-              onChange={handleIdToken}
-            />
-            {horizontalSep}
-            <IconButtonWithInfoModal
-              icon="info"
-              tooltip="About ELO ids"
-              menuTheme={menuTheme}
-              isDarkModeOn={isDarkModeOn}
-              circular={true}
-              modalTitle="About ELO ids"
-              modalBody={idTokenAboutText}
-            />
-          </div>
           <div
             style={{
               display: "flex",
