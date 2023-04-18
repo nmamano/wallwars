@@ -201,7 +201,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         joinerToken: token,
         joinerRating: joinerRating,
       });
-      if (!game.isPublic) {
+      if (game.isPublic) {
         ChallengeBC.notifyDeadChallenge(game.joinCode);
       }
     }
