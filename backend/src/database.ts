@@ -178,7 +178,7 @@ export async function addPlayerSolvedPuzzle(
   if (!p) {
     const timestamp = Date.now();
     console.log("creating new Player");
-    p = new Player(createNewPlayer(""));
+    p = new Player(createNewPlayer(idToken));
     p.name = name;
     p.firstGameDate = new Date(timestamp);
     p.lastGameDate = new Date(timestamp);
