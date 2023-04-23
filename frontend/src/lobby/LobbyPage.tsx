@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { Row, Col } from "react-materialize";
 import { useMediaQuery } from "react-responsive";
-import { ToastContainer } from "react-toastify";
 import { useImmer } from "use-immer";
 import { randPlayerName } from "../shared/utils";
 import { getColor } from "../shared/colorThemes";
@@ -220,7 +219,6 @@ export default function LobbyPage({
         paddingBottom: "2rem",
       }}
     >
-      <ToastContainer />
       <div>
         <Header
           context={"lobby"}

@@ -9,6 +9,7 @@ import LobbyPage from "./lobby/LobbyPage";
 import { useMediaQuery } from "react-responsive";
 import { useImmer } from "use-immer";
 import showToastNotification from "./shared/showToastNotification";
+import { ToastContainer } from "react-toastify";
 import { useCookies } from "react-cookie";
 import blueBgDark from "./static/blueBgDark.jfif";
 import createModule from "./ai.mjs";
@@ -480,62 +481,65 @@ export default function App() {
   }, []);
 
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <LobbyPage
-            appState={state}
-            isLargeScreen={isLargeScreen}
-            handleToggleTheme={handleToggleTheme}
-            handleToggleDarkMode={handleToggleDarkMode}
-            handlePlayerName={handlePlayerName}
-            handleEloId={handleEloId}
-            handleToken={handleToken}
-            handleIsPrivate={handleIsPrivate}
-            handleNumRows={handleNumRows}
-            handleNumCols={handleNumCols}
-            handlePosSetting={handlePosSetting}
-            handleJoinCode={handleJoinCode}
-            handleCreateGame={handleCreateGame}
-            handleJoinGame={handleJoinGame}
-            handleAcceptChallenge={handleAcceptChallenge}
-            handleReturnToGame={handleReturnToGame}
-            handleViewGame={handleViewGame}
-            handleLocalGame={handleLocalGame}
-            handleComputerGame={handleComputerGame}
-            handleSolvePuzzle={handleSolvePuzzle}
-            handleHasOngoingGameInServer={handleHasOngoingGameInServer}
-          />
-        }
-      />
-      <Route
-        path="/game/:gameId"
-        element={
-          <GamePage
-            clientParams={state}
-            isLargeScreen={isLargeScreen}
-            handleReturnToLobby={handleReturnToLobby}
-            handleToggleDarkMode={handleToggleDarkMode}
-            handleToggleTheme={handleToggleTheme}
-            wasmAIGetMove={wasmAIGetMove}
-          />
-        }
-      />
-      <Route
-        path="/puzzle/:puzzleId"
-        element={
-          <GamePage
-            clientParams={state}
-            isLargeScreen={isLargeScreen}
-            handleReturnToLobby={handleReturnToLobby}
-            handleToggleDarkMode={handleToggleDarkMode}
-            handleToggleTheme={handleToggleTheme}
-          />
-        }
-      />
-      <Route path="*" element={<ErrorPage />} />
-    </Routes>
+    <>
+      <ToastContainer />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <LobbyPage
+              appState={state}
+              isLargeScreen={isLargeScreen}
+              handleToggleTheme={handleToggleTheme}
+              handleToggleDarkMode={handleToggleDarkMode}
+              handlePlayerName={handlePlayerName}
+              handleEloId={handleEloId}
+              handleToken={handleToken}
+              handleIsPrivate={handleIsPrivate}
+              handleNumRows={handleNumRows}
+              handleNumCols={handleNumCols}
+              handlePosSetting={handlePosSetting}
+              handleJoinCode={handleJoinCode}
+              handleCreateGame={handleCreateGame}
+              handleJoinGame={handleJoinGame}
+              handleAcceptChallenge={handleAcceptChallenge}
+              handleReturnToGame={handleReturnToGame}
+              handleViewGame={handleViewGame}
+              handleLocalGame={handleLocalGame}
+              handleComputerGame={handleComputerGame}
+              handleSolvePuzzle={handleSolvePuzzle}
+              handleHasOngoingGameInServer={handleHasOngoingGameInServer}
+            />
+          }
+        />
+        <Route
+          path="/game/:gameId"
+          element={
+            <GamePage
+              clientParams={state}
+              isLargeScreen={isLargeScreen}
+              handleReturnToLobby={handleReturnToLobby}
+              handleToggleDarkMode={handleToggleDarkMode}
+              handleToggleTheme={handleToggleTheme}
+              wasmAIGetMove={wasmAIGetMove}
+            />
+          }
+        />
+        <Route
+          path="/puzzle/:puzzleId"
+          element={
+            <GamePage
+              clientParams={state}
+              isLargeScreen={isLargeScreen}
+              handleReturnToLobby={handleReturnToLobby}
+              handleToggleDarkMode={handleToggleDarkMode}
+              handleToggleTheme={handleToggleTheme}
+            />
+          }
+        />
+        <Route path="*" element={<ErrorPage />} />
+      </Routes>
+    </>
   );
 }
 

@@ -4,7 +4,6 @@ import { Row, Col } from "react-materialize";
 import { useImmer } from "use-immer";
 import UIfx from "uifx";
 import moveSoundAudio from "./../static/moveSound.mp3";
-import { ToastContainer } from "react-toastify";
 import showToastNotification from "../shared/showToastNotification";
 import { useCookies } from "react-cookie";
 import { getAiMove } from "../shared/computerAi";
@@ -1004,7 +1003,6 @@ export default function GamePage({
 
   return (
     <div>
-      <ToastContainer />
       <Header
         context={
           state.clientRole === RoleEnum.spectator ? "spectator" : "player"
