@@ -5,6 +5,7 @@ import { Table } from "react-materialize";
 import { prettyDate } from "../shared/utils";
 import { getColor, MenuThemeName } from "../shared/colorThemes";
 import css from "../shared/hoverHighlight.module.css";
+import socket from "../socket";
 
 export type PseudoPlayer = {
   name: string;
@@ -20,12 +21,10 @@ export type PseudoPlayer = {
 export type Ranking = PseudoPlayer[];
 
 export default function RankingList({
-  socket,
   isLargeScreen,
   menuTheme,
   isDarkModeOn,
 }: {
-  socket: any;
   isLargeScreen: boolean;
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
@@ -47,14 +46,14 @@ export default function RankingList({
         count: 200,
       });
     }
-  }, [socket, updateState, state.needToRequestRanking]);
+  }, [updateState, state.needToRequestRanking]);
   useEffect(() => {
     socket.once("requestedRanking", ({ ranking }: { ranking: Ranking }) => {
       updateState((draftState) => {
         draftState.ranking = ranking;
       });
     });
-  }, [socket, updateState]);
+  }, [updateState]);
 
   const [col1, col2, colBg] = [
     getColor(menuTheme, "recentGamesBackground", isDarkModeOn),

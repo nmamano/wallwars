@@ -10,14 +10,14 @@ import {
 
 export async function getAiMove(
   state: GameState,
-  getMove8x8: (s: string) => string
+  wasmAIGetMove?: (s: string) => string
 ): Promise<Move> {
-  if (!getMove8x8) {
+  if (!wasmAIGetMove) {
     console.log("Fall back in case the WebAssembly AI hasn't loaded yet");
     return DoubleWalkMove(state);
   }
   const standard_notation = getStandardNotation(state.moveHistory);
-  const move_notation = getMove8x8(standard_notation);
+  const move_notation = wasmAIGetMove(standard_notation);
   return MoveNotationToMove(move_notation);
 }
 

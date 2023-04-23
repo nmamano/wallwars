@@ -4,10 +4,11 @@ export default function showToastNotification(
   text: string,
   duration?: number
 ): void {
+  console.log("inside showToastNotification: " + text);
   if (!duration || duration === 0) duration = 2500;
   toast(text, {
     autoClose: duration,
-    hideProgressBar: true,
+    hideProgressBar: false,
     transition: Slide,
     pauseOnFocusLoss: false,
   });

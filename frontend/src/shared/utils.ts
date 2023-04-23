@@ -38,3 +38,14 @@ export function randPlayerName(maxPlayerNameLen: number): string {
 export function checkIsLoggedIn(idToken: string): boolean {
   return idToken.substring(0, 6) === "Auth0|";
 }
+
+export function parseFloatOrUndef(
+  val: string | undefined,
+  defaultVal: number
+): number {
+  if (val === undefined) {
+    return defaultVal;
+  }
+  const parsedVal = parseFloat(val);
+  return isNaN(parsedVal) ? defaultVal : parsedVal;
+}

@@ -2,234 +2,95 @@ import { useEffect } from "react";
 import { Row, Col } from "react-materialize";
 import { useMediaQuery } from "react-responsive";
 import { ToastContainer } from "react-toastify";
-import { useCookies } from "react-cookie";
 import { useImmer } from "use-immer";
-import { checkIsLoggedIn, randPlayerName } from "../shared/utils";
-import { getColor, MenuThemeName } from "../shared/colorThemes";
-import blueBgDark from "./../static/blueBgDark.jfif";
-import blueBgLight from "./../static/blueBgLight.jfif";
-import {
-  defaultInitialPlayerPos,
-  defaultGoalPos,
-  defaultBoardSettings,
-  maxBoardDims,
-  cellSizes,
-} from "../shared/globalSettings";
+import { randPlayerName } from "../shared/utils";
+import { getColor } from "../shared/colorThemes";
+import { maxBoardDims, cellSizes } from "../shared/globalSettings";
 import LobbyForm from "./LobbyForm";
 import LobbyTabs from "./LobbyTabs";
 import RankingList from "./RankingList";
 import PuzzleList from "./PuzzleList";
-import GamePage from "../game/GamePage";
 import GameShowcase from "./GameShowcase";
 import Header from "../shared/Header";
 import { lobbyHelpText, aboutText } from "./lobbyHelp";
-import showToastNotification from "../shared/showToastNotification";
-import {
-  emptyBoardDistances,
-  boardPixelDims,
-  BoardSettings,
-  TimeControl,
-} from "../shared/gameLogicUtils";
-import { Puzzle } from "../game/puzzleLogic";
-import { RoleEnum } from "../game/gameState";
+import { boardPixelDims, TimeControl } from "../shared/gameLogicUtils";
 import { TextButton } from "../shared/Buttons";
-
-const boardTheme = "monochromeBoard";
-const maxPlayerNameLen = 9;
-
-// Fields that are passed to the GamePage when it is opened.
-export type ClientParams = {
-  menuTheme: MenuThemeName;
-  isDarkModeOn: boolean;
-  showMoreOptions: boolean;
-  boardSettings: BoardSettings;
-  joinCode: string;
-  playerName: string;
-  timeControl: TimeControl;
-  isPrivate: boolean;
-  token: string;
-  idToken: string;
-  clientRole: RoleEnum;
-  watchGameId: string | null;
-  puzzle?: Puzzle;
-};
+import { AppState, PosSetting } from "../App";
+import socket from "../socket";
 
 export type LobbyState = {
-  playerName: string;
-  token: string;
-  timeControl: {
-    duration: string | number;
-    increment: string | number;
-  };
-  boardSettings: BoardSettings;
-  joinCode: string;
-  clientRole: RoleEnum;
-  watchGameId: string | null;
-  idToken: string;
-  isPrivate: boolean;
-  isGamePageOpen: boolean;
-  hasOngoingGame: boolean;
-  isDarkModeOn: boolean;
-  menuTheme: MenuThemeName;
+  // These are the duration and increment as free form strings. They are not validated and converted
+  // into numbers until the user creates a game.
+  inputtedDuration: string;
+  inputtedIncrement: string;
+  // Whether to show all the configuration options in the lobby form.
   showMoreOptions: boolean;
-  puzzle?: Puzzle;
 };
 
-function initialLobbyState(cookies: Cookies): LobbyState {
-  // @ts-ignore
-  let nr = parseFloat(cookies.numRows);
-  nr = isNaN(nr) ? defaultBoardSettings.dims[0] : nr;
-  // @ts-ignore
-  let nc = parseFloat(cookies.numCols);
-  nc = isNaN(nc) ? defaultBoardSettings.dims[1] : nc;
+function initialLobbyState(tc: TimeControl): LobbyState {
   return {
-    playerName: cookies.playerName || randPlayerName(maxPlayerNameLen),
-    token: cookies.token || "default",
-    timeControl: {
-      duration: cookies.duration || "5",
-      increment: cookies.increment || "5",
-    },
-    boardSettings: {
-      dims: [nr, nc],
-      startPos: defaultInitialPlayerPos([nr, nc]),
-      goalPos: defaultGoalPos([nr, nc]),
-    },
-    joinCode: "",
-    clientRole: RoleEnum.none,
-    watchGameId: null,
-    idToken: "",
-    isPrivate: cookies.isPrivate && cookies.isPrivate === "true" ? true : false,
-    isGamePageOpen: false,
-    hasOngoingGame: false,
-    isDarkModeOn:
-      cookies.isDarkModeOn && cookies.isDarkModeOn === "true" ? true : false,
-    menuTheme:
-      cookies.menuTheme && cookies.menuTheme === "green" ? "green" : "blue",
+    inputtedDuration: tc.duration.toString(),
+    inputtedIncrement: tc.increment.toString(),
     showMoreOptions: false,
   };
 }
 
-export type PosSetting = {
-  player: number;
-  // 0 for row and 1 for column.
-  // todo: use enum.
-  coord: 0 | 1;
-  val: number;
-};
-
-export type Cookies = {
-  isDarkModeOn?: string;
-  menuTheme?: MenuThemeName;
-  token?: string;
-  playerName?: string;
-  duration?: string;
-  increment?: string;
-  numRows?: string;
-  numCols?: string;
-  isPrivate?: string;
-  isVolumeOn?: string;
-  zoomLevel?: string;
-};
-
-function LobbyPage({ socket }: { socket: any }): JSX.Element {
-  const [cookies, setCookie] = useCookies([
-    "isDarkModeOn",
-    "menuTheme",
-    "token",
-    "playerName",
-    "duration",
-    "increment",
-    "numRows",
-    "numCols",
-    "isPrivate",
-  ]);
-  const [state, updateState] = useImmer(initialLobbyState(cookies));
-
-  const handleToggleTheme = () => {
-    const newTheme = state.menuTheme === "green" ? "blue" : "green";
+export default function LobbyPage({
+  appState,
+  isLargeScreen,
+  handleToggleTheme,
+  handleToggleDarkMode,
+  handlePlayerName,
+  handleEloId,
+  handleToken,
+  handleIsPrivate,
+  handleNumRows,
+  handleNumCols,
+  handlePosSetting,
+  handleJoinCode,
+  handleCreateGame,
+  handleJoinGame,
+  handleAcceptChallenge,
+  handleReturnToGame,
+  handleViewGame,
+  handleLocalGame,
+  handleComputerGame,
+  handleSolvePuzzle,
+  handleHasOngoingGameInServer,
+}: {
+  appState: AppState;
+  isLargeScreen: boolean;
+  handleToggleTheme: () => void;
+  handleToggleDarkMode: () => void;
+  handlePlayerName: (name: string) => void;
+  handleEloId: (eloId: string) => void;
+  handleToken: (token: string) => void;
+  handleIsPrivate: (isPrivate: boolean) => void;
+  handleNumRows: (nr: number) => void;
+  handleNumCols: (nc: number) => void;
+  handlePosSetting: (posSetting: PosSetting) => void;
+  handleJoinCode: (joinCode: string) => void;
+  handleCreateGame: (strDur: string, strInc: string) => void;
+  handleJoinGame: () => void;
+  handleAcceptChallenge: (joinCode: string) => void;
+  handleReturnToGame: () => void;
+  handleViewGame: (watchGameId: string) => void;
+  handleLocalGame: (strDur: string, strInc: string) => void;
+  handleComputerGame: () => void;
+  handleSolvePuzzle: (puzzleId: string) => void;
+  handleHasOngoingGameInServer: (hasOngoingGame: boolean) => void;
+}): JSX.Element {
+  const [state, updateState] = useImmer(
+    initialLobbyState(appState.timeControl)
+  );
+  const handleInputtedDuration = (val: string) => {
     updateState((draftState) => {
-      draftState.menuTheme = newTheme;
-    });
-    setCookie("menuTheme", newTheme, { path: "/" });
-  };
-  const handleToggleDarkMode = () => {
-    const newSetting = !state.isDarkModeOn;
-    updateState((draftState) => {
-      draftState.isDarkModeOn = newSetting;
-    });
-    setCookie("isDarkModeOn", newSetting ? "true" : "false", {
-      path: "/",
-    });
-  };
-  const handlePlayerName = (name: string) => {
-    updateState((draftState) => {
-      draftState.playerName = name.slice(0, maxPlayerNameLen);
+      draftState.inputtedDuration = val;
     });
   };
-  const handleRefreshName = () => {
+  const handleInputtedIncrement = (val: string) => {
     updateState((draftState) => {
-      draftState.playerName = randPlayerName(maxPlayerNameLen);
-    });
-  };
-  const handleChangeIdToken = (idToken: string) => {
-    updateState((draftState) => {
-      draftState.idToken = idToken;
-    });
-  };
-  const handleToken = (icon: string) => {
-    updateState((draftState) => {
-      draftState.token = icon;
-    });
-    setCookie("token", icon, { path: "/" });
-  };
-  const handleDuration = (val: string) => {
-    updateState((draftState) => {
-      draftState.timeControl.duration = val;
-    });
-  };
-  const handleIncrement = (val: string) => {
-    updateState((draftState) => {
-      draftState.timeControl.increment = val;
-    });
-  };
-  const handleIsPrivate = (val: boolean) => {
-    updateState((draftState) => {
-      draftState.isPrivate = val;
-    });
-    setCookie("isPrivate", val ? "true" : "false", {
-      path: "/",
-    });
-  };
-  const handleNumRows = (nr: number) => {
-    updateState((draftState) => {
-      const curNr = draftState.boardSettings.dims[0];
-      draftState.boardSettings.dims[0] = nr;
-      for (let i = 0; i < 2; i++) {
-        let pRow = draftState.boardSettings.startPos[i][0];
-        if (pRow >= nr - 1 || pRow === curNr - 1) {
-          draftState.boardSettings.startPos[i][0] = nr - 1;
-        }
-        let gRow = draftState.boardSettings.goalPos[i][0];
-        if (gRow >= nr - 1 || gRow === curNr - 1) {
-          draftState.boardSettings.goalPos[i][0] = nr - 1;
-        }
-      }
-    });
-  };
-  const handleNumCols = (nc: number) => {
-    updateState((draftState) => {
-      const curNc = draftState.boardSettings.dims[1];
-      draftState.boardSettings.dims[1] = nc;
-      for (let i = 0; i < 2; i++) {
-        let pCol = draftState.boardSettings.startPos[i][1];
-        if (pCol >= nc - 1 || pCol === curNc - 1) {
-          draftState.boardSettings.startPos[i][1] = nc - 1;
-        }
-        let gCol = draftState.boardSettings.goalPos[i][1];
-        if (gCol >= nc - 1 || gCol === curNc - 1) {
-          draftState.boardSettings.goalPos[i][1] = nc - 1;
-        }
-      }
+      draftState.inputtedIncrement = val;
     });
   };
   const handleShowMoreOptions = () => {
@@ -237,6 +98,10 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
       draftState.showMoreOptions = !draftState.showMoreOptions;
     });
   };
+
+const handleRefreshName = () => {
+handlePlayerName(randPlayerName(30));
+}
 
   const handleStartPos = ({ player, coord, val }: PosSetting) => {
     updateState((draftState) => {
@@ -419,36 +284,20 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
 
   // Determine if the "Return To Game" button needs to be shown.
   useEffect(() => {
-    if (!state.hasOngoingGame && !state.isGamePageOpen) {
-      socket.emit("checkHasOngoingGame", { idToken: state.idToken });
+    if (!appState.hasOngoingGame) {
+      socket.emit("checkHasOngoingGame", { idToken: appState.idToken });
     }
-  }, [socket, state.hasOngoingGame, state.isGamePageOpen, state.idToken]);
+  }, [appState.hasOngoingGame, appState.idToken]);
   useEffect(() => {
     socket.on("respondHasOngoingGame", ({ res }: { res: boolean }) => {
-      updateState((draftState) => {
-        if (!draftState.isGamePageOpen) draftState.hasOngoingGame = res;
-      });
+      handleHasOngoingGameInServer(res);
     });
   });
 
-  // Set the background of the entire site based on theme and dark mode.
-  useEffect(() => {
-    document.body.style.backgroundColor = getColor(
-      state.menuTheme,
-      "background",
-      state.isDarkModeOn
-    );
-    if (state.menuTheme === "blue") {
-      document.body.style.backgroundImage = `url('${
-        state.isDarkModeOn ? blueBgDark : blueBgLight
-      }')`;
-    } else {
-      document.body.style.backgroundImage = "none";
-    }
-  }, [state.isDarkModeOn, state.menuTheme]);
-
+  // =========================
+  // Styling the lobby
+  // =========================
   const sideBySideLayout = useMediaQuery({ query: "(min-width: 1300px)" });
-  const isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
   let [groundSize, wallWidth] = isLargeScreen
     ? [cellSizes.groundSize, cellSizes.wallWidth]
     : [cellSizes.smallScreenGroundSize, cellSizes.smallScreenWallWidth];
@@ -538,8 +387,8 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
       text="Return to game"
       tooltip="Continue ongoing game"
       onClick={handleReturnToGame}
-      menuTheme={state.menuTheme}
-      isDarkModeOn={state.isDarkModeOn}
+      menuTheme={appState.menuTheme}
+      isDarkModeOn={appState.isDarkModeOn}
       isImportant={true}
     />
   );
@@ -551,139 +400,117 @@ function LobbyPage({ socket }: { socket: any }): JSX.Element {
       }}
     >
       <ToastContainer />
-      {state.isGamePageOpen && (
-        <GamePage
-          socket={socket}
-          // @ts-ignore
-          clientParams={state}
+      <div>
+        <Header
+          context={"lobby"}
           isLargeScreen={isLargeScreen}
-          boardTheme={boardTheme}
-          handleReturnToLobby={handleReturnToLobby}
+          menuTheme={appState.menuTheme}
+          isDarkModeOn={appState.isDarkModeOn}
+          helpText={lobbyHelpText}
+          aboutText={aboutText}
           handleToggleDarkMode={handleToggleDarkMode}
           handleToggleTheme={handleToggleTheme}
         />
-      )}
-      {!state.isGamePageOpen && (
-        <div>
-          <Header
-            context={"lobby"}
-            isLargeScreen={isLargeScreen}
-            menuTheme={state.menuTheme}
-            isDarkModeOn={state.isDarkModeOn}
-            helpText={lobbyHelpText}
-            aboutText={aboutText}
-            username={state.playerName}
-            handleToggleDarkMode={handleToggleDarkMode}
-            handleToggleTheme={handleToggleTheme}
-            handleIdToken={handleChangeIdToken}
-            hasOngoingGame={state.hasOngoingGame}
-            isLoggedIn={checkIsLoggedIn(state.idToken)}
-          />
-          <LobbyForm
-            // @ts-ignore
-            clientParams={state}
-            isLargeScreen={isLargeScreen}
-            handlePlayerName={handlePlayerName}
-            handleDuration={handleDuration}
-            handleIncrement={handleIncrement}
-            handleIsPrivate={handleIsPrivate}
-            handleNumRows={handleNumRows}
-            handleNumCols={handleNumCols}
-            handleShowMoreOptions={handleShowMoreOptions}
-            handleStartPos={handleStartPos}
-            handleGoalPos={handleGoalPos}
-            handleJoinCode={handleJoinCode}
-            handleCreateGame={handleCreateGame}
-            handleJoinGame={handleJoinGame}
-            handleLocalGame={handleLocalGame}
-            handleComputerGame={handleComputerGame}
-            handleRefreshName={handleRefreshName}
-            handleToken={handleToken}
-            handleIdToken={handleChangeIdToken}
-          />
-          {state.hasOngoingGame && ( // todo: do we need to check here if the idToken matches?
-            <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
-              <Col className="center" s={12}>
-                {returnToGameButton}
-              </Col>
-            </Row>
-          )}
-          <div style={gridStyle}>
-            <div style={{ gridArea: "showcaseArea" }}>
-              {gameShowcaseHeader}
-              <GameShowcase
-                socket={socket}
-                isLargeScreen={isLargeScreen}
-                menuTheme={state.menuTheme}
-                boardTheme={boardTheme}
-                isDarkModeOn={state.isDarkModeOn}
-                handleViewGame={handleViewGame}
-              />
-            </div>
-            <div
-              style={{
-                gridArea: "tabsArea",
-                height: "100%",
-              }}
-            >
-              <LobbyTabs
-                socket={socket}
-                isLargeScreen={isLargeScreen}
-                menuTheme={state.menuTheme}
-                isDarkModeOn={state.isDarkModeOn}
-                handleViewGame={handleViewGame}
-                handleAcceptChallenge={handleAcceptChallenge}
-              />
-            </div>
-          </div>
-          {rankingHeader}
-          <div
-            style={{
-              height: rankingHeight,
-              width: rankingWidth,
-              marginLeft: "auto",
-              marginRight: "auto",
-              border: `1px solid ${getColor(
-                state.menuTheme,
-                "container",
-                state.isDarkModeOn
-              )}`,
-              paddingBottom: "2rem",
-            }}
-          >
-            <RankingList
-              socket={socket}
+        <LobbyForm
+          // @ts-ignore
+          appState={appState}
+          isLargeScreen={isLargeScreen}
+          showMoreOptions={state.showMoreOptions}
+          inputtedDuration={state.inputtedDuration}
+          inputtedIncrement={state.inputtedIncrement}
+          handlePlayerName={handlePlayerName}
+          handleInputtedDuration={handleInputtedDuration}
+          handleInputtedIncrement={handleInputtedIncrement}
+          handleIsPrivate={handleIsPrivate}
+          handleNumRows={handleNumRows}
+          handleNumCols={handleNumCols}
+          handleShowMoreOptions={handleShowMoreOptions}
+          handlePosSetting={handlePosSetting}
+          handleJoinCode={handleJoinCode}
+          handleCreateGame={handleCreateGame}
+          handleJoinGame={handleJoinGame}
+          handleLocalGame={handleLocalGame}
+          handleComputerGame={handleComputerGame}
+          handleRefreshName={handleRefreshName}
+          handleToken={handleToken}
+          handleEloId={handleEloId}
+        />
+        {appState.hasOngoingGame && ( // todo: do we need to check here if the eloId matches?
+          <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
+            <Col className="center" s={12}>
+              {returnToGameButton}
+            </Col>
+          </Row>
+        )}
+        <div style={gridStyle}>
+          <div style={{ gridArea: "showcaseArea" }}>
+            {gameShowcaseHeader}
+            <GameShowcase
               isLargeScreen={isLargeScreen}
-              menuTheme={state.menuTheme}
-              isDarkModeOn={state.isDarkModeOn}
+              menuTheme={appState.menuTheme}
+              boardTheme={appState.boardTheme}
+              isDarkModeOn={appState.isDarkModeOn}
+              handleViewGame={handleViewGame}
             />
           </div>
-          {puzzleHeader}
           <div
             style={{
-              height: puzzleHeight,
-              width: puzzleWidth,
-              marginLeft: "auto",
-              marginRight: "auto",
-              border: `1px solid ${getColor(
-                state.menuTheme,
-                "container",
-                state.isDarkModeOn
-              )}`,
+              gridArea: "tabsArea",
+              height: "100%",
             }}
           >
-            <PuzzleList
-              socket={socket}
-              idToken={state.idToken}
-              menuTheme={state.menuTheme}
-              isDarkModeOn={state.isDarkModeOn}
-              handleSolvePuzzle={handleSolvePuzzle}
+            <LobbyTabs
+              isLargeScreen={isLargeScreen}
+              menuTheme={appState.menuTheme}
+              isDarkModeOn={appState.isDarkModeOn}
+              handleViewGame={handleViewGame}
+              handleAcceptChallenge={handleAcceptChallenge}
             />
-          </div>{" "}
+          </div>
         </div>
-      )}
+        {rankingHeader}
+        <div
+          style={{
+            height: rankingHeight,
+            width: rankingWidth,
+            marginLeft: "auto",
+            marginRight: "auto",
+            border: `1px solid ${getColor(
+              appState.menuTheme,
+              "container",
+              appState.isDarkModeOn
+            )}`,
+            paddingBottom: "2rem",
+          }}
+        >
+          <RankingList
+            isLargeScreen={isLargeScreen}
+            menuTheme={appState.menuTheme}
+            isDarkModeOn={appState.isDarkModeOn}
+          />
+        </div>
+        {puzzleHeader}
+        <div
+          style={{
+            height: puzzleHeight,
+            width: puzzleWidth,
+            marginLeft: "auto",
+            marginRight: "auto",
+            border: `1px solid ${getColor(
+              appState.menuTheme,
+              "container",
+              appState.isDarkModeOn
+            )}`,
+          }}
+        >
+          <PuzzleList
+            eloId={appState.eloId}
+            menuTheme={appState.menuTheme}
+            isDarkModeOn={appState.isDarkModeOn}
+            handleSolvePuzzle={handleSolvePuzzle}
+          />
+        </div>{" "}
+      </div>
     </div>
   );
 }
-
-export default LobbyPage;

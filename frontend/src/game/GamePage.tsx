@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { Row, Col } from "react-materialize";
 import { useImmer } from "use-immer";
 import UIfx from "uifx";
 import moveSoundAudio from "./../static/moveSound.mp3";
+import { ToastContainer } from "react-toastify";
 import showToastNotification from "../shared/showToastNotification";
 import { useCookies } from "react-cookie";
 import { getAiMove } from "../shared/computerAi";
 import { cellSizes, maxBoardDims } from "../shared/globalSettings";
+import { getPuzzle } from "./puzzles";
 import {
   GameState,
   RoleEnum,
@@ -52,7 +55,6 @@ import TimerHeader from "./TimerHeader";
 import gameHelp from "./gameHelp";
 import puzzleHelp from "./puzzleHelp";
 import ControlPanel from "./ControlPanel";
-import { BoardThemeName } from "../shared/colorThemes";
 import {
   BoardSettings,
   CellType,
@@ -60,9 +62,9 @@ import {
   Pos,
   TimeControl,
 } from "../shared/gameLogicUtils";
-import createModule from "../ai.mjs";
-import { ClientParams } from "../lobby/LobbyPage";
+import { AppState } from "../App";
 import { TextButton } from "../shared/Buttons";
+import socket from "../socket";
 import { checkIsLoggedIn } from "../shared/utils";
 
 const moveSound = new UIfx(moveSoundAudio);
@@ -71,22 +73,25 @@ function playMoveSound() {
 }
 
 export default function GamePage({
-  socket,
   clientParams,
   isLargeScreen,
-  boardTheme,
   handleReturnToLobby,
   handleToggleDarkMode,
   handleToggleTheme,
+  wasmAIGetMove,
 }: {
-  socket: any;
-  clientParams: ClientParams;
+  clientParams: AppState;
   isLargeScreen: boolean;
-  boardTheme: BoardThemeName;
   handleReturnToLobby: () => void;
   handleToggleDarkMode: () => void;
   handleToggleTheme: () => void;
+  wasmAIGetMove?: (s: string) => string;
 }): JSX.Element {
+  const { gameId, puzzleId } = useParams();
+  const isPuzzleMode = puzzleId !== undefined;
+  const isComputerMode = gameId === "computer";
+  const isLocalMode = gameId === "local";
+
   const menuTheme = clientParams.menuTheme;
   const isDarkModeOn = clientParams.isDarkModeOn;
 
@@ -97,37 +102,9 @@ export default function GamePage({
   const [state, updateState] = useImmer<GameState>(createInitialState(cookies));
 
   //===================================================
-  // WebAssembly AI.
-  //===================================================
-  const [getMove, setGetMove] = useState<(s: string) => string>();
-  useEffect(() => {
-    // @ts-ignore
-    createModule().then((Module) => {
-      setGetMove(() => Module.cwrap("GetMove", "string", ["string"]));
-    });
-  }, []);
-
-  //===================================================
   // Communication FROM the server.
   //===================================================
   useEffect(() => {
-    socket.once(
-      "gameCreated",
-      ({
-        joinCode,
-        creatorStarts,
-        rating,
-      }: {
-        joinCode: string;
-        creatorStarts: boolean;
-        rating: number;
-      }) => {
-        updateState((draftState) => {
-          applyCreatedOnServer({ draftState, joinCode, creatorStarts, rating });
-        });
-      }
-    );
-
     socket.once(
       "gameJoined",
       ({
@@ -170,24 +147,6 @@ export default function GamePage({
         applyReceivedGame(draftState, game);
       });
     });
-
-    socket.on(
-      "returnedToOngoingGame",
-      ({
-        ongoingGame,
-        isCreator,
-        timeLeft,
-      }: {
-        ongoingGame: ServerGame;
-        isCreator: boolean;
-        timeLeft: [number, number];
-      }) => {
-        updateState((draftState) => {
-          applyReturnToGame(draftState, ongoingGame, isCreator, timeLeft);
-          draftState.waitingForPing = 0;
-        });
-      }
-    );
 
     socket.on("opponentReturned", () => {
       updateState((draftState) => {
@@ -422,7 +381,7 @@ export default function GamePage({
     return () => {
       socket.removeAllListeners();
     };
-  }, [socket, updateState, handleReturnToLobby]);
+  }, [updateState, handleReturnToLobby]);
 
   //===================================================
   // Communication TO the server.
@@ -439,6 +398,12 @@ export default function GamePage({
           boardSettings: clientParams.boardSettings,
           name: clientParams.playerName,
           token: clientParams.token,
+        });
+        applyCreatedOnServer({
+          draftState,
+          joinCode: clientParams.joinCode,
+          creatorStarts: clientParams.creatorStarts,
+          rating: clientParams.rating,
         });
         draftState.arePlayersPresent[0] = true;
       });
@@ -470,8 +435,15 @@ export default function GamePage({
       console.log("getGame: " + clientParams.watchGameId);
       socket.emit("getGame", { gameId: clientParams.watchGameId });
     } else if (clientParams.clientRole === RoleEnum.returner) {
-      socket.emit("returnToOngoingGame", { idToken: clientParams.idToken });
-    } else if (clientParams.clientRole === RoleEnum.offline) {
+      updateState((draftState) => {
+        applyReturnToGame(
+          draftState,
+          clientParams.ongoingGame!,
+          clientParams.isCreator,
+          clientParams.timeLeft
+        );
+      });
+    } else if (isLocalMode) {
       updateState((draftState) => {
         applyCreatedLocally({
           draftState,
@@ -483,7 +455,7 @@ export default function GamePage({
         draftState.arePlayersPresent[0] = true;
         draftState.arePlayersPresent[1] = true;
       });
-    } else if (clientParams.clientRole === RoleEnum.computer) {
+    } else if (isComputerMode) {
       updateState((draftState) => {
         applyCreatedVsComputer({
           draftState,
@@ -494,13 +466,20 @@ export default function GamePage({
         draftState.arePlayersPresent[0] = true;
         draftState.arePlayersPresent[1] = true;
       });
-    } else if (clientParams.clientRole === RoleEnum.puzzle) {
+    } else if (isPuzzleMode) {
+      const puzzle = getPuzzle(puzzleId);
+      if (!puzzle) {
+        console.log("show toast notification: puzzle not found");
+        showToastNotification("Puzzle not found.", 5000);
+        handleReturnToLobby();
+        return;
+      }
       updateState((draftState) => {
         applyCreatedPuzzle({
           draftState,
           name: clientParams.playerName,
           token: clientParams.token,
-          puzzle: clientParams.puzzle!,
+          puzzle: puzzle,
         });
         draftState.arePlayersPresent[0] = true;
         draftState.arePlayersPresent[1] = true;
@@ -510,10 +489,7 @@ export default function GamePage({
     }
   });
 
-  const isOfflineMode = () =>
-    clientParams.clientRole === RoleEnum.offline ||
-    clientParams.clientRole === RoleEnum.computer ||
-    clientParams.clientRole === RoleEnum.puzzle;
+  const isOfflineMode = () => isLocalMode || isComputerMode || isPuzzleMode;
   const isOnlineMode = () => !isOfflineMode();
 
   const handleLeaveGame = () => {
@@ -528,7 +504,7 @@ export default function GamePage({
     } else {
       updateState((draftState) => {
         draftState.shouldPlaySound = true;
-        if (clientParams.clientRole === RoleEnum.computer) {
+        if (isComputerMode) {
           // In the C++ AI, the player on the top-left always moves first.
           // So, here, we make the Creator always start.
           // Since applySetupRematch flips who starts,
@@ -587,17 +563,19 @@ export default function GamePage({
       socket.emit("requestTakeback");
     } else {
       updateState((draftState) => {
-        if (clientParams.clientRole === RoleEnum.offline) {
+        if (isLocalMode) {
           // In a local game, we always undo only one ply.
           applyTakeback(draftState, !creatorToMove(draftState));
-        } else if (clientParams.clientRole === RoleEnum.computer) {
+        } else if (isComputerMode) {
           // Versus the computer, we always undo the player (creator) move.
           applyTakeback(draftState, true);
-        } else {
+        } else if (isPuzzleMode) {
           // In a puzzle, always undo two moves, except don't undo the setup moves.
           const tc = turnCount(draftState);
-          if (tc <= clientParams.puzzle!.startIndex) return;
+          if (tc <= getPuzzle(puzzleId)!.startIndex) return;
           applyTakeback(draftState, creatorToMove(draftState));
+        } else {
+          console.log("unreachable case");
         }
       });
     }
@@ -647,7 +625,7 @@ export default function GamePage({
       });
     } else {
       updateState((draftState) => {
-        if (clientParams.clientRole === RoleEnum.offline) {
+        if (isLocalMode) {
           // In local games, the player that resigns is the one to move.
           applyResignGame(draftState, creatorToMove(draftState));
         } else {
@@ -689,12 +667,7 @@ export default function GamePage({
   useEffect(() => {
     const pingInterval = 5000;
     const interval = setInterval(() => {
-      if (
-        clientParams.clientRole === RoleEnum.offline ||
-        clientParams.clientRole === RoleEnum.computer ||
-        clientParams.clientRole === RoleEnum.puzzle
-      )
-        return;
+      if (isLocalMode || isComputerMode || isPuzzleMode) return;
       if (state.lifeCycleStage !== 3) return;
       if (state.waitingForPing === 1) {
         socket.emit("pingServer");
@@ -710,11 +683,12 @@ export default function GamePage({
     }, pingInterval);
     return () => clearInterval(interval);
   }, [
-    socket,
     state.lifeCycleStage,
     state.waitingForPing,
-    clientParams.clientRole,
     updateState,
+    isPuzzleMode,
+    isComputerMode,
+    isLocalMode,
   ]);
 
   //===================================================
@@ -725,10 +699,7 @@ export default function GamePage({
   // make a full move, in which case it is also sent to the other client.
   const handleSelectedCell = (pos: Pos) => {
     updateState((draftState) => {
-      if (
-        clientParams.clientRole === RoleEnum.offline ||
-        clientParams.clientRole === RoleEnum.puzzle
-      ) {
+      if (isLocalMode || isPuzzleMode) {
         // It is always the client's turn in local games.
         applySelectedCell(draftState, pos, true);
         return;
@@ -753,12 +724,12 @@ export default function GamePage({
   // Compute and play the AI move in computer mode.
   //===================================================
   useEffect(() => {
-    if (clientParams.clientRole !== RoleEnum.computer) return;
+    if (!isComputerMode) return;
     if (state.lifeCycleStage < 1 || state.lifeCycleStage > 3) return;
     if (creatorToMove(state)) return;
     const moveIndex = turnCount(state) + 1;
     const playAiMove = async () => {
-      await getAiMove(state, getMove!).then((aiActions) =>
+      await getAiMove(state, wasmAIGetMove).then((aiActions) =>
         updateState((draftState) => {
           applyMove(draftState, aiActions, 60 * 60, moveIndex);
         })
@@ -774,9 +745,10 @@ export default function GamePage({
   // Play the right continuations in puzzle mode.
   //===================================================
   useEffect(() => {
-    if (clientParams.clientRole !== RoleEnum.puzzle) return;
+    if (!isPuzzleMode) return;
     if (state.lifeCycleStage < 1) return;
-    if (!lastPuzzleMoveIsCorrect(state, clientParams.puzzle!)) {
+    if (!lastPuzzleMoveIsCorrect(state, getPuzzle(puzzleId)!)) {
+      console.log("show toast: suboptimal move");
       showToastNotification("Suboptimal move!");
       updateState((draftState) => {
         applyPuzzleTakeback(draftState, !creatorToMove(draftState));
@@ -784,14 +756,14 @@ export default function GamePage({
     } else if (state.lifeCycleStage === 4) {
       socket.emit("solvedPuzzle", {
         idToken: clientParams.idToken,
-        name: state.names[clientParams.puzzle!.playAsCreator ? 0 : 1],
-        puzzleId: clientParams.puzzle!.id,
+        name: state.names[getPuzzle(puzzleId)!.playAsCreator ? 0 : 1],
+        puzzleId: puzzleId,
       });
     } else {
       updateState((draftState) => {
         if (draftState.lifeCycleStage === 4) return;
-        if (clientParams.puzzle!.playAsCreator !== creatorToMove(draftState))
-          applyPuzzleMove(draftState, clientParams.puzzle!);
+        if (getPuzzle(puzzleId)!.playAsCreator !== creatorToMove(draftState))
+          applyPuzzleMove(draftState, getPuzzle(puzzleId)!);
       });
     }
   });
@@ -802,9 +774,9 @@ export default function GamePage({
   useEffect(() => {
     if (
       state.clientRole === RoleEnum.spectator ||
-      clientParams.clientRole === RoleEnum.offline ||
-      clientParams.clientRole === RoleEnum.computer ||
-      clientParams.clientRole === RoleEnum.puzzle
+      isLocalMode ||
+      isComputerMode ||
+      isPuzzleMode
     )
       return;
     if (state.finishReason === "goal") {
@@ -814,11 +786,13 @@ export default function GamePage({
       socket.emit("playerWonOnTime", { winner: state.winner });
     }
   }, [
-    socket,
     state.clientRole,
     state.winner,
     clientParams.clientRole,
     state.finishReason,
+    isPuzzleMode,
+    isComputerMode,
+    isLocalMode,
   ]);
 
   const handleBoardClick = (clickedPos: Pos) => handleSelectedCell(clickedPos);
@@ -864,7 +838,7 @@ export default function GamePage({
       return;
     }
     // Normal case: use arrow keys to move the player token.
-    if (clientParams.clientRole === RoleEnum.puzzle) {
+    if (isPuzzleMode) {
       // Disable moving with arrow keys in puzzle mode because for some reason it
       // does not check if the moves are correct.
       return;
@@ -1039,12 +1013,13 @@ export default function GamePage({
 
   return (
     <div>
+      <ToastContainer />
       <Header
         context={
           state.clientRole === RoleEnum.spectator ? "spectator" : "player"
         }
         joinCode={state.joinCode!}
-        helpText={clientParams.clientRole === "puzzle" ? puzzleHelp : gameHelp}
+        helpText={isPuzzleMode ? puzzleHelp : gameHelp}
         handleLeaveGame={handleLeaveGame}
         isLargeScreen={isLargeScreen}
         menuTheme={menuTheme}
@@ -1078,7 +1053,7 @@ export default function GamePage({
           scores={state.matchScore}
           arePlayersPresent={state.arePlayersPresent}
           menuTheme={menuTheme}
-          boardTheme={boardTheme}
+          boardTheme={clientParams.boardTheme}
           isDarkModeOn={isDarkModeOn}
         />
         <StatusHeader
@@ -1106,7 +1081,7 @@ export default function GamePage({
           groundSize={newScaledGroundSize}
           wallWidth={newScaledWallWidth}
           menuTheme={menuTheme}
-          boardTheme={boardTheme}
+          boardTheme={clientParams.boardTheme}
           isDarkModeOn={isDarkModeOn}
           tokens={state.tokens}
         />
@@ -1130,7 +1105,7 @@ export default function GamePage({
           isVolumeOn={state.isVolumeOn}
           handleLeaveGame={handleLeaveGame}
           menuTheme={menuTheme}
-          boardTheme={boardTheme}
+          boardTheme={clientParams.boardTheme}
           isDarkModeOn={isDarkModeOn}
           handleIncreaseBoardSize={handleIncreaseBoardSize}
           handleDecreaseBoardSize={handleDecreaseBoardSize}
@@ -1141,7 +1116,7 @@ export default function GamePage({
       </div>
       {state.lifeCycleStage === 4 &&
         state.clientRole !== RoleEnum.spectator &&
-        clientParams.clientRole !== RoleEnum.puzzle && (
+        !isPuzzleMode && (
           <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
             <Col className="center" s={12}>
               <TextButton

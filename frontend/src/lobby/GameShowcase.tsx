@@ -11,6 +11,7 @@ import {
 } from "../shared/gameLogicUtils";
 import { ServerGame } from "../game/gameState";
 import { BoardThemeName, MenuThemeName } from "../shared/colorThemes";
+import socket from "../socket";
 
 type GameShowcaseState = {
   needToRequestGame: boolean;
@@ -24,14 +25,12 @@ type GameShowcaseState = {
 };
 
 export default function GameShowcase({
-  socket,
   isLargeScreen,
   menuTheme,
   boardTheme,
   isDarkModeOn,
   handleViewGame,
 }: {
-  socket: any;
   isLargeScreen: boolean;
   menuTheme: MenuThemeName;
   boardTheme: BoardThemeName;
@@ -117,7 +116,7 @@ export default function GameShowcase({
     return () => {
       socket.off("requestedRandomGame");
     };
-  }, [socket, updateState, state.needToRequestGame]);
+  }, [updateState, state.needToRequestGame]);
 
   const groundSize = isLargeScreen
     ? cellSizes.groundSize
