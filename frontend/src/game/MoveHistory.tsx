@@ -1,4 +1,4 @@
-import { Table } from "react-materialize";
+// @ts-nocheck (necessary because of a problem with the table tags)
 import { useMediaQuery } from "react-responsive";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import showToastNotification from "../shared/showToastNotification";
@@ -12,16 +12,26 @@ import { ThemeName, getColor } from "../shared/colorThemes";
 import css from "../shared/hoverHighlight.module.css";
 
 const tdStyle = {
+  textAlign: "center",
   paddingTop: "0.15rem",
   paddingBottom: "0.15rem",
   borderRadius: "0",
 };
-
 const tdStyleMonospace = {
+  textAlign: "center",
   paddingTop: "0.15rem",
   paddingBottom: "0.15rem",
   borderRadius: "0",
   fontFamily: "monospace, monospace",
+};
+const headEntryStyle = {
+  textAlign: "center",
+  position: "sticky",
+  top: "0px",
+  paddingTop: "0.15rem",
+  paddingBottom: "0.15rem",
+  borderRadius: "0",
+  backgroundColor: colBg,
 };
 
 export default function MoveHistoryTable({
@@ -50,14 +60,6 @@ export default function MoveHistoryTable({
     getColor(menuTheme, "container", isDarkModeOn),
     getColor(boardTheme, "currentMove", isDarkModeOn),
   ];
-  const headEntryStyle = {
-    position: "sticky",
-    top: "0px",
-    paddingTop: "0.15rem",
-    paddingBottom: "0.15rem",
-    borderRadius: "0",
-    backgroundColor: colBg,
-  };
 
   return (
     <div
@@ -73,12 +75,10 @@ export default function MoveHistoryTable({
         userSelect: "none",
       }}
     >
-      <Table centered style={{ width: "100%" }}>
+      <table style={{ width: "100%" }}>
         <thead>
           <tr>
-            {/*@ts-ignore*/}
             <th style={headEntryStyle}>#</th>
-            {/*@ts-ignore*/}
             <th style={headEntryStyle}>
               <CopyToClipboard //@ts-ignore
                 style={{ cursor: "pointer" }}
@@ -90,9 +90,7 @@ export default function MoveHistoryTable({
                 <span>Moves</span>
               </CopyToClipboard>
             </th>
-            {/*@ts-ignore*/}
             <th style={headEntryStyle}>Distance</th>
-            {/*@ts-ignore*/}
             <th style={headEntryStyle}># Walls</th>
           </tr>
         </thead>
@@ -129,7 +127,7 @@ export default function MoveHistoryTable({
             );
           })}
         </tbody>
-      </Table>
+      </table>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 // @ts-nocheck (necessary because of a problem with the <tr> tag)
 import { useEffect } from "react";
 import { useImmer } from "use-immer";
-import { Table } from "react-materialize";
 import { getColor, MenuThemeName } from "../shared/colorThemes";
 import css from "../shared/hoverHighlight.module.css";
 import { puzzles } from "../game/puzzles";
@@ -52,6 +51,7 @@ export default function PuzzleList({
     getColor(menuTheme, "container", isDarkModeOn),
   ];
   const headEntryStyle = {
+    textAlign: "center",
     position: "sticky",
     top: "0px",
     paddingTop: "0.15rem",
@@ -60,6 +60,7 @@ export default function PuzzleList({
     backgroundColor: colBg,
   };
   const entryStyle = {
+    textAlign: "center",
     paddingTop: "0.15rem",
     paddingBottom: "0.15rem",
     borderRadius: "0",
@@ -79,7 +80,7 @@ export default function PuzzleList({
         ),
       }}
     >
-      <Table centered style={{ width: "100%" }}>
+      <table style={{ width: "100%" }}>
         <thead>
           <tr>
             <th style={headEntryStyle}>Puzzle</th>
@@ -110,7 +111,7 @@ export default function PuzzleList({
             );
           })}
         </tbody>
-      </Table>
+      </table>
     </div>
   );
 }
