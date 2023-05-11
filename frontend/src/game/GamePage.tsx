@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Row, Col } from "react-materialize";
 import { useImmer } from "use-immer";
 import UIfx from "uifx";
 import moveSoundAudio from "./../static/moveSound.mp3";
@@ -1103,19 +1102,24 @@ export default function GamePage({
       {state.lifeCycleStage === 4 &&
         state.clientRole !== RoleEnum.spectator &&
         !isPuzzleMode && (
-          <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
-            <Col className="center" s={12}>
-              <TextButton
-                text="Rematch"
-                tooltip="Ask the other player for a rematch"
-                menuTheme={menuTheme}
-                isDarkModeOn={isDarkModeOn}
-                disabled={!isOpponentPresent(state)}
-                isImportant={true}
-                onClick={handleRematchButton}
-              />
-            </Col>
-          </Row>
+          <div
+            style={{
+              marginTop: "1rem",
+              marginBottom: "2rem",
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <TextButton
+              text="Rematch"
+              tooltip="Ask the other player for a rematch"
+              menuTheme={menuTheme}
+              isDarkModeOn={isDarkModeOn}
+              disabled={!isOpponentPresent(state)}
+              isImportant={true}
+              onClick={handleRematchButton}
+            />
+          </div>
         )}
       <div style={{ height: "100%" }}></div>
       <BooleanDialog

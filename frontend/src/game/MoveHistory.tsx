@@ -24,15 +24,6 @@ const tdStyleMonospace = {
   borderRadius: "0",
   fontFamily: "monospace, monospace",
 };
-const headEntryStyle = {
-  textAlign: "center",
-  position: "sticky",
-  top: "0px",
-  paddingTop: "0.15rem",
-  paddingBottom: "0.15rem",
-  borderRadius: "0",
-  backgroundColor: colBg,
-};
 
 export default function MoveHistoryTable({
   moveHistory,
@@ -60,6 +51,15 @@ export default function MoveHistoryTable({
     getColor(menuTheme, "container", isDarkModeOn),
     getColor(boardTheme, "currentMove", isDarkModeOn),
   ];
+  const headEntryStyle = {
+    textAlign: "center",
+    position: "sticky",
+    top: "0px",
+    paddingTop: "0.15rem",
+    paddingBottom: "0.15rem",
+    borderRadius: "0",
+    backgroundColor: colBg,
+  };
 
   return (
     <div
