@@ -65,7 +65,6 @@ import {
 import { AppState } from "../App";
 import { TextButton } from "../shared/Buttons";
 import socket from "../socket";
-import { checkIsLoggedIn } from "../shared/utils";
 
 const moveSound = new UIfx(moveSoundAudio);
 function playMoveSound() {
@@ -74,6 +73,7 @@ function playMoveSound() {
 
 export default function GamePage({
   clientParams,
+  isLoggedIn,
   isLargeScreen,
   handleReturnToLobby,
   handleToggleDarkMode,
@@ -81,6 +81,7 @@ export default function GamePage({
   wasmAIGetMove,
 }: {
   clientParams: AppState;
+  isLoggedIn: boolean;
   isLargeScreen: boolean;
   handleReturnToLobby: () => void;
   handleToggleDarkMode: () => void;
@@ -216,6 +217,8 @@ export default function GamePage({
           draftState.arePlayersPresent[1] = true;
           draftState.waitingForPing = 0;
         });
+        if (state.names[0] === "Guest" || state.names[1] === "Guest")
+          showToastNotification("Games with guests will not affect ELO.");
       }
     );
 
@@ -1024,11 +1027,11 @@ export default function GamePage({
         isLargeScreen={isLargeScreen}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
-        username={clientParams.playerName}
+        playerName={clientParams.playerName}
         handleToggleDarkMode={handleToggleDarkMode}
         handleToggleTheme={handleToggleTheme}
         hasOngoingGame={true}
-        isLoggedIn={checkIsLoggedIn(clientParams.idToken)}
+        isLoggedIn={isLoggedIn}
       />
       <div
         style={{

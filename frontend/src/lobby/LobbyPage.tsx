@@ -37,11 +37,12 @@ function initialLobbyState(tc: TimeControl): LobbyState {
 
 export default function LobbyPage({
   appState,
+  isLoggedIn,
   isLargeScreen,
   handleToggleTheme,
   handleToggleDarkMode,
   handlePlayerName,
-  handleEloId,
+  handleIdToken,
   handleToken,
   handleIsPrivate,
   handleNumRows,
@@ -59,11 +60,12 @@ export default function LobbyPage({
   handleHasOngoingGameInServer,
 }: {
   appState: AppState;
+  isLoggedIn: boolean;
   isLargeScreen: boolean;
   handleToggleTheme: () => void;
   handleToggleDarkMode: () => void;
   handlePlayerName: (name: string) => void;
-  handleEloId: (eloId: string) => void;
+  handleIdToken: (idToken: string) => void;
   handleToken: (token: string) => void;
   handleIsPrivate: (isPrivate: boolean) => void;
   handleNumRows: (nr: number) => void;
@@ -99,187 +101,8 @@ export default function LobbyPage({
     });
   };
 
-const handleRefreshName = () => {
-handlePlayerName(randPlayerName(30));
-}
-
-  const handleStartPos = ({ player, coord, val }: PosSetting) => {
-    updateState((draftState) => {
-      draftState.boardSettings.startPos[player][coord] = val;
-    });
-  };
-  const handleGoalPos = ({ player, coord, val }: PosSetting) => {
-    updateState((draftState) => {
-      draftState.boardSettings.goalPos[player][coord] = val;
-    });
-  };
-  const handleJoinCode = (code: string) => {
-    updateState((draftState) => {
-      draftState.joinCode = code;
-    });
-  };
-  const handleCreateGame = () => {
-    const dur = validateDuration();
-    const inc = validateIncrement();
-    const bs = validateBoardSettings();
-    const name = validateName();
-    updateState((draftState) => {
-      draftState.clientRole = RoleEnum.creator;
-      // Duration and increment are converted from string to number here.
-      draftState.timeControl.duration = dur;
-      draftState.timeControl.increment = inc;
-      draftState.boardSettings = bs;
-      draftState.playerName = name;
-      if (state.idToken === "") draftState.idToken = socket.id;
-      draftState.hasOngoingGame = false;
-      draftState.isGamePageOpen = true;
-    });
-  };
-  const handleJoinGame = () => {
-    const name = validateName();
-    updateState((draftState) => {
-      draftState.clientRole = RoleEnum.joiner;
-      draftState.playerName = name;
-      if (state.idToken === "") draftState.idToken = socket.id;
-      draftState.hasOngoingGame = false;
-      draftState.isGamePageOpen = true;
-    });
-  };
-  const handleAcceptChallenge = (joinCode: string) => {
-    const name = validateName();
-    updateState((draftState) => {
-      draftState.joinCode = joinCode;
-      draftState.clientRole = RoleEnum.joiner;
-      draftState.playerName = name;
-      if (state.idToken === "") draftState.idToken = socket.id;
-      draftState.hasOngoingGame = false;
-      draftState.isGamePageOpen = true;
-    });
-  };
-  const handleReturnToGame = () => {
-    updateState((draftState) => {
-      draftState.clientRole = RoleEnum.returner;
-      draftState.hasOngoingGame = false;
-      draftState.isGamePageOpen = true;
-    });
-  };
-  const handleViewGame = (watchGameId: string) => {
-    updateState((draftState) => {
-      draftState.clientRole = RoleEnum.spectator;
-      draftState.watchGameId = watchGameId;
-      draftState.hasOngoingGame = false;
-      draftState.isGamePageOpen = true;
-    });
-  };
-  const handleReturnToLobby = () => {
-    updateState((draftState) => {
-      draftState.hasOngoingGame = false;
-      draftState.isGamePageOpen = false;
-      draftState.clientRole = RoleEnum.none;
-      draftState.joinCode = "";
-    });
-  };
-
-  const handleLocalGame = () => {
-    const dur = validateDuration();
-    const inc = validateIncrement();
-    const bs = validateBoardSettings();
-    const name = validateName();
-    updateState((draftState) => {
-      draftState.clientRole = RoleEnum.offline;
-      // Duration and increment are converted from string to number here.
-      draftState.timeControl.duration = dur;
-      draftState.timeControl.increment = inc;
-      draftState.boardSettings = bs;
-      draftState.playerName = name;
-      if (state.idToken === "") draftState.idToken = socket.id;
-      draftState.hasOngoingGame = false;
-      draftState.isGamePageOpen = true;
-    });
-  };
-  const handleComputerGame = () => {
-    const name = validateName();
-    updateState((draftState) => {
-      draftState.clientRole = RoleEnum.computer;
-      // Overwrite dimensions for computer game (can only be 7x7).
-      const board_dim = 7;
-      const internal_dim = board_dim * 2 - 1;
-      draftState.boardSettings = {
-        dims: [internal_dim, internal_dim],
-        startPos: defaultInitialPlayerPos([internal_dim, internal_dim]),
-        goalPos: defaultGoalPos([internal_dim, internal_dim]),
-      };
-      draftState.playerName = name;
-      if (state.idToken === "") draftState.idToken = socket.id;
-      draftState.hasOngoingGame = false;
-      draftState.isGamePageOpen = true;
-    });
-  };
-  const handleSolvePuzzle = (puzzle: Puzzle) => {
-    const name = validateName();
-    updateState((draftState) => {
-      draftState.clientRole = RoleEnum.puzzle;
-      draftState.playerName = name;
-      if (state.idToken === "") draftState.idToken = socket.id;
-      draftState.hasOngoingGame = false;
-      draftState.isGamePageOpen = true;
-      draftState.puzzle = puzzle;
-    });
-  };
-
-  const validateName = () => {
-    let name = state.playerName;
-    if (name === "") name = "Anon";
-    else setCookie("playerName", name, { path: "/" });
-    return name;
-  };
-  const validateDuration = () => {
-    let dur = parseFloat(`${state.timeControl.duration}`);
-    if (isNaN(dur)) {
-      dur = 5;
-      showToastNotification("Invalid duration, using 5m instead", 5000);
-    } else if (dur < 0.1) {
-      dur = 5 / 60;
-      showToastNotification("Duration too short, using 5s instead", 5000);
-    } else if (dur > 120) {
-      dur = 120;
-      showToastNotification("Duration too long, using 2h instead", 5000);
-    } else {
-      setCookie("duration", dur, { path: "/" });
-    }
-    return dur;
-  };
-  const validateIncrement = () => {
-    let inc = parseFloat(`${state.timeControl.increment}`);
-    if (isNaN(inc) || inc < 0) {
-      inc = 0;
-      showToastNotification("Invalid increment, using 0s instead", 5000);
-    } else if (inc > 300) {
-      inc = 300;
-      showToastNotification("Increment too large, using 5m instead", 5000);
-    } else {
-      setCookie("increment", inc, { path: "/" });
-    }
-    return inc;
-  };
-  const validateBoardSettings = () => {
-    const bs = state.boardSettings;
-    const dists = emptyBoardDistances(bs);
-    if (dists[0] <= 2 || dists[1] <= 2) {
-      showToastNotification(
-        "The goal is too close to the player, using default board instead",
-        5000
-      );
-      return defaultBoardSettings;
-    } else {
-      setCookie("numRows", state.boardSettings.dims[0], {
-        path: "/",
-      });
-      setCookie("numCols", state.boardSettings.dims[1], {
-        path: "/",
-      });
-      return bs;
-    }
+  const handleRefreshName = () => {
+    handlePlayerName(randPlayerName(30));
   };
 
   // Determine if the "Return To Game" button needs to be shown.
@@ -410,6 +233,9 @@ handlePlayerName(randPlayerName(30));
           aboutText={aboutText}
           handleToggleDarkMode={handleToggleDarkMode}
           handleToggleTheme={handleToggleTheme}
+          hasOngoingGame={appState.hasOngoingGame}
+          isLoggedIn={isLoggedIn}
+          playerName={appState.playerName}
         />
         <LobbyForm
           // @ts-ignore
@@ -433,7 +259,7 @@ handlePlayerName(randPlayerName(30));
           handleComputerGame={handleComputerGame}
           handleRefreshName={handleRefreshName}
           handleToken={handleToken}
-          handleEloId={handleEloId}
+          handleIdToken={handleIdToken}
         />
         {appState.hasOngoingGame && ( // todo: do we need to check here if the eloId matches?
           <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
@@ -504,7 +330,7 @@ handlePlayerName(randPlayerName(30));
           }}
         >
           <PuzzleList
-            eloId={appState.eloId}
+            idToken={appState.idToken}
             menuTheme={appState.menuTheme}
             isDarkModeOn={appState.isDarkModeOn}
             handleSolvePuzzle={handleSolvePuzzle}

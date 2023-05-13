@@ -29,6 +29,7 @@ import {
 } from "./src/gameState";
 import M from "./src/messageList";
 import { auth } from "express-openid-connect";
+import { isGuest } from "./src/utils";
 
 ////////////////////////////////////
 // Boilerplate server setup.
@@ -39,13 +40,14 @@ const app = express();
 app.use(cors);
 app.use(index);
 
+// https://auth0.com/docs/quickstart/webapp/express/01-login#5-configure-router
 const authConfig = {
-  authRequired: false,
-  auth0Logout: true,
-  secret: process.env.AUTH0_SECRET,
-  baseURL: process.env.AUTH0_BASE_URL,
-  clientID: process.env.AUTH0_CLIENT_ID,
-  issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
+  authRequired: false, // whether authentication not required for all routes
+  auth0Logout: true, // allows use of built in log out Auth0 feature https://auth0.com/docs/authenticate/login/logout
+  secret: process.env.AUTH0_SECRET, // base64 random long string
+  baseURL: process.env.AUTH0_BASE_URL, // url where app is served
+  clientID: process.env.AUTH0_CLIENT_ID, // similar to api key
+  issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL, // secure domain acting as client i.e. https://wallwars.net
 };
 app.use(auth(authConfig));
 app.get("/wallwars/", (req, res) => {
@@ -68,7 +70,7 @@ const GM = new GameManager();
 const ChallengeBC = new ChallengeBroadcast();
 
 io.on(M.connectionMsg, function (socket: any): void {
-  let clientIdToken: string | null = null; // for pseudo-global idToken access
+  let clientIdToken: string = socket.id;
 
   ////////////////////////////////////
   // New connection start-up.
@@ -108,7 +110,8 @@ io.on(M.connectionMsg, function (socket: any): void {
         emitMessage(M.invalidIdTokenErrorMsg);
         return;
       }
-      clientIdToken = idToken;
+      if (idToken) clientIdToken = idToken;
+
       const ongoingGame = GM.getOngoingGameByIdToken(clientIdToken);
       if (ongoingGame) await dealWithLingeringGame(ongoingGame);
       GM.removeGamesByIdToken(clientIdToken); // Ensure there's no other game for this client.
@@ -168,7 +171,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         return;
       }
       GM.removeGamesByIdToken(idToken); // Ensure there's no other game for this client.
-      clientIdToken = idToken;
+      if (idToken) clientIdToken = idToken;
       const joinerPlayer = await db.getPlayer(clientIdToken);
       const joinerRating = joinerPlayer
         ? joinerPlayer.rating
@@ -182,7 +185,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         socketId: socket.id,
         name,
         token,
-        idToken,
+        idToken: clientIdToken,
         rating: joinerRating,
       });
       GM.moveGameFromUnjoinedToOngoing(joinCode);
@@ -202,6 +205,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         joinerRating: joinerRating,
       });
       if (game.isPublic) {
+        // removes game from list of open challenges when player joins
         ChallengeBC.notifyDeadChallenge(game.joinCode);
       }
     }
@@ -275,16 +279,10 @@ io.on(M.connectionMsg, function (socket: any): void {
       return;
     }
     const [creatorPlayer, joinerPlayer] = await getPlayersFromDB(game);
-    if (creatorPlayer && joinerPlayer) {
-      const newRatings: [number, number] = [
-        creatorPlayer.rating,
-        joinerPlayer.rating,
-      ];
-      setupRematch(game, newRatings);
-    } else {
-      // Game has guest(s)
-      setupRematch(game, [0, 0]);
-    }
+    let newRatings: [number, number] = [0, 0];
+    if (creatorPlayer) newRatings[0] = creatorPlayer.rating;
+    if (joinerPlayer) newRatings[1] = joinerPlayer.rating;
+    setupRematch(game, newRatings);
 
     emitMessageOpponent(M.rematchAcceptedMsg);
   });
@@ -523,10 +521,10 @@ io.on(M.connectionMsg, function (socket: any): void {
     M.getSolvedPuzzlesMsg,
     async function ({ idToken }: { idToken: string }): Promise<void> {
       logReceivedMessage(M.getSolvedPuzzlesMsg, { idToken });
-      const Player = await db.getPlayer(idToken);
-      if (Player) {
+      const player = await db.getPlayer(idToken);
+      if (player) {
         emitMessage(M.requestedSolvedPuzzlesMsg, {
-          solvedPuzzles: Player.solvedPuzzles,
+          solvedPuzzles: player.solvedPuzzles,
         });
       } else emitMessage(M.solvedPuzzlesNotFoundMsg);
     }
@@ -582,7 +580,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         emitMessage(M.ongoingGameNotFoundMsg);
         return;
       }
-      clientIdToken = idToken;
+      if (idToken) clientIdToken = idToken;
       const game = GM.getOngoingGameByIdToken(clientIdToken);
       if (!game) {
         emitMessage(M.ongoingGameNotFoundMsg);
@@ -681,10 +679,10 @@ io.on(M.connectionMsg, function (socket: any): void {
   async function storeGameAndNotifyRatings(game: GameState): Promise<void> {
     if (!clientIdToken) return;
 
-    const oldRatings = game.ratings;
     await db.storeGame(game);
     const [creatorPlayer, joinerPlayer] = await getPlayersFromDB(game);
     if (!creatorPlayer || !joinerPlayer) return;
+    const oldRatings = game.ratings;
 
     const newRatings = [creatorPlayer.rating, joinerPlayer.rating];
     const clientIdx = clientIndex(game, clientIdToken);

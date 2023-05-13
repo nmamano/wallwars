@@ -1,6 +1,7 @@
 import fs from "fs";
 import util from "util";
 import { GameState } from "./gameState";
+import { auth0Prefix } from "./utils";
 
 //middleware for logging incoming and outgoing messages
 //format: hh:mm:ss ss|ccc|J -> #SERVER#: m [gg] {p}
@@ -48,7 +49,9 @@ export function logMessage({
   messageTitle: string;
   messageParams: any;
 }) {
-  let shortIdToken = idToken ? idToken.substring(6, 9) : ""; // starts at index 6 to not include "Auth0|"
+  let shortIdToken = idToken
+    ? idToken.substring(auth0Prefix.length, auth0Prefix.length + 3)
+    : "";
   const shortSocketId = socketId.substring(0, 2);
   let client = shortSocketId + "," + shortIdToken;
   const date = new Date();

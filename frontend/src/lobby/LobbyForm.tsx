@@ -392,39 +392,6 @@ export default function LobbyForm({
                 fontSize: "20px",
               }}
             >
-              ELO id:
-            </span>
-            {horizontalSep}
-            <TextInputField
-              label=""
-              id="eloIdInput"
-              value={appState.eloId}
-              onChange={handleEloId}
-            />
-            {horizontalSep}
-            <IconButtonWithInfoModal
-              icon="info"
-              tooltip="About ELO ids"
-              menuTheme={menuTheme}
-              isDarkModeOn={isDarkModeOn}
-              circular={true}
-              modalTitle="About ELO ids"
-              modalBody={eloIdAboutText}
-            />
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              paddingTop: "20px",
-            }}
-          >
-            {horizontalSep}
-            <span
-              style={{
-                fontSize: "20px",
-              }}
-            >
               Private game:
             </span>
             {horizontalSep}

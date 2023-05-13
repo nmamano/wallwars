@@ -184,7 +184,6 @@ export function addJoiner({
   game.arePlayersPresent[1] = true;
   game.ratings[1] = rating;
 }
-
 export function setupRematch(
   game: GameState,
   newRatings: [number, number]

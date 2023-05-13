@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 import { updateRating, initialRating } from "./rating";
 import { GameState } from "./gameState";
-import { isGuest } from "./util";
+import { isGuest } from "./utils";
 
 const url = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.vt6ui.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 var connectedToDB = false;
@@ -208,7 +208,7 @@ export async function storeGame(game: GameState): Promise<void> {
       await updatePlayers(game);
       console.log(`Updated  players`);
     } catch (err) {
-      console.error("Updating  players failed");
+      console.error("Updating players failed");
       console.log(err);
     }
   } catch (err) {
@@ -217,7 +217,7 @@ export async function storeGame(game: GameState): Promise<void> {
   }
 }
 
-// Gets game from db and removes ELO ids before returning it.
+// Gets game from db and removes id tokens before returning it.
 export async function getGame(
   id: string
 ): Promise<dbFinishedGameWithoutIdTokens | null> {
@@ -394,67 +394,81 @@ function updatePlayer(
 // updates both players of a game in the database. If a player is not yet
 // in the database, a new one is created
 async function updatePlayers(game: GameState): Promise<void> {
-  if (!connectedToDB || isGuest(game.idTokens[0]) || isGuest(game.idTokens[1]))
-    return;
+  if (!connectedToDB) return;
   if (!game.idTokens[0] || !game.idTokens[1]) {
     console.error("cannot update players because game.idTokens are not set");
     return;
   }
+  const p1IdToken = game.idTokens[0];
+  const p2IdToken = game.idTokens[1];
+  const p1IsGuest = isGuest(p1IdToken);
+  const p2IsGuest = isGuest(p2IdToken);
+  if (p1IsGuest && p2IsGuest) return;
+  // TELL: checking if both players are guests would still take place at the DB level. If one player not a guest, flag alone can't say which. Even when not updating Elo, still need to pass elo to updatePlayer() which means need current elo of each player
 
   // Read the two players from db, or create new ones if not found
-  let p1 = await Player.findOne({
-    idToken: game.idTokens[0],
-  });
-  if (!p1) {
-    console.log("creating new player for creator");
-    p1 = new Player(createNewPlayer(game.idTokens[0]));
+  let p1 = new Player(createNewPlayer(p1IdToken));
+  if (!p1IsGuest) {
+    const foundExistingPlayer = await Player.findOne({
+      idToken: p1IdToken,
+    });
+    if (foundExistingPlayer) p1 = foundExistingPlayer;
   }
-  let p2 = await Player.findOne({
-    idToken: game.idTokens[1],
-  });
-  if (!p2) {
-    console.log("creating new Player for joiner");
-    p2 = new Player(createNewPlayer(game.idTokens[1]));
+  let p2 = new Player(createNewPlayer(p2IdToken));
+  if (!p2IsGuest) {
+    const foundExistingPlayer = await Player.findOne({
+      idToken: p2IdToken,
+    });
+    if (foundExistingPlayer) p2 = foundExistingPlayer;
   }
 
-  // Update the fields based on the result of the game
-  let scores;
-  if (game.winner === "draw") scores = [0.5, 0.5];
-  else if (game.winner === "creator") scores = [1, 0];
-  else scores = [0, 1];
-  const p1RatingTuple = {
+  let p1RatingTuple = {
     rating: p1.rating,
     deviation: p1.ratingDeviation,
     volatility: p1.ratingVolatility,
   };
-  const p2RatingTuple = {
+  let p2RatingTuple = {
     rating: p2.rating,
     deviation: p2.ratingDeviation,
     volatility: p2.ratingVolatility,
   };
-  const p1NewRating = updateRating(p1RatingTuple, p2RatingTuple, scores[0]);
-  const p2NewRating = updateRating(p2RatingTuple, p1RatingTuple, scores[1]);
-  updatePlayer(p1, game, scores[0], p1NewRating);
-  updatePlayer(p2, game, scores[1], p2NewRating);
 
-  // Store the players with the updated fields
-  try {
-    await p1.save();
-    console.log(
-      `Stored player in DB ${process.env.DB_NAME}: name ${p1.name} idToken ${p1.idToken} freshness: ${p1.lastGameDate}`
-    );
-  } catch (err) {
-    console.error(`Store player to DB ${process.env.DB_NAME} failed`);
-    console.log(err);
+  let scores;
+  if (game.winner === "draw") scores = [0.5, 0.5];
+  else if (game.winner === "creator") scores = [1, 0];
+  else scores = [0, 1]; // only updates elo if both players not guests
+  if (!p1IsGuest && !p2IsGuest) {
+    // update elo
+    p1RatingTuple = updateRating(p1RatingTuple, p2RatingTuple, scores[0]);
+    p2RatingTuple = updateRating(p2RatingTuple, p1RatingTuple, scores[1]);
   }
-  try {
-    await p2.save();
-    console.log(
-      `Stored player in DB ${process.env.DB_NAME}: name ${p2.name} idToken ${p2.idToken} freshness: ${p2.lastGameDate}`
-    );
-  } catch (err) {
-    console.error(`Store player to DB ${process.env.DB_NAME} failed`);
-    console.log(err);
+
+  // Update the fields based on the result of the game
+  updatePlayer(p1, game, scores[0], p1RatingTuple);
+  updatePlayer(p2, game, scores[1], p2RatingTuple);
+
+  if (!isGuest(p1IdToken)) {
+    try {
+      // Store the players with the updated fields
+      await p1.save();
+      console.log(
+        `Stored player in DB ${process.env.DB_NAME}: name ${p1.name} idToken ${p1.idToken} freshness: ${p1.lastGameDate}`
+      );
+    } catch (err) {
+      console.error(`Store player to DB ${process.env.DB_NAME} failed`);
+      console.log(err);
+    }
+  }
+  if (!isGuest(p2IdToken)) {
+    try {
+      await p2.save();
+      console.log(
+        `Stored player in DB ${process.env.DB_NAME}: name ${p2.name} idToken ${p2.idToken} freshness: ${p2.lastGameDate}`
+      );
+    } catch (err) {
+      console.error(`Store player to DB ${process.env.DB_NAME} failed`);
+      console.log(err);
+    }
   }
 }
 

@@ -24,7 +24,7 @@ function Header({
   isDarkModeOn,
   hasOngoingGame,
   isLoggedIn,
-  username,
+  playerName,
   handleToggleDarkMode,
   handleToggleTheme,
   handleIdToken,
@@ -39,7 +39,7 @@ function Header({
   isDarkModeOn: boolean;
   hasOngoingGame: boolean;
   isLoggedIn: boolean;
-  username: string;
+  playerName: string;
   handleToggleDarkMode: () => void;
   handleToggleTheme: () => void;
   handleIdToken?: (idToken: string) => void; // undefined when authbutton not shown (on game page)
@@ -84,7 +84,7 @@ function Header({
   const buttonCol = getColor(menuTheme, "headerButton", isDarkModeOn);
   let buttonColCount = isLargeScreen ? 5 : 4;
   const allowToggleLogin =
-    context === contextEnum.lobby && (!hasOngoingGame || isLoggedIn); // should be able to log out midgame?
+    context === contextEnum.lobby && (!hasOngoingGame || isLoggedIn);
   if (!allowToggleLogin) buttonColCount--;
   return (
     <div>
@@ -174,7 +174,7 @@ function Header({
               />
             )}
           </div>
-          <UsernameIcon>{username}</UsernameIcon>
+          <UsernameIcon>{playerName}</UsernameIcon>
         </div>
       </div>
     </div>

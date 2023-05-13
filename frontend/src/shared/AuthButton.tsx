@@ -2,6 +2,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { IconStr } from "./Buttons";
 import { IconButtonWithTooltip } from "./Buttons";
 import { useState } from "react";
+import { auth0Prefix } from "./utils";
 
 const setLoggedIn = (): [IconStr, string] => {
   const icon = "account_circle";
@@ -47,7 +48,7 @@ const AuthButton = ({
       onClick={() => /*loginWithRedirect()*/ {
         // for testing purposes
         if (!loggedIn) {
-          const testToken = `Auth0|${Math.random().toString()}`;
+          const testToken = auth0Prefix + Math.random().toString();
           handleIdToken(testToken);
           setLoggedIn(true);
         } else {

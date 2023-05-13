@@ -40,11 +40,11 @@ export class GameManager {
     return null;
   }
 
-  getOpponentSocketId(IdToken: string | null): string | null {
-    const game = this.ongoingGameOfClient(IdToken);
+  getOpponentSocketId(idToken: string | null): string | null {
+    const game = this.ongoingGameOfClient(idToken);
     if (!game) return null;
     const [socketId1, socketId2] = game.socketIds;
-    return IdToken === game.idTokens[0] ? socketId2 : socketId1;
+    return idToken === game.idTokens[0] ? socketId2 : socketId1;
   }
 
   getOpponentIdToken(idToken: string | null): string | null {

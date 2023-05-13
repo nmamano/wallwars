@@ -4,7 +4,7 @@ import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { MenuThemeName, BoardThemeName, getColor } from "./shared/colorThemes";
 import { RoleEnum, ServerGame } from "./game/gameState";
 import GamePage from "./game/GamePage";
-import { randPlayerName, randEloId, parseFloatOrUndef } from "./shared/utils";
+import { randPlayerName, parseFloatOrUndef, auth0Prefix } from "./shared/utils";
 import LobbyPage from "./lobby/LobbyPage";
 import { useMediaQuery } from "react-responsive";
 import { useImmer } from "use-immer";
@@ -25,8 +25,6 @@ import {
 } from "./shared/gameLogicUtils";
 import ErrorPage from "./shared/ErrorPage";
 
-const minEloIdLen = 4;
-const maxEloIdLen = 16;
 const maxPlayerNameLen = 9;
 
 export type Cookies = {
@@ -138,7 +136,6 @@ export default function App() {
     "increment",
     "numRows",
     "numCols",
-    "eloId",
     "isPrivate",
   ]);
 
@@ -175,11 +172,11 @@ export default function App() {
     // The name is not saved in a cookie until a game is started.
   };
 
-  const handleEloId = (eloId: string) => {
+  const handleIdToken = (idToken: string) => {
     updateState((draftState) => {
-      draftState.eloId = eloId.slice(0, maxEloIdLen);
+      draftState.idToken = idToken;
     });
-    // The eloId is not saved in a cookie until a game is started.
+    // idToken not saved until player plays their first game
   };
 
   const handleToken = (icon: string) => {
@@ -274,8 +271,6 @@ export default function App() {
     setCookie("numCols", bs.dims[1], { path: "/" });
     const name = validateOrFixPlayerName(state.playerName);
     setCookie("playerName", name, { path: "/" });
-    const eloId = validateOrFixEloId(state.eloId);
-    setCookie("eloId", eloId, { path: "/" });
 
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.creator;
@@ -283,7 +278,6 @@ export default function App() {
       draftState.timeControl.increment = inc;
       draftState.boardSettings = bs;
       draftState.playerName = name;
-      draftState.eloId = eloId;
       draftState.hasOngoingGame = false;
     });
     socket.emit("createGame", {
@@ -291,7 +285,7 @@ export default function App() {
       token: state.token,
       timeControl: state.timeControl,
       boardSettings: state.boardSettings,
-      eloId: state.eloId,
+      idToken: state.idToken,
       isPublic: !state.isPrivate,
     });
   };
@@ -308,6 +302,7 @@ export default function App() {
         creatorStarts: boolean;
         rating: number;
       }) => {
+        console.log("recieved creator starts", creatorStarts);
         updateState((draftState) => {
           draftState.joinCode = joinCode;
           draftState.creatorStarts = creatorStarts;
@@ -341,12 +336,9 @@ export default function App() {
   const handleJoinGame = () => {
     const name = validateOrFixPlayerName(state.playerName);
     setCookie("playerName", name, { path: "/" });
-    const eloId = validateOrFixEloId(state.eloId);
-    setCookie("eloId", eloId, { path: "/" });
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.joiner;
       draftState.playerName = name;
-      draftState.eloId = eloId;
       draftState.hasOngoingGame = false;
     });
     navigate(`/game/${state.joinCode}`);
@@ -355,13 +347,10 @@ export default function App() {
   const handleAcceptChallenge = (joinCode: string) => {
     const name = validateOrFixPlayerName(state.playerName);
     setCookie("playerName", name, { path: "/" });
-    const eloId = validateOrFixEloId(state.eloId);
-    setCookie("eloId", eloId, { path: "/" });
     updateState((draftState) => {
       draftState.joinCode = joinCode;
       draftState.clientRole = RoleEnum.joiner;
       draftState.playerName = name;
-      draftState.eloId = eloId;
       draftState.hasOngoingGame = false;
     });
     navigate(`/game/${joinCode}`);
@@ -372,7 +361,7 @@ export default function App() {
       draftState.clientRole = RoleEnum.returner;
       draftState.hasOngoingGame = false;
     });
-    socket.emit("returnToOngoingGame", { eloId: state.eloId });
+    socket.emit("returnToOngoingGame", { idToken: state.idToken });
   };
 
   const handleViewGame = (watchGameId: string) => {
@@ -394,8 +383,6 @@ export default function App() {
     setCookie("numCols", bs.dims[1], { path: "/" });
     const name = validateOrFixPlayerName(state.playerName);
     setCookie("playerName", name, { path: "/" });
-    const eloId = validateOrFixEloId(state.eloId);
-    setCookie("eloId", eloId, { path: "/" });
 
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.offline;
@@ -403,7 +390,6 @@ export default function App() {
       draftState.timeControl.increment = inc;
       draftState.boardSettings = bs;
       draftState.playerName = name;
-      draftState.eloId = eloId;
       draftState.hasOngoingGame = false;
     });
     navigate("/game/local", { replace: true });
@@ -412,8 +398,6 @@ export default function App() {
   const handleComputerGame = () => {
     const name = validateOrFixPlayerName(state.playerName);
     setCookie("playerName", name, { path: "/" });
-    const eloId = validateOrFixEloId(state.eloId);
-    setCookie("eloId", eloId, { path: "/" });
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.computer;
       // Overwrite dimensions for computer game (can only be 7x7).
@@ -425,7 +409,6 @@ export default function App() {
         goalPos: defaultGoalPos([internal_dim, internal_dim]),
       };
       draftState.playerName = name;
-      draftState.eloId = eloId;
       draftState.hasOngoingGame = false;
     });
     navigate("/game/computer", { replace: true });
@@ -434,12 +417,9 @@ export default function App() {
   const handleSolvePuzzle = (puzzleId: string) => {
     const name = validateOrFixPlayerName(state.playerName);
     setCookie("playerName", name, { path: "/" });
-    const eloId = validateOrFixEloId(state.eloId);
-    setCookie("eloId", eloId, { path: "/" });
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.puzzle;
       draftState.playerName = name;
-      draftState.eloId = eloId;
       draftState.hasOngoingGame = false;
     });
     navigate(`/puzzle/${puzzleId}`);
@@ -485,11 +465,12 @@ export default function App() {
         element={
           <LobbyPage
             appState={state}
+            isLoggedIn={checkIsLoggedIn(state.idToken)}
             isLargeScreen={isLargeScreen}
             handleToggleTheme={handleToggleTheme}
             handleToggleDarkMode={handleToggleDarkMode}
             handlePlayerName={handlePlayerName}
-            handleEloId={handleEloId}
+            handleIdToken={handleIdToken}
             handleToken={handleToken}
             handleIsPrivate={handleIsPrivate}
             handleNumRows={handleNumRows}
@@ -513,6 +494,7 @@ export default function App() {
         element={
           <GamePage
             clientParams={state}
+            isLoggedIn={checkIsLoggedIn(state.idToken)}
             isLargeScreen={isLargeScreen}
             handleReturnToLobby={handleReturnToLobby}
             handleToggleDarkMode={handleToggleDarkMode}
@@ -526,6 +508,7 @@ export default function App() {
         element={
           <GamePage
             clientParams={state}
+            isLoggedIn={checkIsLoggedIn(state.idToken)}
             isLargeScreen={isLargeScreen}
             handleReturnToLobby={handleReturnToLobby}
             handleToggleDarkMode={handleToggleDarkMode}
@@ -541,18 +524,6 @@ export default function App() {
 // ========================================================================
 // Utility functions
 // ========================================================================
-
-function validateEloIdOrMakeRandom(eloId: string | undefined): string {
-  if (
-    eloId === undefined ||
-    eloId.length < minEloIdLen ||
-    eloId.length > maxEloIdLen
-  ) {
-    return randEloId(maxEloIdLen);
-  }
-  return eloId;
-}
-
 function validateOrFixDuration(strDur: string): number {
   let dur = parseFloat(`${strDur}`);
   if (isNaN(dur)) {
@@ -598,8 +569,6 @@ function validateOrFixPlayerName(name: string): string {
   return name;
 }
 
-function validateOrFixEloId(eloId: string): string {
-  if (eloId.length < minEloIdLen || eloId.length > maxEloIdLen)
-    return randEloId(maxEloIdLen);
-  return eloId;
+export function checkIsLoggedIn(idToken: string): boolean {
+  return idToken.substring(0, auth0Prefix.length) === auth0Prefix;
 }

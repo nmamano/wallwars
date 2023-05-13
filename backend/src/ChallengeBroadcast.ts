@@ -49,7 +49,7 @@ function emitMessageSubscriber(
   if (msgParams) subscribedSocket.emit(msgTitle, msgParams);
   else subscribedSocket.emit(msgTitle);
   logMessage({
-    idToken: "SUBSCRIBER", // what is this for?
+    idToken: "SUBSCRIBER",
     socketId: subscribedSocket.id,
     game: null,
     sent: true,
