@@ -1,4 +1,4 @@
-import { Table } from "react-materialize";
+// @ts-nocheck (necessary because of a problem with the table tags)
 import { prettyDate } from "../shared/utils";
 import {
   timeControlToString,
@@ -29,6 +29,7 @@ export default function ChallengeList({
     getColor(menuTheme, "container", isDarkModeOn),
   ];
   const headEntryStyle = {
+    textAlign: "center",
     position: "sticky",
     top: "0px",
     paddingTop: "0.15rem",
@@ -37,6 +38,7 @@ export default function ChallengeList({
     backgroundColor: colBg,
   };
   const entryStyle = {
+    textAlign: "center",
     paddingTop: "0.15rem",
     paddingBottom: "0.15rem",
     borderRadius: "0",
@@ -52,15 +54,13 @@ export default function ChallengeList({
         backgroundColor: col1,
       }}
     >
-      <Table centered style={{ width: "100%" }}>
+      <table style={{ width: "100%" }}>
         <thead>
           <tr>
-            {/*@ts-ignore*/}
-            <th style={headEntryStyle}>Time</th> {/*@ts-ignore*/}
-            <th style={headEntryStyle}>Player</th> {/*@ts-ignore*/}
-            <th style={headEntryStyle}>Board</th> {/*@ts-ignore*/}
+            <th style={headEntryStyle}>Time</th>
+            <th style={headEntryStyle}>Player</th>
+            <th style={headEntryStyle}>Board</th>
             {isLargeScreen && <th style={headEntryStyle}>Distance</th>}
-            {/*@ts-ignore*/}
             <th style={headEntryStyle}>Date</th>
           </tr>
         </thead>
@@ -97,7 +97,7 @@ export default function ChallengeList({
             );
           })}
         </tbody>
-      </Table>
+      </table>
     </div>
   );
 }

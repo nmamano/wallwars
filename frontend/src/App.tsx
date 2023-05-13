@@ -9,6 +9,7 @@ import LobbyPage from "./lobby/LobbyPage";
 import { useMediaQuery } from "react-responsive";
 import { useImmer } from "use-immer";
 import showToastNotification from "./shared/showToastNotification";
+import { ToastContainer } from "react-toastify";
 import { useCookies } from "react-cookie";
 import blueBgDark from "./static/blueBgDark.jfif";
 import createModule from "./ai.mjs";

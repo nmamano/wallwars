@@ -1,7 +1,5 @@
 import { useEffect } from "react";
-import { Row, Col } from "react-materialize";
 import { useMediaQuery } from "react-responsive";
-import { ToastContainer } from "react-toastify";
 import { useImmer } from "use-immer";
 import { randPlayerName } from "../shared/utils";
 import { getColor } from "../shared/colorThemes";
@@ -222,7 +220,6 @@ export default function LobbyPage({
         paddingBottom: "2rem",
       }}
     >
-      <ToastContainer />
       <div>
         <Header
           context={"lobby"}
@@ -262,11 +259,16 @@ export default function LobbyPage({
           handleIdToken={handleIdToken}
         />
         {appState.hasOngoingGame && ( // todo: do we need to check here if the eloId matches?
-          <Row className="valign-wrapper" style={{ marginTop: "1rem" }}>
-            <Col className="center" s={12}>
-              {returnToGameButton}
-            </Col>
-          </Row>
+          <div
+            style={{
+              marginTop: "1rem",
+              marginBottom: "1rem",
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            {returnToGameButton}
+          </div>
         )}
         <div style={gridStyle}>
           <div style={{ gridArea: "showcaseArea" }}>

@@ -1,5 +1,4 @@
 // @ts-nocheck (necessary because of a problem with the <tr> tag)
-import { Table } from "react-materialize";
 import { TimeControl, timeControlToString } from "../shared/gameLogicUtils";
 import { prettyDate } from "../shared/utils";
 import { getColor, MenuThemeName } from "../shared/colorThemes";
@@ -34,6 +33,7 @@ export default function RecentGameList({
     getColor(menuTheme, "container", isDarkModeOn),
   ];
   const headEntryStyle = {
+    textAlign: "center",
     position: "sticky",
     top: "0px",
     paddingTop: "0.15rem",
@@ -42,11 +42,13 @@ export default function RecentGameList({
     backgroundColor: colBg,
   };
   const entryStyle = {
+    textAlign: "center",
     paddingTop: "0.15rem",
     paddingBottom: "0.15rem",
     borderRadius: "0",
   };
   const boldEntryStyle = {
+    textAlign: "center",
     paddingTop: "0.15rem",
     paddingBottom: "0.15rem",
     borderRadius: "0",
@@ -67,7 +69,7 @@ export default function RecentGameList({
           ),
         }}
       >
-        <Table centered style={{ width: "100%" }}>
+        <table style={{ width: "100%" }}>
           <thead>
             <tr>
               <th style={headEntryStyle}>Time</th>
@@ -121,7 +123,7 @@ export default function RecentGameList({
                 );
               })}
           </tbody>
-        </Table>
+        </table>
       </div>
     );
   } else {
@@ -134,7 +136,7 @@ export default function RecentGameList({
           height: "100%",
         }}
       >
-        <Table centered style={{ width: "100%" }}>
+        <table style={{ width: "100%" }}>
           <thead>
             <tr>
               <th style={headEntryStyle}>Time</th>
@@ -170,7 +172,7 @@ export default function RecentGameList({
                 );
               })}
           </tbody>
-        </Table>
+        </table>
       </div>
     );
   }

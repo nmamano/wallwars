@@ -1,7 +1,6 @@
 // @ts-nocheck (necessary because of a problem with the <tr> tag)
 import { useEffect } from "react";
 import { useImmer } from "use-immer";
-import { Table } from "react-materialize";
 import { prettyDate } from "../shared/utils";
 import { getColor, MenuThemeName } from "../shared/colorThemes";
 import css from "../shared/hoverHighlight.module.css";
@@ -61,6 +60,7 @@ export default function RankingList({
     getColor(menuTheme, "container", isDarkModeOn),
   ];
   const headEntryStyle = {
+    textAlign: "center",
     position: "sticky",
     top: "0px",
     paddingTop: "0.15rem",
@@ -69,6 +69,7 @@ export default function RankingList({
     backgroundColor: colBg,
   };
   const entryStyle = {
+    textAlign: "center",
     paddingTop: "0.15rem",
     paddingBottom: "0.15rem",
     borderRadius: "0",
@@ -89,7 +90,7 @@ export default function RankingList({
           ),
         }}
       >
-        <Table centered style={{ width: "100%" }}>
+        <table style={{ width: "100%" }}>
           <thead>
             <tr>
               <th style={headEntryStyle}>Rank</th>
@@ -131,7 +132,7 @@ export default function RankingList({
                 );
               })}
           </tbody>
-        </Table>
+        </table>
       </div>
     );
   } else {
@@ -144,7 +145,7 @@ export default function RankingList({
           height: "100%",
         }}
       >
-        <Table centered style={{ width: "100%" }}>
+        <table style={{ width: "100%" }}>
           <thead>
             <tr>
               <th style={headEntryStyle}>Rank</th>
@@ -178,7 +179,7 @@ export default function RankingList({
                 );
               })}
           </tbody>
-        </Table>
+        </table>
       </div>
     );
   }
