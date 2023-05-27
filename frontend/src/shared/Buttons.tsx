@@ -33,7 +33,7 @@ import Brightness2 from "@mui/icons-material/Brightness2";
 import Help from "@mui/icons-material/Help";
 import Info from "@mui/icons-material/Info";
 import AccountCircle from "@mui/icons-material/AccountCircle";
-import { AccountCircleOutlined } from "@mui/icons-material";
+import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
 import Refresh from "@mui/icons-material/Refresh";
 
 export type IconStr =

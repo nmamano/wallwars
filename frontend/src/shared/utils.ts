@@ -1,6 +1,7 @@
 import { uniqueNamesGenerator, names } from "unique-names-generator";
 
 export const auth0Prefix = "Auth0|";
+
 export function roundNum(num: number): number {
   return Math.round((num + Number.EPSILON) * 100) / 100;
 }

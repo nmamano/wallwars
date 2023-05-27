@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 import { updateRating, initialRating } from "./rating";
 import { GameState } from "./gameState";
-import { isGuest } from "./utils";
+import { isGuest } from "./authUtils";
 
 const url = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.vt6ui.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 var connectedToDB = false;

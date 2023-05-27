@@ -39,7 +39,6 @@ export default function LobbyForm({
   handleComputerGame,
   handleRefreshName,
   handleToken,
-  handleIdToken,
 }: {
   appState: AppState;
   isLargeScreen: boolean;

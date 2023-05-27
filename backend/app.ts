@@ -31,8 +31,6 @@ import M from "./src/messageList";
 import { version } from "wallwars-core";
 
 console.log(`Using ${version()}`);
-import { auth } from "express-openid-connect";
-import { isGuest } from "./src/utils";
 
 ////////////////////////////////////
 // Boilerplate server setup.
@@ -42,20 +40,6 @@ const app = express();
 // The server doesn't serve any HTML, but it needs a route to listen for incoming connections.
 app.use(cors);
 app.use(index);
-
-// https://auth0.com/docs/quickstart/webapp/express/01-login#5-configure-router
-const authConfig = {
-  authRequired: false, // whether authentication not required for all routes
-  auth0Logout: true, // allows use of built in log out Auth0 feature https://auth0.com/docs/authenticate/login/logout
-  secret: process.env.AUTH0_SECRET, // base64 random long string
-  baseURL: process.env.AUTH0_BASE_URL, // url where app is served
-  clientID: process.env.AUTH0_CLIENT_ID, // similar to api key
-  issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL, // secure domain acting as client i.e. https://wallwars.net
-};
-app.use(auth(authConfig));
-app.get("/wallwars/", (req, res) => {
-  res.send(req.oidc.isAuthenticated() ? "Logged in" : "Logged out");
-});
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -653,7 +637,7 @@ io.on(M.connectionMsg, function (socket: any): void {
     else io.to(oppSocketId).emit(msgTitle);
     const game = GM.ongoingGameOfClient(clientIdToken);
     logMessage({
-      idToken: oppIdToken,
+      idToken: oppIdToken!,
       socketId: oppSocketId,
       game,
       sent: true,

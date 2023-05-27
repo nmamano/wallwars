@@ -214,9 +214,13 @@ export default function GamePage({
           });
           draftState.arePlayersPresent[1] = true;
           draftState.waitingForPing = 0;
+          if (
+            draftState.names[0] === "Guest" ||
+            draftState.names[1] === "Guest"
+          ) {
+            showToastNotification("Games with guests will not affect ELO.");
+          }
         });
-        if (state.names[0] === "Guest" || state.names[1] === "Guest")
-          showToastNotification("Games with guests will not affect ELO.");
       }
     );
 
@@ -407,14 +411,6 @@ export default function GamePage({
           rating: clientParams.rating,
         });
         draftState.arePlayersPresent[0] = true;
-      });
-      socket.emit("createGame", {
-        name: clientParams.playerName,
-        token: clientParams.token,
-        timeControl: clientParams.timeControl,
-        boardSettings: clientParams.boardSettings,
-        idToken: clientParams.idToken,
-        isPublic: !clientParams.isPrivate,
       });
     } else if (clientParams.clientRole === RoleEnum.joiner) {
       updateState((draftState) => {

@@ -5,7 +5,38 @@ import { IconButtonWithTooltip, IconButtonWithInfoModal } from "./Buttons";
 import showToastNotification from "./showToastNotification";
 import { getColor, MenuThemeName } from "./colorThemes";
 import AuthButton from "./AuthButton";
-import UsernameIcon from "./UsernameIcon";
+
+function UsernameIcon({ playerName }: { playerName: String }): JSX.Element {
+  return (
+    <div
+      style={{
+        height: "2.35rem",
+        width: "12rem",
+        paddingLeft: "0.5rem",
+        marginRight: "5px",
+        borderRadius: "5px",
+        border: "1px",
+        borderColor: "white",
+        borderStyle: "solid",
+        display: "flex",
+        justifyContent: "flex-start",
+        alignItems: "center",
+      }}
+    >
+      <p
+        style={{
+          color: "white",
+          fontSize: "20px",
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {playerName}
+      </p>
+    </div>
+  );
+}
 
 const contextEnum = {
   player: "player",
@@ -42,7 +73,7 @@ function Header({
   playerName: string;
   handleToggleDarkMode: () => void;
   handleToggleTheme: () => void;
-  handleIdToken?: (idToken: string) => void; // undefined when authbutton not shown (on game page)
+  handleIdToken?: (idToken: string) => void; // undefined when auth button is not shown (on game page)
 }): JSX.Element {
   const hasJoinCode =
     joinCode !== "local" && joinCode !== "puzzle" && joinCode !== "AI";
@@ -82,10 +113,14 @@ function Header({
   }
   const padding = isLargeScreen ? 20 : 11;
   const buttonCol = getColor(menuTheme, "headerButton", isDarkModeOn);
-  let buttonColCount = isLargeScreen ? 5 : 4;
-  const allowToggleLogin =
+
+  const allowToToggleLogin =
     context === contextEnum.lobby && (!hasOngoingGame || isLoggedIn);
-  if (!allowToggleLogin) buttonColCount--;
+
+  let buttonCount = 3; // night mode, help, and info/return to lobby buttons
+  if (isLargeScreen) buttonCount++; // the "change theme" button is only shown in large screens
+  if (allowToToggleLogin) buttonCount++; // the login/profile button
+
   return (
     <div>
       <div
@@ -112,7 +147,7 @@ function Header({
             style={{
               height: "auto",
               display: "grid",
-              gridTemplateColumns: `repeat(${buttonColCount}, 1fr)`,
+              gridTemplateColumns: `repeat(${buttonCount}, 1fr)`,
               gridTemplateRows: `auto`,
               columnGap: "5px",
               rowGap: "5px",
@@ -155,7 +190,7 @@ function Header({
                   modalTitle="About"
                   modalBody={aboutText!}
                 />
-                {allowToggleLogin && (
+                {allowToToggleLogin && (
                   <AuthButton
                     bgColor={buttonCol}
                     horizontalPadding={padding}
@@ -174,7 +209,7 @@ function Header({
               />
             )}
           </div>
-          <UsernameIcon>{playerName}</UsernameIcon>
+          <UsernameIcon playerName={playerName} />
         </div>
       </div>
     </div>

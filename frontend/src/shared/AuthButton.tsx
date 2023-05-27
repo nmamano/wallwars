@@ -1,24 +1,7 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { IconStr } from "./Buttons";
-import { IconButtonWithTooltip } from "./Buttons";
-import { useState } from "react";
-import { auth0Prefix } from "./utils";
+import { IconStr, IconButtonWithTooltip } from "./Buttons";
 
-const setLoggedIn = (): [IconStr, string] => {
-  const icon = "account_circle";
-  const tooltip = "Log In";
-
-  return [icon, tooltip];
-};
-
-const setLoggedOut = (): [IconStr, string] => {
-  const icon = "account_circle_outlined";
-  const tooltip = "Profile";
-
-  return [icon, tooltip];
-};
-
-const AuthButton = ({
+export default function AuthButton({
   bgColor,
   horizontalPadding,
   handleIdToken,
@@ -26,38 +9,31 @@ const AuthButton = ({
   bgColor: string;
   horizontalPadding: number;
   handleIdToken: (idToken: string) => void;
-}): JSX.Element => {
-  let [icon, tooltip] = setLoggedOut();
+}): JSX.Element {
+  const [loggedInIcon, loggedOutIcon]: [IconStr, IconStr] = [
+    "account_circle",
+    "account_circle_outlined",
+  ];
+  const [loggedInTooltip, loggedOutTooltip]: [string, string] = [
+    "Log in",
+    "Profile",
+  ];
 
   const { user, error, isAuthenticated, loginWithRedirect } = useAuth0();
 
   if (error) {
     console.log("There was an error while authenticating:\n", error);
   } else if (isAuthenticated) {
-    // [icon, tooltip] = setLoggedIn();
-    handleIdToken(user?.sub ? user!.sub : "");
+    handleIdToken(user?.sub ? user!.sub : ""); // user.sub is the id token.
     console.log("user:\n", user);
   }
-  const [loggedIn, setLoggedIn] = useState(false);
   return (
     <IconButtonWithTooltip
-      icon={icon}
-      tooltip={tooltip}
+      icon={isAuthenticated ? loggedInIcon : loggedOutIcon}
+      tooltip={isAuthenticated ? loggedInTooltip : loggedOutTooltip}
       bgColor={bgColor}
       horizontalPadding={horizontalPadding}
-      onClick={() => /*loginWithRedirect()*/ {
-        // for testing purposes
-        if (!loggedIn) {
-          const testToken = auth0Prefix + Math.random().toString();
-          handleIdToken(testToken);
-          setLoggedIn(true);
-        } else {
-          handleIdToken("");
-          setLoggedIn(false);
-        }
-      }}
-    ></IconButtonWithTooltip>
+      onClick={loginWithRedirect}
+    />
   );
-};
-
-export default AuthButton;
+}

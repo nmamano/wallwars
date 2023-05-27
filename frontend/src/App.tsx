@@ -88,7 +88,7 @@ export type PosSetting = {
   val: number;
 };
 
-export function initialAppState(cookies: Cookies): AppState {
+function initialAppState(cookies: Cookies): AppState {
   let nr = parseFloatOrUndef(cookies.numRows, defaultBoardSettings.dims[0]);
   let nc = parseFloatOrUndef(cookies.numCols, defaultBoardSettings.dims[1]);
 
@@ -109,7 +109,7 @@ export function initialAppState(cookies: Cookies): AppState {
     },
     watchGameId: null,
     isPrivate: cookies.isPrivate && cookies.isPrivate === "true" ? true : false,
-    idToken: "",
+    idToken: "", // guests (logged out users) have an empty-string idToken
 
     creatorStarts: false,
     rating: 0,
@@ -182,7 +182,6 @@ export default function App() {
     updateState((draftState) => {
       draftState.idToken = idToken;
     });
-    // idToken not saved until player plays their first game
   };
 
   const handleToken = (icon: string) => {
@@ -308,7 +307,6 @@ export default function App() {
         creatorStarts: boolean;
         rating: number;
       }) => {
-        console.log("recieved creator starts", creatorStarts);
         updateState((draftState) => {
           draftState.joinCode = joinCode;
           draftState.creatorStarts = creatorStarts;
@@ -465,65 +463,68 @@ export default function App() {
   }, []);
 
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <LobbyPage
-            appState={state}
-            isLoggedIn={checkIsLoggedIn(state.idToken)}
-            isLargeScreen={isLargeScreen}
-            handleToggleTheme={handleToggleTheme}
-            handleToggleDarkMode={handleToggleDarkMode}
-            handlePlayerName={handlePlayerName}
-            handleIdToken={handleIdToken}
-            handleToken={handleToken}
-            handleIsPrivate={handleIsPrivate}
-            handleNumRows={handleNumRows}
-            handleNumCols={handleNumCols}
-            handlePosSetting={handlePosSetting}
-            handleJoinCode={handleJoinCode}
-            handleCreateGame={handleCreateGame}
-            handleJoinGame={handleJoinGame}
-            handleAcceptChallenge={handleAcceptChallenge}
-            handleReturnToGame={handleReturnToGame}
-            handleViewGame={handleViewGame}
-            handleLocalGame={handleLocalGame}
-            handleComputerGame={handleComputerGame}
-            handleSolvePuzzle={handleSolvePuzzle}
-            handleHasOngoingGameInServer={handleHasOngoingGameInServer}
-          />
-        }
-      />
-      <Route
-        path="/game/:gameId"
-        element={
-          <GamePage
-            clientParams={state}
-            isLoggedIn={checkIsLoggedIn(state.idToken)}
-            isLargeScreen={isLargeScreen}
-            handleReturnToLobby={handleReturnToLobby}
-            handleToggleDarkMode={handleToggleDarkMode}
-            handleToggleTheme={handleToggleTheme}
-            wasmAIGetMove={wasmAIGetMove}
-          />
-        }
-      />
-      <Route
-        path="/puzzle/:puzzleId"
-        element={
-          <GamePage
-            clientParams={state}
-            isLoggedIn={checkIsLoggedIn(state.idToken)}
-            isLargeScreen={isLargeScreen}
-            handleReturnToLobby={handleReturnToLobby}
-            handleToggleDarkMode={handleToggleDarkMode}
-            handleToggleTheme={handleToggleTheme}
-          />
-        }
-      />
-      <Route path="*" element={<ErrorPage />} />
-    </Routes>
+    <>
+      <ToastContainer />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <LobbyPage
+              appState={state}
+              isLoggedIn={checkIsLoggedIn(state.idToken)}
+              isLargeScreen={isLargeScreen}
+              handleToggleTheme={handleToggleTheme}
+              handleToggleDarkMode={handleToggleDarkMode}
+              handlePlayerName={handlePlayerName}
+              handleIdToken={handleIdToken}
+              handleToken={handleToken}
+              handleIsPrivate={handleIsPrivate}
+              handleNumRows={handleNumRows}
+              handleNumCols={handleNumCols}
+              handlePosSetting={handlePosSetting}
+              handleJoinCode={handleJoinCode}
+              handleCreateGame={handleCreateGame}
+              handleJoinGame={handleJoinGame}
+              handleAcceptChallenge={handleAcceptChallenge}
+              handleReturnToGame={handleReturnToGame}
+              handleViewGame={handleViewGame}
+              handleLocalGame={handleLocalGame}
+              handleComputerGame={handleComputerGame}
+              handleSolvePuzzle={handleSolvePuzzle}
+              handleHasOngoingGameInServer={handleHasOngoingGameInServer}
+            />
+          }
+        />
+        <Route
+          path="/game/:gameId"
+          element={
+            <GamePage
+              clientParams={state}
+              isLoggedIn={checkIsLoggedIn(state.idToken)}
+              isLargeScreen={isLargeScreen}
+              handleReturnToLobby={handleReturnToLobby}
+              handleToggleDarkMode={handleToggleDarkMode}
+              handleToggleTheme={handleToggleTheme}
+              wasmAIGetMove={wasmAIGetMove}
+            />
+          }
+        />
+        <Route
+          path="/puzzle/:puzzleId"
+          element={
+            <GamePage
+              clientParams={state}
+              isLoggedIn={checkIsLoggedIn(state.idToken)}
+              isLargeScreen={isLargeScreen}
+              handleReturnToLobby={handleReturnToLobby}
+              handleToggleDarkMode={handleToggleDarkMode}
+              handleToggleTheme={handleToggleTheme}
+            />
+          }
+        />
+        <Route path="*" element={<ErrorPage />} />
+      </Routes>
+    </>
   );
 }
 
@@ -575,6 +576,6 @@ function validateOrFixPlayerName(name: string): string {
   return name;
 }
 
-export function checkIsLoggedIn(idToken: string): boolean {
+function checkIsLoggedIn(idToken: string): boolean {
   return idToken.substring(0, auth0Prefix.length) === auth0Prefix;
 }
