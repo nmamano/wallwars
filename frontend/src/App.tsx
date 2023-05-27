@@ -25,6 +25,7 @@ import {
   TimeControl,
 } from "./shared/gameLogicUtils";
 import ErrorPage from "./shared/ErrorPage";
+import { version } from "wallwars-core";
 
 const maxPlayerNameLen = 9;
 
@@ -126,6 +127,10 @@ export function initialAppState(cookies: Cookies): AppState {
 }
 
 export default function App() {
+  useEffect(() => {
+    console.log(`Using ${version()}`);
+  }, []);
+
   const isLargeScreen = useMediaQuery({ query: "(min-width: 990px)" });
 
   const [cookies, setCookie] = useCookies([

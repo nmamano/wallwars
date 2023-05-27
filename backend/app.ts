@@ -28,6 +28,9 @@ import {
   setResult,
 } from "./src/gameState";
 import M from "./src/messageList";
+import { version } from "wallwars-core";
+
+console.log(`Using ${version()}`);
 import { auth } from "express-openid-connect";
 import { isGuest } from "./src/utils";
 
