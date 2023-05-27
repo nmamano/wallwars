@@ -1,11 +1,12 @@
 import fs from "fs";
 import util from "util";
 import { GameState } from "./gameState";
+import { auth0Prefix } from "./utils";
 
 //middleware for logging incoming and outgoing messages
 //format: hh:mm:ss ss|ccc|J -> #SERVER#: m [gg] {p}
 //ss: first 2 chars of the socket id,
-//ccc: first 3 chars of the eloId, with added '_'s if necessary.
+//ccc: first 3 chars of the idToken, with added '_'s if necessary.
 //J: client role. 'C' for creator, 'J' for joiner, or '_' if not in a game
 //X -> Y: X is the sender and Y the receiver. One of them is SERVER
 //m: message title
@@ -34,31 +35,32 @@ const cropAndLogMessage = (txt: string) => {
 };
 
 export function logMessage({
-  eloId,
+  idToken,
   socketId,
   game,
   sent,
   messageTitle,
   messageParams,
 }: {
-  eloId: string | null;
+  idToken: string | null;
   socketId: string;
   game: GameState | null;
   sent: boolean;
   messageTitle: string;
   messageParams: any;
 }) {
-  let shortEloId = eloId ? eloId.substring(0, 3) : "";
-  while (shortEloId.length < 3) shortEloId = shortEloId + "_";
+  let shortIdToken = idToken
+    ? idToken.substring(auth0Prefix.length, auth0Prefix.length + 3)
+    : "";
   const shortSocketId = socketId.substring(0, 2);
-  let client = shortSocketId + "," + shortEloId;
+  let client = shortSocketId + "," + shortIdToken;
   const date = new Date();
   let [hs, ms, ss] = [date.getHours(), date.getMinutes(), date.getSeconds()];
   let msStr = ms < 10 ? "0" + ms : ms;
   let ssStr = ss < 10 ? "0" + ss : ss;
   let logText = `${hs}:${msStr}:${ssStr} `;
   if (game) {
-    const isCreator = eloId === game.eloIds[0];
+    const isCreator = idToken === game.idTokens[0];
     client += `,${isCreator ? "C" : "J"}`;
   } else {
     client += ",_";

@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@auth0/auth0-react": "^2.0.1",
     "@babel/runtime": "^7.20.13",
     "@emotion/react": "^11.10.6",
     "@emotion/styled": "^11.10.6",

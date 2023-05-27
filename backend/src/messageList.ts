@@ -7,7 +7,7 @@ export default {
   pingServerMsg: "pingServer",
   pongFromServerMsg: "pongFromServer",
   newRatingsNotificationMsg: "newRatingsNotification",
-  invalidEloIdErrorMsg: "invalidEloIdError",
+  invalidIdTokenErrorMsg: "invalidIdTokenError",
   solvedPuzzleMsg: "solvedPuzzle",
 
   //client-server-client messages

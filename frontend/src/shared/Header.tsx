@@ -4,6 +4,8 @@ import "react-toastify/dist/ReactToastify.css";
 import { IconButtonWithTooltip, IconButtonWithInfoModal } from "./Buttons";
 import showToastNotification from "./showToastNotification";
 import { getColor, MenuThemeName } from "./colorThemes";
+import AuthButton from "./AuthButton";
+import UsernameIcon from "./UsernameIcon";
 
 const contextEnum = {
   player: "player",
@@ -20,8 +22,12 @@ function Header({
   isLargeScreen,
   menuTheme,
   isDarkModeOn,
+  hasOngoingGame,
+  isLoggedIn,
+  playerName,
   handleToggleDarkMode,
   handleToggleTheme,
+  handleIdToken,
 }: {
   context: string;
   helpText: JSX.Element;
@@ -31,8 +37,12 @@ function Header({
   isLargeScreen: boolean;
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
+  hasOngoingGame: boolean;
+  isLoggedIn: boolean;
+  playerName: string;
   handleToggleDarkMode: () => void;
   handleToggleTheme: () => void;
+  handleIdToken?: (idToken: string) => void; // undefined when authbutton not shown (on game page)
 }): JSX.Element {
   const hasJoinCode =
     joinCode !== "local" && joinCode !== "puzzle" && joinCode !== "AI";
@@ -72,6 +82,10 @@ function Header({
   }
   const padding = isLargeScreen ? 20 : 11;
   const buttonCol = getColor(menuTheme, "headerButton", isDarkModeOn);
+  let buttonColCount = isLargeScreen ? 5 : 4;
+  const allowToggleLogin =
+    context === contextEnum.lobby && (!hasOngoingGame || isLoggedIn);
+  if (!allowToggleLogin) buttonColCount--;
   return (
     <div>
       <div
@@ -93,63 +107,74 @@ function Header({
         >
           {mainText}
         </div>
-        <div
-          style={{
-            height: "auto",
-            display: "grid",
-            padding: "5px",
-            gridTemplateColumns: `repeat(${isLargeScreen ? 4 : 3}, 1fr)`,
-            gridTemplateRows: `auto`,
-            columnGap: "5px",
-            rowGap: "5px",
-            marginRight: isLargeScreen ? "15px" : "5px",
-          }}
-        >
-          {isLargeScreen && (
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <div
+            style={{
+              height: "auto",
+              display: "grid",
+              gridTemplateColumns: `repeat(${buttonColCount}, 1fr)`,
+              gridTemplateRows: `auto`,
+              columnGap: "5px",
+              rowGap: "5px",
+              marginRight: "5px",
+            }}
+          >
+            {isLargeScreen && (
+              <IconButtonWithTooltip
+                icon={"color_lens"}
+                tooltip={"Change theme"}
+                bgColor={buttonCol}
+                horizontalPadding={padding}
+                onClick={handleToggleTheme}
+              />
+            )}
             <IconButtonWithTooltip
-              icon={"color_lens"}
-              tooltip={"Change theme"}
+              icon={isDarkModeOn ? "wb_sunny" : "brightness_2"}
+              tooltip={
+                isDarkModeOn ? "Turn off night mode" : "Turn on night mode"
+              }
               bgColor={buttonCol}
               horizontalPadding={padding}
-              onClick={handleToggleTheme}
+              onClick={handleToggleDarkMode}
             />
-          )}
-          <IconButtonWithTooltip
-            icon={isDarkModeOn ? "wb_sunny" : "brightness_2"}
-            tooltip={
-              isDarkModeOn ? "Turn off night mode" : "Turn on night mode"
-            }
-            bgColor={buttonCol}
-            horizontalPadding={padding}
-            onClick={handleToggleDarkMode}
-          />
-          <IconButtonWithInfoModal
-            icon="help"
-            tooltip="Help"
-            bgColor={buttonCol}
-            horizontalPadding={padding}
-            modalTitle="Help"
-            modalBody={helpText}
-          />
-          {context === contextEnum.lobby && (
             <IconButtonWithInfoModal
-              icon="info"
-              tooltip="About"
+              icon="help"
+              tooltip="Help"
               bgColor={buttonCol}
               horizontalPadding={padding}
-              modalTitle="About"
-              modalBody={aboutText!}
+              modalTitle="Help"
+              modalBody={helpText}
             />
-          )}
-          {context !== contextEnum.lobby && (
-            <IconButtonWithTooltip
-              icon="home"
-              tooltip="Leave game"
-              bgColor={buttonCol}
-              horizontalPadding={padding}
-              onClick={handleLeaveGame!}
-            />
-          )}
+            {context === contextEnum.lobby && (
+              <>
+                <IconButtonWithInfoModal
+                  icon="info"
+                  tooltip="About"
+                  bgColor={buttonCol}
+                  horizontalPadding={padding}
+                  modalTitle="About"
+                  modalBody={aboutText!}
+                />
+                {allowToggleLogin && (
+                  <AuthButton
+                    bgColor={buttonCol}
+                    horizontalPadding={padding}
+                    handleIdToken={handleIdToken!}
+                  ></AuthButton>
+                )}
+              </>
+            )}
+            {context !== contextEnum.lobby && (
+              <IconButtonWithTooltip
+                icon="home"
+                tooltip="Leave game"
+                bgColor={buttonCol}
+                horizontalPadding={padding}
+                onClick={handleLeaveGame!}
+              />
+            )}
+          </div>
+          <UsernameIcon>{playerName}</UsernameIcon>
         </div>
       </div>
     </div>

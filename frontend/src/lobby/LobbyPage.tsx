@@ -35,11 +35,12 @@ function initialLobbyState(tc: TimeControl): LobbyState {
 
 export default function LobbyPage({
   appState,
+  isLoggedIn,
   isLargeScreen,
   handleToggleTheme,
   handleToggleDarkMode,
   handlePlayerName,
-  handleEloId,
+  handleIdToken,
   handleToken,
   handleIsPrivate,
   handleNumRows,
@@ -57,11 +58,12 @@ export default function LobbyPage({
   handleHasOngoingGameInServer,
 }: {
   appState: AppState;
+  isLoggedIn: boolean;
   isLargeScreen: boolean;
   handleToggleTheme: () => void;
   handleToggleDarkMode: () => void;
   handlePlayerName: (name: string) => void;
-  handleEloId: (eloId: string) => void;
+  handleIdToken: (idToken: string) => void;
   handleToken: (token: string) => void;
   handleIsPrivate: (isPrivate: boolean) => void;
   handleNumRows: (nr: number) => void;
@@ -104,9 +106,9 @@ export default function LobbyPage({
   // Determine if the "Return To Game" button needs to be shown.
   useEffect(() => {
     if (!appState.hasOngoingGame) {
-      socket.emit("checkHasOngoingGame", { eloId: appState.eloId });
+      socket.emit("checkHasOngoingGame", { idToken: appState.idToken });
     }
-  }, [appState.hasOngoingGame, appState.eloId]);
+  }, [appState.hasOngoingGame, appState.idToken]);
   useEffect(() => {
     socket.on("respondHasOngoingGame", ({ res }: { res: boolean }) => {
       handleHasOngoingGameInServer(res);
@@ -228,6 +230,9 @@ export default function LobbyPage({
           aboutText={aboutText}
           handleToggleDarkMode={handleToggleDarkMode}
           handleToggleTheme={handleToggleTheme}
+          hasOngoingGame={appState.hasOngoingGame}
+          isLoggedIn={isLoggedIn}
+          playerName={appState.playerName}
         />
         <LobbyForm
           // @ts-ignore
@@ -251,7 +256,7 @@ export default function LobbyPage({
           handleComputerGame={handleComputerGame}
           handleRefreshName={handleRefreshName}
           handleToken={handleToken}
-          handleEloId={handleEloId}
+          handleIdToken={handleIdToken}
         />
         {appState.hasOngoingGame && ( // todo: do we need to check here if the eloId matches?
           <div
@@ -327,7 +332,7 @@ export default function LobbyPage({
           }}
         >
           <PuzzleList
-            eloId={appState.eloId}
+            idToken={appState.idToken}
             menuTheme={appState.menuTheme}
             isDarkModeOn={appState.isDarkModeOn}
             handleSolvePuzzle={handleSolvePuzzle}

@@ -1,5 +1,6 @@
 import { uniqueNamesGenerator, names } from "unique-names-generator";
 
+export const auth0Prefix = "Auth0|";
 export function roundNum(num: number): number {
   return Math.round((num + Number.EPSILON) * 100) / 100;
 }
@@ -33,11 +34,6 @@ export function randPlayerName(maxPlayerNameLen: number): string {
     dictionaries: [names],
     length: 1,
   }).slice(0, maxPlayerNameLen);
-}
-
-export function randEloId(maxEloIdLen: number): string {
-  const res = "elo_" + Math.random().toString(36).slice(2);
-  return res.slice(0, maxEloIdLen);
 }
 
 export function parseFloatOrUndef(

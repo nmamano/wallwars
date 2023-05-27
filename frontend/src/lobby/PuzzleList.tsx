@@ -7,12 +7,12 @@ import { puzzles } from "../game/puzzles";
 import socket from "../socket";
 
 export default function PuzzleList({
-  eloId,
+  idToken,
   menuTheme,
   isDarkModeOn,
   handleSolvePuzzle,
 }: {
-  eloId: string;
+  idToken: string;
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
   handleSolvePuzzle: (puzzleId: string) => void;
@@ -30,10 +30,10 @@ export default function PuzzleList({
         draftState.needToRequestSolvedPuzzles = false;
       });
       socket.emit("getSolvedPuzzles", {
-        eloId: eloId,
+        idToken: idToken,
       });
     }
-  }, [eloId, updateState, state.needToRequestSolvedPuzzles]);
+  }, [idToken, updateState, state.needToRequestSolvedPuzzles]);
   useEffect(() => {
     socket.once(
       "requestedSolvedPuzzles",

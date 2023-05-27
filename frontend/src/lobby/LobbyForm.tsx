@@ -3,13 +3,8 @@ import { useEffect } from "react";
 import Grid from "@mui/material/Grid";
 import { getColor } from "../shared/colorThemes";
 import showToastNotification from "../shared/showToastNotification";
-import {
-  TextButton,
-  IconButtonWithTooltip,
-  IconButtonWithInfoModal,
-} from "../shared/Buttons";
+import { TextButton, IconButtonWithTooltip } from "../shared/Buttons";
 import { maxBoardDims } from "../shared/globalSettings";
-import { eloIdAboutText } from "./lobbyHelp";
 import { AppState, PosSetting } from "../App";
 import TokenDropdown from "./TokenDropdown";
 import TextInputField from "../shared/TextInputField";
@@ -44,7 +39,7 @@ export default function LobbyForm({
   handleComputerGame,
   handleRefreshName,
   handleToken,
-  handleEloId,
+  handleIdToken,
 }: {
   appState: AppState;
   isLargeScreen: boolean;
@@ -66,7 +61,7 @@ export default function LobbyForm({
   handleComputerGame: () => void;
   handleRefreshName: () => void;
   handleToken: (token: string) => void;
-  handleEloId: (eloId: string) => void;
+  handleIdToken: (idToken: string) => void;
 }): JSX.Element {
   const menuTheme = appState.menuTheme;
   const isDarkModeOn = appState.isDarkModeOn;
@@ -384,39 +379,6 @@ export default function LobbyForm({
             ToDisplay={internalToClassicCoord}
             FromDisplay={classicToInternalCoord}
           />
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              paddingTop: "20px",
-            }}
-          >
-            {horizontalSep}
-            <span
-              style={{
-                fontSize: "20px",
-              }}
-            >
-              ELO id:
-            </span>
-            {horizontalSep}
-            <TextInputField
-              label=""
-              id="eloIdInput"
-              value={appState.eloId}
-              onChange={handleEloId}
-            />
-            {horizontalSep}
-            <IconButtonWithInfoModal
-              icon="info"
-              tooltip="About ELO ids"
-              menuTheme={menuTheme}
-              isDarkModeOn={isDarkModeOn}
-              circular={true}
-              modalTitle="About ELO ids"
-              modalBody={eloIdAboutText}
-            />
-          </div>
           <div
             style={{
               display: "flex",
