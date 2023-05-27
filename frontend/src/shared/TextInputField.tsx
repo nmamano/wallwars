@@ -7,6 +7,7 @@ export default function TextInputField({
   label,
   isInvalid,
   placeholder,
+  disabled,
 }: {
   id: string;
   value: string;
@@ -14,6 +15,7 @@ export default function TextInputField({
   label?: string;
   isInvalid?: boolean;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   return (
     <TextField
@@ -25,6 +27,9 @@ export default function TextInputField({
       id={id}
       value={value}
       placeholder={placeholder}
+      InputProps={{
+        readOnly: disabled,
+      }}
       onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
         onChange(event.target.value);
       }}

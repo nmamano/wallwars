@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import Grid from "@mui/material/Grid";
 import { getColor } from "../shared/colorThemes";
 import showToastNotification from "../shared/showToastNotification";
-import { TextButton, IconButtonWithTooltip } from "../shared/Buttons";
+import { TextButton } from "../shared/Buttons";
 import { maxBoardDims } from "../shared/globalSettings";
 import { AppState, PosSetting } from "../App";
 import TokenDropdown from "./TokenDropdown";
@@ -37,7 +37,6 @@ export default function LobbyForm({
   handleJoinGame,
   handleLocalGame,
   handleComputerGame,
-  handleRefreshName,
   handleToken,
 }: {
   appState: AppState;
@@ -58,7 +57,6 @@ export default function LobbyForm({
   handleJoinGame: () => void;
   handleLocalGame: (strDur: string, strInc: string) => void;
   handleComputerGame: () => void;
-  handleRefreshName: () => void;
   handleToken: (token: string) => void;
   handleIdToken: (idToken: string) => void;
 }): JSX.Element {
@@ -168,16 +166,7 @@ export default function LobbyForm({
             id="nameInput"
             value={appState.playerName}
             onChange={handlePlayerName}
-          />
-        </span>
-        <span style={gridItemStyle}>
-          <IconButtonWithTooltip
-            icon="refresh"
-            tooltip="Get a new name"
-            menuTheme={menuTheme}
-            isDarkModeOn={isDarkModeOn}
-            circular={true}
-            onClick={handleRefreshName}
+            disabled={appState.idToken === ""}
           />
         </span>
       </div>

@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useMediaQuery } from "react-responsive";
 import { useImmer } from "use-immer";
-import { randPlayerName } from "../shared/utils";
 import { getColor } from "../shared/colorThemes";
 import { maxBoardDims, cellSizes } from "../shared/globalSettings";
 import LobbyForm from "./LobbyForm";
@@ -97,10 +96,6 @@ export default function LobbyPage({
     updateState((draftState) => {
       draftState.showMoreOptions = !draftState.showMoreOptions;
     });
-  };
-
-  const handleRefreshName = () => {
-    handlePlayerName(randPlayerName(30));
   };
 
   // Determine if the "Return To Game" button needs to be shown.
@@ -254,7 +249,6 @@ export default function LobbyPage({
           handleJoinGame={handleJoinGame}
           handleLocalGame={handleLocalGame}
           handleComputerGame={handleComputerGame}
-          handleRefreshName={handleRefreshName}
           handleToken={handleToken}
           handleIdToken={handleIdToken}
         />

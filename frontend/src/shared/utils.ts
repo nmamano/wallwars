@@ -1,5 +1,3 @@
-import { uniqueNamesGenerator, names } from "unique-names-generator";
-
 export const auth0Prefix = "Auth0|";
 
 export function roundNum(num: number): number {
@@ -28,13 +26,6 @@ export function prettyDate(date: Date, longFormat: boolean): string {
   if (seconds > 1) return seconds + (longFormat ? " seconds" : "s") + " ago";
   if (seconds === 1) return seconds + (longFormat ? " second" : "s") + " ago";
   return "Just now";
-}
-
-export function randPlayerName(maxPlayerNameLen: number): string {
-  return uniqueNamesGenerator({
-    dictionaries: [names],
-    length: 1,
-  }).slice(0, maxPlayerNameLen);
 }
 
 export function parseFloatOrUndef(

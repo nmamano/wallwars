@@ -137,6 +137,12 @@ export default function GamePage({
             creatorRating,
             joinerRating,
           });
+          if (
+            draftState.names[0] === "Guest" ||
+            draftState.names[1] === "Guest"
+          ) {
+            showToastNotification("Games with guests will not affect ELO.");
+          }
         });
       }
     );

@@ -4,7 +4,7 @@ import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { MenuThemeName, BoardThemeName, getColor } from "./shared/colorThemes";
 import { RoleEnum, ServerGame } from "./game/gameState";
 import GamePage from "./game/GamePage";
-import { randPlayerName, parseFloatOrUndef, auth0Prefix } from "./shared/utils";
+import { parseFloatOrUndef, auth0Prefix } from "./shared/utils";
 import LobbyPage from "./lobby/LobbyPage";
 import { useMediaQuery } from "react-responsive";
 import { useImmer } from "use-immer";
@@ -96,7 +96,7 @@ function initialAppState(cookies: Cookies): AppState {
     hasOngoingGame: false,
     clientRole: RoleEnum.none,
     joinCode: "",
-    playerName: cookies.playerName || randPlayerName(maxPlayerNameLen),
+    playerName: "Guest",
     token: cookies.token || "default",
     boardSettings: {
       dims: [nr, nc],
@@ -173,7 +173,9 @@ export default function App() {
 
   const handlePlayerName = (name: string) => {
     updateState((draftState) => {
-      draftState.playerName = name.slice(0, maxPlayerNameLen);
+      if (draftState.idToken !== "") {
+        draftState.playerName = name.slice(0, maxPlayerNameLen);
+      }
     });
     // The name is not saved in a cookie until a game is started.
   };
