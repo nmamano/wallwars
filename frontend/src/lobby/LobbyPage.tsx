@@ -228,6 +228,7 @@ export default function LobbyPage({
           hasOngoingGame={appState.hasOngoingGame}
           isLoggedIn={isLoggedIn}
           playerName={appState.playerName}
+          handleIdToken={handleIdToken}
         />
         <LobbyForm
           // @ts-ignore
