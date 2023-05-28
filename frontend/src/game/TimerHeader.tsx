@@ -1,7 +1,9 @@
 import { getColor, MenuThemeName, BoardThemeName } from "../shared/colorThemes";
 import { LifeCycleStage } from "./gameState";
+import { RoleEnum } from "./gameState";
 
 export default function TimerHeader({
+  clientRole,
   lifeCycleStage,
   names,
   ratings,
@@ -14,6 +16,7 @@ export default function TimerHeader({
   boardTheme,
   isDarkModeOn,
 }: {
+  clientRole: RoleEnum;
   lifeCycleStage: LifeCycleStage;
   names: [string, string];
   ratings: [number, number];
@@ -26,7 +29,6 @@ export default function TimerHeader({
   boardTheme: BoardThemeName;
   isDarkModeOn: boolean;
 }): JSX.Element {
-  const formattedRatings = [Math.round(ratings[0]), Math.round(ratings[1])];
   const [min1, min2] = [
     Math.floor(timeLeft[0] / 60),
     Math.floor(timeLeft[1] / 60),
@@ -73,6 +75,18 @@ export default function TimerHeader({
     getColor(boardTheme, "lowTime", isDarkModeOn),
   ];
 
+  let formattedNames = [names[0], names[1]];
+  if (names[0] === "Guest" && clientRole === RoleEnum.creator) {
+    formattedNames[0] = "Guest (you)";
+  }
+  if (names[1] === "Guest" && clientRole === RoleEnum.joiner) {
+    formattedNames[1] = "Guest (you)";
+  } else if (!names[1]) {
+    formattedNames[1] = "Waiting...";
+  }
+
+  const roundedRatings = [Math.round(ratings[0]), Math.round(ratings[1])];
+
   return (
     <div
       style={{
@@ -101,9 +115,9 @@ export default function TimerHeader({
         }}
         className={"center truncate" + (pToMove[0] ? " z-depth-2" : "")}
       >
-        {names[0]}
+        {formattedNames[0]}
         <br></br>
-        {"(" + formattedRatings[0] + ")"}
+        {"(" + roundedRatings[0] + ")"}
       </div>
       <div style={childStyle} className={"center"}>
         {isPresentDot(arePlayersPresent[0], names[0])}
@@ -139,9 +153,9 @@ export default function TimerHeader({
         }}
         className={"center truncate" + (pToMove[1] ? " z-depth-2" : "")}
       >
-        {names[1] === null ? "waiting..." : names[1]}
+        {formattedNames[1]}
         <br></br>
-        {names[1] === null ? "" : "(" + formattedRatings[1] + ")"}
+        {names[1] === null ? "" : "(" + roundedRatings[1] + ")"}
       </div>
       {showScores && (
         <div style={childStyle} className={"center"}>
@@ -170,5 +184,5 @@ function dot(color: string, title: string): JSX.Element {
 
 function isPresentDot(isPresent: boolean, name: string): JSX.Element {
   if (isPresent) return dot("#67ff36", `${name} has the game open`);
-  return dot("gray", `${name} does not have the game page open`);
+  return dot("gray", `${name} does not have the game open`);
 }

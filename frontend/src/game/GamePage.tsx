@@ -941,7 +941,7 @@ export default function GamePage({
   });
 
   //===================================================
-  // Preparing props for rendering.
+  // Prepare props for rendering.
   //===================================================
   // After the game is over, the players can see how much time they
   // had left at each move. During the game, they ALWAYS see the current time.
@@ -1046,6 +1046,7 @@ export default function GamePage({
         }}
       >
         <TimerHeader
+          clientRole={state.clientRole!}
           lifeCycleStage={state.lifeCycleStage}
           names={[state.names[0]!, state.names[1]!]}
           ratings={state.ratings}
