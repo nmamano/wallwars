@@ -15,8 +15,8 @@ export default function AuthButton({
     "account_circle_outlined",
   ];
   const [loggedInTooltip, loggedOutTooltip]: [string, string] = [
-    "Log in",
     "Profile",
+    "Log in",
   ];
 
   const { user, error, isAuthenticated, loginWithRedirect } = useAuth0();

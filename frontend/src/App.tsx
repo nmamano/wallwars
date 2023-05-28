@@ -181,6 +181,7 @@ export default function App() {
   };
 
   const handleIdToken = (idToken: string) => {
+    console.log("handleIdToken: ", idToken);
     updateState((draftState) => {
       draftState.idToken = idToken;
     });
