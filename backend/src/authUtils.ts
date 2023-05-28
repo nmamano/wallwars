@@ -1,4 +1,4 @@
-export const auth0Prefix = "Auth0|";
+export const auth0Prefix = "auth0|";
 import { uniqueNamesGenerator, names } from "unique-names-generator";
 
 export function isGuest(idToken: string) {
