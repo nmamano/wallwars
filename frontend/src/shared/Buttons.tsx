@@ -9,6 +9,7 @@ import Typography from "@mui/material/Typography";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
+import TextInputField from "../shared/TextInputField";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -138,35 +139,23 @@ export function TextButton({
     backgroundColor: disabled ? "lightgray" : bgColor,
     color: disabled ? "gray" : "white",
   };
-  if (disabled)
-    return (
-      <Button
-        id={id}
-        variant="contained"
-        style={style}
-        onClick={onClick}
-        disabled={true}
-        size={isImportant ? "large" : "medium"}
-        endIcon={dropdownIcon ? <KeyboardArrowDownIcon /> : undefined}
-      >
-        {text}
-      </Button>
-    );
-  return (
-    <Tooltip title={tooltip}>
-      <Button
-        id={id}
-        variant="contained"
-        style={style}
-        onClick={onClick}
-        disabled={false}
-        size={isImportant ? "large" : "medium"}
-        endIcon={dropdownIcon ? <KeyboardArrowDownIcon /> : undefined}
-      >
-        {text}
-      </Button>
-    </Tooltip>
+
+  const button = (
+    <Button
+      id={id}
+      variant="contained"
+      style={style}
+      onClick={onClick}
+      disabled={disabled}
+      size={isImportant ? "large" : "medium"}
+      endIcon={dropdownIcon ? <KeyboardArrowDownIcon /> : undefined}
+    >
+      {text}
+    </Button>
   );
+
+  if (disabled) return button;
+  return <Tooltip title={tooltip}>{button}</Tooltip>;
 }
 
 export function IconButtonWithTooltip({
@@ -202,34 +191,22 @@ export function IconButtonWithTooltip({
     boxShadow: 1,
     borderRadius: circular ? 50 : 1,
   };
-  if (disabled) {
-    return (
-      <IconButton
-        style={style}
-        sx={sx}
-        onClick={onClick}
-        disabled={true}
-        centerRipple={false}
-        size="small"
-      >
-        {getIcon(icon)}
-      </IconButton>
-    );
-  }
-  return (
-    <Tooltip title={tooltip}>
-      <IconButton
-        style={style}
-        sx={sx}
-        onClick={onClick}
-        disabled={false}
-        centerRipple={false}
-        size="small"
-      >
-        {getIcon(icon)}
-      </IconButton>
-    </Tooltip>
+
+  const button = (
+    <IconButton
+      style={style}
+      sx={sx}
+      onClick={onClick}
+      disabled={disabled}
+      centerRipple={false}
+      size="small"
+    >
+      {getIcon(icon)}
+    </IconButton>
   );
+
+  if (disabled) return button;
+  return <Tooltip title={tooltip}>{button}</Tooltip>;
 }
 
 // When you click this button, an informational modal pops up that you need to dismiss by clicking
@@ -350,6 +327,93 @@ export function IconButtonWithDialog({
             onClick={() => {
               handleClose();
               onClick();
+            }}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn || false}
+          />
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}
+
+// A button that when pressed, shows a modal with a text field, a cancel button
+// and an accept button. Calling the accept button triggers a callback that
+// receives the text field value as an argument.
+export function TextButtonWithTextField({
+  baseButtonText,
+  tooltip,
+  disabled,
+  menuTheme,
+  isDarkModeOn,
+  modalTitle,
+  modalBody,
+  onClick,
+  tooltipOnDisabled,
+}: {
+  baseButtonText: string;
+  tooltip: string;
+  disabled?: boolean;
+  menuTheme: MenuThemeName;
+  isDarkModeOn: boolean;
+  modalTitle: string;
+  modalBody: string;
+  onClick: (text: string) => void; // Triggered when confirming the dialog.
+  tooltipOnDisabled?: boolean;
+}): JSX.Element {
+  const [isOpen, setIsOpen] = React.useState<boolean>(false);
+  const handleOpen = () => setIsOpen(true);
+  const handleClose = () => setIsOpen(false);
+  const [textFieldInput, setTextFieldInput] = React.useState<string>("");
+
+  const setTextFieldInputWithLimit = (text: string): void => {
+    // TODO: 15 should be a prop.
+    setTextFieldInput(text.substring(0, 15));
+  };
+
+  let baseButton = (
+    <TextButton
+      text={baseButtonText}
+      tooltip={tooltip}
+      menuTheme={menuTheme}
+      isDarkModeOn={isDarkModeOn}
+      disabled={disabled}
+      onClick={handleOpen}
+    />
+  );
+
+  if (disabled && tooltipOnDisabled) {
+    // The span is needed to make the tooltip work on disabled buttons.
+    baseButton = <span>{baseButton}</span>;
+  }
+
+  baseButton = <Tooltip title={tooltip}>{baseButton}</Tooltip>;
+
+  return (
+    <>
+      {baseButton}
+      <Dialog open={isOpen} onClose={handleClose}>
+        <DialogTitle variant="h5" style={{ color: "black" }}>
+          {modalTitle}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText style={{ color: "black" }}>
+            {modalBody}
+          </DialogContentText>
+          <TextInputField
+            id="text_field_input"
+            value={textFieldInput}
+            onChange={setTextFieldInputWithLimit}
+            blackText={true}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancel</Button>
+          <TextButton
+            text="Accept"
+            onClick={() => {
+              handleClose();
+              onClick(textFieldInput);
             }}
             menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn || false}

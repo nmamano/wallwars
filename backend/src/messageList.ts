@@ -9,8 +9,14 @@ export default {
   newRatingsNotificationMsg: "newRatingsNotification",
   invalidIdTokenErrorMsg: "invalidIdTokenError",
   solvedPuzzleMsg: "solvedPuzzle",
+  loggedInMsg: "loggedIn",
+  createdNewPlayerMsg: "createdNewPlayer",
+  createNewPlayerFailedMsg: "createNewPlayerFailed",
+  changeNameMsg: "changeName",
+  nameChangedMsg: "nameChanged",
+  nameChangeFailedMsg: "nameChangeFailed",
 
-  //client-server-client messages
+  //client1-server-client2 messages
   joinGameMsg: "joinGame",
   gameJoinedMsg: "gameJoined",
   gameJoinFailedMsg: "gameJoinFailed",

@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import Grid from "@mui/material/Grid";
 import { getColor } from "../shared/colorThemes";
 import showToastNotification from "../shared/showToastNotification";
-import { TextButton } from "../shared/Buttons";
+import { TextButton, TextButtonWithTextField } from "../shared/Buttons";
 import { maxBoardDims } from "../shared/globalSettings";
 import { AppState, PosSetting } from "../App";
 import TokenDropdown from "./TokenDropdown";
@@ -109,6 +109,8 @@ export default function LobbyForm({
   const [tokenDropdownAnchorEl, setTokenDropdownAnchorEl] =
     React.useState<null | HTMLElement>(null);
 
+  const isLoggedIn = appState.idToken !== "";
+
   return (
     <div
       style={{
@@ -159,17 +161,32 @@ export default function LobbyForm({
           />
         </Grid>
       </Grid>
-      <div style={gridItemStyle}>
-        <span style={gridItemStyle}>
-          <TextInputField
-            label="Your name:"
-            id="nameInput"
-            value={appState.playerName}
-            onChange={handlePlayerName}
-            disabled={appState.idToken === ""}
-          />
-        </span>
-      </div>
+      <Grid
+        container
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        textAlign="center"
+        spacing={0}
+      >
+        <Grid item style={gridItemStyle} xs={4}>
+          <div style={gridItemStyle}>
+            <TextButtonWithTextField
+              baseButtonText="Change Name"
+              tooltip={
+                isLoggedIn ? "Change your name." : "Log in to change your name."
+              }
+              disabled={!isLoggedIn}
+              menuTheme={menuTheme}
+              isDarkModeOn={isDarkModeOn}
+              modalTitle="Name change"
+              modalBody="Enter your new name:"
+              onClick={handlePlayerName}
+              tooltipOnDisabled={true}
+            />
+          </div>
+        </Grid>
+      </Grid>
       <div>
         <FormControlLabel
           style={{ color: "white" }}

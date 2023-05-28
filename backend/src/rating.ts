@@ -23,7 +23,7 @@ export function initialRating(): RatingTuple {
   };
 }
 
-export function updateRating(
+export function newRatingAfterGame(
   player: RatingTuple,
   opponent: RatingTuple,
   outcome: Outcome

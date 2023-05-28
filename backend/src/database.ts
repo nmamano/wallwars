@@ -2,10 +2,9 @@
 Users can play even if the DB is down: the games are simply not stored in that case */
 import mongoose from "mongoose";
 const Schema = mongoose.Schema;
-import { updateRating, initialRating } from "./rating";
+import { newRatingAfterGame, initialRating } from "./rating";
 import { GameState } from "./gameState";
-import { isGuest } from "./authUtils";
-
+import { auth0Prefix, isGuest } from "./authUtils";
 const url = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.vt6ui.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 var connectedToDB = false;
 
@@ -116,9 +115,88 @@ export type dbFinishedGameWithoutIdTokens = Omit<dbFinishedGame, "idTokens">;
 // Functions to interact with the database.
 // ============================================
 
+// Returns whether there is a player with the given name. Also returns false in
+// case of error.
+export async function nameExists(name: string): Promise<boolean> {
+  if (!connectedToDB) {
+    console.error("when checking if name exists: not connected to DB");
+    return false;
+  }
+  if (name === "") {
+    console.error("when checking if name exists: name is empty");
+    return false;
+  }
+  const count = await Player.countDocuments({ name: name });
+  if (count > 1) {
+    console.error(`name exists ${count} times`);
+    return false; // false because it is an error.
+  }
+  return count === 1;
+}
+
+// Returns whether it succeeded in changing the name of the player with the given
+// idToken.
+export async function changeName(
+  idToken: string,
+  name: string
+): Promise<boolean> {
+  if (!connectedToDB) {
+    console.error("when changing name: not connected to DB");
+    return false;
+  }
+  if (!idToken.startsWith(auth0Prefix)) {
+    console.error(
+      "when changing name: idToken does not start with auth0Prefix"
+    );
+    return false;
+  }
+  if (name === "") {
+    console.error("when changing name: name is empty");
+    return false;
+  }
+  const res = await Player.updateOne({ idToken: idToken }, { name: name });
+  if (res.modifiedCount !== 1) {
+    console.error(`name changed modified ${res.modifiedCount} players`);
+    return false;
+  }
+  return true;
+}
+
 export async function getPlayer(idToken: string): Promise<dbPlayer | null> {
   if (!connectedToDB) return null;
   return await Player.findOne({ idToken: idToken });
+}
+
+// Returns whether it succeeds in adding a new player.
+export async function addNewPlayer(
+  idToken: string,
+  name: string
+): Promise<boolean> {
+  if (!connectedToDB) return false;
+  if (!idToken.startsWith(auth0Prefix)) {
+    console.error(
+      `when adding new player: idToken '${idToken}' does not start with 'auth0|'`
+    );
+    return false;
+  }
+  if (name === "") {
+    console.error("when adding new player: name is empty");
+    return false;
+  }
+
+  const p = new Player(defaultDbPlayer(idToken, name));
+  try {
+    await p.save();
+    console.log(
+      `Stored new player in DB ${process.env.DB_NAME}: name ${p.name} idToken ${p.idToken}`
+    );
+    return true;
+  } catch (err) {
+    console.error(
+      `Store new player to DB ${process.env.DB_NAME} failed:\n${err}`
+    );
+    return false;
+  }
 }
 
 export async function getRanking(count: number): Promise<dbRanking | null> {
@@ -146,11 +224,11 @@ export async function getRanking(count: number): Promise<dbRanking | null> {
 }
 
 // Does not insert the player in the database, it just initializes some of the fields.
-export function createNewPlayer(idToken: string): dbPlayer {
+export function defaultDbPlayer(idToken: string, name: string): dbPlayer {
   const r = initialRating();
   return {
     idToken: idToken,
-    name: "",
+    name: name,
     rating: r.rating,
     peakRating: r.rating,
     ratingDeviation: r.deviation,
@@ -165,32 +243,38 @@ export function createNewPlayer(idToken: string): dbPlayer {
 }
 
 // Adds a puzzle to the list of the players' solved puzzles, if it is not
-// already marked as solved.
+// already marked as solved. Returns whether it succeeded.
 export async function addPlayerSolvedPuzzle(
   idToken: string,
   name: string,
   puzzleId: string
-): Promise<void> {
-  if (!connectedToDB || isGuest(idToken)) return;
-  let p = await Player.findOne({ idToken: idToken });
-  // If the player is not in the DB yet because they have not played any game yet, create it
-  // so we can keep track of their puzzle completions.
-  if (!p) {
-    const timestamp = Date.now();
-    console.log("creating new Player");
-    p = new Player(createNewPlayer(idToken));
-    p.name = name;
-    p.firstGameDate = new Date(timestamp);
-    p.lastGameDate = new Date(timestamp);
+): Promise<boolean> {
+  if (!connectedToDB) {
+    console.error("addPlayerSolvedPuzzle: not connected to DB");
+    return false;
   }
-  if (p.solvedPuzzles.includes(puzzleId)) return;
+  if (isGuest(idToken)) {
+    console.error("addPlayerSolvedPuzzle: should not be a guest player");
+    return false;
+  }
+  let p = await Player.findOne({ idToken: idToken });
+  if (!p) {
+    console.error("addPlayerSolvedPuzzle: player not found in DB");
+    return false;
+  }
+
+  if (p.solvedPuzzles.includes(puzzleId)) return true;
+
   p.solvedPuzzles.push(puzzleId);
   try {
     await p.save();
     console.log(`Stored player in DB ${process.env.DB_NAME}: name ${p.name}`);
+    return true;
   } catch (err) {
-    console.error(`Store player ${p} to DB ${process.env.DB_NAME} failed`);
-    console.log(err);
+    console.error(
+      `Store player ${p} to DB ${process.env.DB_NAME} failed:\n${err}`
+    );
+    return false;
   }
 }
 
@@ -366,24 +450,22 @@ const playerSchema = new Schema({
 });
 const Player = mongoose.model("Player", playerSchema);
 
-// updates the `Player` object (locally) based on the result of a game
-function updatePlayer(
+// updates the `player` (locally) based on the result of a game.
+function updatePlayerWithGameResult(
   player: dbPlayer,
   game: GameState,
   score: number,
-  newRatingTuple: { rating: number; deviation: number; volatility: number }
-) {
-  const idToken = player.idToken;
-
-  if (idToken !== game.idTokens[0] && idToken !== game.idTokens[1])
-    console.error("player is not in this game");
-
-  const pIndex = player.idToken === game.idTokens[0] ? 0 : 1;
-  player.name = game.playerNames[pIndex] || "";
-  player.rating = newRatingTuple.rating;
-  player.peakRating = Math.max(player.rating, player.peakRating);
-  player.ratingDeviation = newRatingTuple.deviation;
-  player.ratingVolatility = newRatingTuple.volatility;
+  newRatingTuple: { rating: number; deviation: number; volatility: number },
+  isVsGuest: boolean
+): void {
+  if (!isVsGuest) {
+    // The rating is a competitive statistic, so it is not influenced by games
+    // vs guests.
+    player.rating = newRatingTuple.rating;
+    player.peakRating = Math.max(player.rating, player.peakRating);
+    player.ratingDeviation = newRatingTuple.deviation;
+    player.ratingVolatility = newRatingTuple.volatility;
+  }
   player.gameCount++;
   if (score === 1) player.winCount++;
   if (score === 0.5) player.drawCount++;
@@ -391,85 +473,111 @@ function updatePlayer(
   player.lastGameDate = game.startDate;
 }
 
-// updates both players of a game in the database. If a player is not yet
-// in the database, a new one is created
-async function updatePlayers(game: GameState): Promise<void> {
-  if (!connectedToDB) return;
+// Updates both players of a game in the database. Returns whether it succeeds.
+async function updatePlayers(game: GameState): Promise<boolean> {
+  if (!connectedToDB) {
+    console.error("cannot update players because not connected to db");
+    return false;
+  }
   if (!game.idTokens[0] || !game.idTokens[1]) {
     console.error("cannot update players because game.idTokens are not set");
-    return;
+    return false;
   }
-  const p1IdToken = game.idTokens[0];
-  const p2IdToken = game.idTokens[1];
-  const p1IsGuest = isGuest(p1IdToken);
-  const p2IsGuest = isGuest(p2IdToken);
-  if (p1IsGuest && p2IsGuest) return;
-  // TELL: checking if both players are guests would still take place at the DB level. If one player not a guest, flag alone can't say which. Even when not updating Elo, still need to pass elo to updatePlayer() which means need current elo of each player
+  const guest: [boolean, boolean] = [
+    isGuest(game.idTokens[0]),
+    isGuest(game.idTokens[1]),
+  ];
 
-  // Read the two players from db, or create new ones if not found
-  let p1 = new Player(createNewPlayer(p1IdToken));
-  if (!p1IsGuest) {
-    const foundExistingPlayer = await Player.findOne({
-      idToken: p1IdToken,
+  // Only non-guests exist in the DB. If both are guests, there is nothing to
+  // do.
+  if (guest[0] && guest[1]) return true;
+
+  // Read the non-guest players from db
+  let p1: any, p2: any; // TODO: type this properly
+  if (!guest[0]) {
+    const foundPlayer = await Player.findOne({
+      idToken: game.idTokens[0],
     });
-    if (foundExistingPlayer) p1 = foundExistingPlayer;
+    if (foundPlayer) {
+      p1 = foundPlayer;
+    } else {
+      console.error("player is not a guest and not found in db");
+      return false;
+    }
   }
-  let p2 = new Player(createNewPlayer(p2IdToken));
-  if (!p2IsGuest) {
-    const foundExistingPlayer = await Player.findOne({
-      idToken: p2IdToken,
+  if (!guest[1]) {
+    const foundPlayer = await Player.findOne({
+      idToken: game.idTokens[1],
     });
-    if (foundExistingPlayer) p2 = foundExistingPlayer;
+    if (foundPlayer) {
+      p2 = foundPlayer;
+    } else {
+      console.error("player is not a guest and not found in db");
+      return false;
+    }
   }
 
-  let p1RatingTuple = {
-    rating: p1.rating,
-    deviation: p1.ratingDeviation,
-    volatility: p1.ratingVolatility,
-  };
-  let p2RatingTuple = {
-    rating: p2.rating,
-    deviation: p2.ratingDeviation,
-    volatility: p2.ratingVolatility,
-  };
+  // Get the rating statistics for both players, regardless of whether they are
+  // guests or not. Guests just get the initial rating.
+  let p1RatingTuple = guest[0]
+    ? initialRating()
+    : {
+        rating: p1.rating,
+        deviation: p1.ratingDeviation,
+        volatility: p1.ratingVolatility,
+      };
+
+  let p2RatingTuple = guest[1]
+    ? initialRating()
+    : {
+        rating: p2.rating,
+        deviation: p2.ratingDeviation,
+        volatility: p2.ratingVolatility,
+      };
 
   let scores;
   if (game.winner === "draw") scores = [0.5, 0.5];
   else if (game.winner === "creator") scores = [1, 0];
-  else scores = [0, 1]; // only updates elo if both players not guests
-  if (!p1IsGuest && !p2IsGuest) {
-    // update elo
-    p1RatingTuple = updateRating(p1RatingTuple, p2RatingTuple, scores[0]);
-    p2RatingTuple = updateRating(p2RatingTuple, p1RatingTuple, scores[1]);
-  }
+  else scores = [0, 1];
 
-  // Update the fields based on the result of the game
-  updatePlayer(p1, game, scores[0], p1RatingTuple);
-  updatePlayer(p2, game, scores[1], p2RatingTuple);
-
-  if (!isGuest(p1IdToken)) {
+  // Update the players which are not guests.
+  if (!guest[0]) {
+    updatePlayerWithGameResult(
+      p1,
+      game,
+      scores[0],
+      newRatingAfterGame(p1RatingTuple, p2RatingTuple, scores[0]),
+      guest[1]
+    );
     try {
-      // Store the players with the updated fields
       await p1.save();
       console.log(
         `Stored player in DB ${process.env.DB_NAME}: name ${p1.name} idToken ${p1.idToken} freshness: ${p1.lastGameDate}`
       );
     } catch (err) {
-      console.error(`Store player to DB ${process.env.DB_NAME} failed`);
-      console.log(err);
+      console.error(`Store player to DB ${process.env.DB_NAME} failed: ${err}`);
+      return false;
     }
   }
-  if (!isGuest(p2IdToken)) {
+  if (!guest[1]) {
+    updatePlayerWithGameResult(
+      p2,
+      game,
+      scores[1],
+      newRatingAfterGame(p2RatingTuple, p1RatingTuple, scores[1]),
+      guest[0]
+    );
     try {
       await p2.save();
       console.log(
         `Stored player in DB ${process.env.DB_NAME}: name ${p2.name} idToken ${p2.idToken} freshness: ${p2.lastGameDate}`
       );
     } catch (err) {
-      console.error(`Store player to DB ${process.env.DB_NAME} failed`);
-      console.log(err);
+      console.error(`Store player to DB ${process.env.DB_NAME} failed: ${err}`);
+      return false;
     }
   }
+  return true;
 }
 
 const moveSchema = new Schema(

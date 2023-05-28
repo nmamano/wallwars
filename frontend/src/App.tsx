@@ -27,13 +27,12 @@ import {
 import ErrorPage from "./shared/ErrorPage";
 import { version } from "wallwars-core";
 
-const maxPlayerNameLen = 9;
+const maxPlayerNameLen = 15;
 
 export type Cookies = {
   isDarkModeOn?: string;
   menuTheme?: MenuThemeName;
   token?: string;
-  playerName?: string;
   duration?: string;
   increment?: string;
   numRows?: string;
@@ -172,15 +171,16 @@ export default function App() {
   };
 
   const handlePlayerName = (name: string) => {
-    updateState((draftState) => {
-      if (draftState.idToken !== "") {
-        draftState.playerName = name.slice(0, maxPlayerNameLen);
-      }
-    });
-    // The name is not saved in a cookie until a game is started.
+    socket.emit("changeName", { idToken: state.idToken, name: name });
   };
 
   const handleIdToken = (idToken: string) => {
+    if (idToken === "") {
+      // Tell the server that we logged in so that it can create an account for
+      // us in the database, if not already there. This would typically only be
+      // necessary when someone registers for the first time.
+      socket.emit("loggedIn", { idToken: idToken });
+    }
     console.log("handleIdToken: ", idToken);
     updateState((draftState) => {
       draftState.idToken = idToken;
@@ -318,6 +318,37 @@ export default function App() {
         navigate(`/game/${joinCode}`);
       }
     );
+
+    // When a player logs in for the first time, the server will respond with
+    // a valid unique name generated on the server.
+    socket.on("createdNewPlayer", ({ name }: { name: string }) => {
+      updateState((draftState) => {
+        draftState.playerName = name;
+      });
+    });
+
+    socket.on("createNewPlayerFailed", () => {
+      console.log("problem when saving the new player in the db");
+    });
+
+    socket.on(
+      "nameChanged",
+      ({ idToken, name }: { idToken: string; name: string }) => {
+        if (idToken !== state.idToken) {
+          showToastNotification("Name change failed.", 8000);
+          console.error("idToken mismatch during name change");
+          return;
+        }
+        updateState((draftState) => {
+          showToastNotification("Name changed successfully!", 5000);
+          draftState.playerName = name;
+        });
+      }
+    );
+
+    socket.on("nameChangeFailed", ({ reason }: { reason: string }) => {
+      showToastNotification(`Name change failed: ${reason}`, 10000);
+    });
 
     socket.on(
       "returnedToOngoingGame",

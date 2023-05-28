@@ -8,6 +8,7 @@ export default function TextInputField({
   isInvalid,
   placeholder,
   disabled,
+  blackText,
 }: {
   id: string;
   value: string;
@@ -16,12 +17,17 @@ export default function TextInputField({
   isInvalid?: boolean;
   placeholder?: string;
   disabled?: boolean;
+  blackText?: boolean;
 }) {
   return (
     <TextField
       style={{ minHeight: "42px" }}
-      inputProps={{ style: { color: "white", paddingLeft: "7px" } }}
-      InputLabelProps={{ style: { color: "white", fontSize: "18px" } }}
+      inputProps={{
+        style: { color: blackText ? "black" : "white", paddingLeft: "7px" },
+      }}
+      InputLabelProps={{
+        style: { color: blackText ? "black" : "white", fontSize: "18px" },
+      }}
       label={label}
       error={isInvalid}
       id={id}

@@ -29,6 +29,7 @@ import {
 } from "./src/gameState";
 import M from "./src/messageList";
 import { version } from "wallwars-core";
+import { randPlayerName } from "./src/authUtils";
 
 console.log(`Using ${version()}`);
 
@@ -461,6 +462,91 @@ io.on(M.connectionMsg, function (socket: any): void {
     logReceivedMessage(M.pingServerMsg);
     emitMessage(M.pongFromServerMsg);
   });
+
+  socket.on(
+    M.loggedInMsg,
+    async function ({ idToken }: { idToken: string }): Promise<void> {
+      logReceivedMessage(M.loggedInMsg, { idToken });
+      const player = await db.getPlayer(idToken);
+      if (player) {
+        return; // Player already exists, does not need to be created.
+      }
+
+      // Get a random and unique name.
+      let newName = randPlayerName();
+      let tries = 20;
+      while (tries > 0) {
+        if (await db.nameExists(newName)) newName = randPlayerName();
+        tries--;
+      }
+      if (tries === 0) {
+        console.error("Could not find a unique name for new player");
+        emitMessage(M.createNewPlayerFailedMsg);
+        return;
+      }
+
+      let success = await db.addNewPlayer(idToken, newName);
+      if (!success) {
+        emitMessage(M.createNewPlayerFailedMsg);
+      } else {
+        emitMessage(M.createdNewPlayerMsg, { name: newName });
+      }
+    }
+  );
+
+  socket.on(
+    M.changeNameMsg,
+    async function ({
+      idToken,
+      name,
+    }: {
+      idToken: string;
+      name: string;
+    }): Promise<void> {
+      logReceivedMessage(M.changeNameMsg, { idToken, name });
+      // Perform formatting validation.
+      if (name.length > 15) {
+        emitMessage(M.nameChangeFailedMsg, { reason: "Name too long" });
+        return;
+      }
+      if (name.length < 3) {
+        emitMessage(M.nameChangeFailedMsg, { reason: "Name too short" });
+        return;
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(name)) {
+        emitMessage(M.nameChangeFailedMsg, {
+          reason: "Name contains invalid characters",
+        });
+        return;
+      }
+      if (name.toLowerCase() === "guest") {
+        emitMessage(M.nameChangeFailedMsg, {
+          reason: "Name cannot be 'guest'",
+        });
+        return;
+      }
+      if (idToken === "") {
+        emitMessage(M.nameChangeFailedMsg, { reason: "Internal error" });
+        return;
+      }
+      const nameExists = await db.nameExists(name);
+      if (nameExists) {
+        emitMessage(M.nameChangeFailedMsg, {
+          reason: "Name already taken",
+        });
+        return;
+      }
+      const success = await db.changeName(idToken, name);
+      if (!success) {
+        emitMessage(M.nameChangeFailedMsg, { reason: "Internal error" });
+      } else {
+        // The input parameters are passed back in the response in case the
+        // client sent multiple changeName messages, so we know which one the
+        // server is responding to.
+        emitMessage(M.nameChangedMsg, { idToken: idToken, name: name });
+      }
+    }
+  );
 
   socket.on(
     M.getGameMsg,
