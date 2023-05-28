@@ -24,8 +24,10 @@ export default function AuthButton({
   if (error) {
     console.log("There was an error while authenticating:\n", error);
   } else if (isAuthenticated) {
-    handleIdToken(user?.sub ? user!.sub : ""); // user.sub is the id token.
     console.log("user:\n", user);
+    console.log("error:\n", error);
+    console.log("isAuthenticated:\n", isAuthenticated);
+    handleIdToken(user?.sub ? user!.sub : ""); // user.sub is the id token.
   }
   return (
     <IconButtonWithTooltip
