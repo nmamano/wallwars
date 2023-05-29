@@ -4,7 +4,6 @@ import "react-toastify/dist/ReactToastify.css";
 import { IconButtonWithTooltip, IconButtonWithInfoModal } from "./Buttons";
 import showToastNotification from "./showToastNotification";
 import { getColor, MenuThemeName } from "./colorThemes";
-import AuthButton from "./AuthButton";
 
 function UsernameIcon({ playerName }: { playerName: String }): JSX.Element {
   return (
@@ -58,7 +57,8 @@ function Header({
   playerName,
   handleToggleDarkMode,
   handleToggleTheme,
-  handleIdToken,
+  handleLogin,
+  handleGoToProfile,
 }: {
   context: string;
   helpText: JSX.Element;
@@ -73,7 +73,8 @@ function Header({
   playerName: string;
   handleToggleDarkMode: () => void;
   handleToggleTheme: () => void;
-  handleIdToken?: (idToken: string) => void; // undefined when auth button is not shown (on game page)
+  handleLogin?: () => void; // Undefined in the game page.
+  handleGoToProfile?: () => void; // Undefined in the game page.
 }): JSX.Element {
   const hasJoinCode =
     joinCode !== "local" && joinCode !== "puzzle" && joinCode !== "AI";
@@ -114,6 +115,8 @@ function Header({
   const padding = isLargeScreen ? 20 : 11;
   const buttonCol = getColor(menuTheme, "headerButton", isDarkModeOn);
 
+  // TODO: the user should be allowed to log out show even if there is an
+  // ongoing game.
   const allowToToggleLogin =
     context === contextEnum.lobby && (!hasOngoingGame || isLoggedIn);
 
@@ -191,11 +194,15 @@ function Header({
                   modalBody={aboutText!}
                 />
                 {allowToToggleLogin && (
-                  <AuthButton
+                  <IconButtonWithTooltip
+                    icon={
+                      isLoggedIn ? "account_circle" : "account_circle_outlined"
+                    }
+                    tooltip={isLoggedIn ? "Profile (WIP)" : "Log in"}
                     bgColor={buttonCol}
                     horizontalPadding={padding}
-                    handleIdToken={handleIdToken!}
-                  ></AuthButton>
+                    onClick={isLoggedIn ? handleGoToProfile! : handleLogin!}
+                  />
                 )}
               </>
             )}

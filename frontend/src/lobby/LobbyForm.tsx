@@ -58,7 +58,6 @@ export default function LobbyForm({
   handleLocalGame: (strDur: string, strInc: string) => void;
   handleComputerGame: () => void;
   handleToken: (token: string) => void;
-  handleIdToken: (idToken: string) => void;
 }): JSX.Element {
   const menuTheme = appState.menuTheme;
   const isDarkModeOn = appState.isDarkModeOn;

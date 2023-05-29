@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import socket from "./socket";
+import { useAuth0 } from "@auth0/auth0-react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { MenuThemeName, BoardThemeName, getColor } from "./shared/colorThemes";
 import { RoleEnum, ServerGame } from "./game/gameState";
@@ -149,6 +150,59 @@ export default function App() {
   const navigate = useNavigate();
 
   // ========================================================================
+  // Authentication logic
+  // ========================================================================
+  const { error, isAuthenticated, user, loginWithRedirect } = useAuth0();
+  useEffect(() => {
+    console.log("user:\n", user);
+    console.log("error:\n", error);
+    console.log("isAuthenticated:\n", isAuthenticated);
+    if (error) {
+      console.log("There was an error while authenticating:\n", error);
+      return;
+    }
+    if (!isAuthenticated) return;
+
+    if (user === undefined) {
+      console.error("user is authenticated but undefined");
+      return;
+    }
+    if (user.sub === undefined || user.sub === "") {
+      console.error("user.sub is undefined or empty");
+      return;
+    }
+    updateState((draftState) => {
+      draftState.idToken = user.sub!;
+    });
+    // Tell the server that we logged in so that it can create an account for
+    // us in the database, if not already there. This would typically only be
+    // necessary when someone registers for the first time.
+    console.log("emitting loggedIn");
+    socket.emit("loggedIn", { idToken: user.sub });
+    return;
+  }, [user, isAuthenticated, error, updateState]);
+
+  const handleLogin = () => {
+    loginWithRedirect();
+  };
+  const handleGoToProfile = () => {
+    // TODO: implement
+    showToastNotification("Profile page not implemented yet, sorry");
+  };
+
+  // When a player logs in for the first time, the server will respond with
+  // a valid unique name generated on the server.
+  socket.on("createdNewPlayer", ({ name }: { name: string }) => {
+    updateState((draftState) => {
+      draftState.playerName = name;
+    });
+  });
+
+  socket.on("createNewPlayerFailed", () => {
+    console.log("problem when saving the new player in the db");
+  });
+
+  // ========================================================================
   // Functions to modify the state
   // ========================================================================
 
@@ -172,19 +226,6 @@ export default function App() {
 
   const handlePlayerName = (name: string) => {
     socket.emit("changeName", { idToken: state.idToken, name: name });
-  };
-
-  const handleIdToken = (idToken: string) => {
-    if (idToken === "") {
-      // Tell the server that we logged in so that it can create an account for
-      // us in the database, if not already there. This would typically only be
-      // necessary when someone registers for the first time.
-      socket.emit("loggedIn", { idToken: idToken });
-    }
-    console.log("handleIdToken: ", idToken);
-    updateState((draftState) => {
-      draftState.idToken = idToken;
-    });
   };
 
   const handleToken = (icon: string) => {
@@ -318,18 +359,6 @@ export default function App() {
         navigate(`/game/${joinCode}`);
       }
     );
-
-    // When a player logs in for the first time, the server will respond with
-    // a valid unique name generated on the server.
-    socket.on("createdNewPlayer", ({ name }: { name: string }) => {
-      updateState((draftState) => {
-        draftState.playerName = name;
-      });
-    });
-
-    socket.on("createNewPlayerFailed", () => {
-      console.log("problem when saving the new player in the db");
-    });
 
     socket.on(
       "nameChanged",
@@ -510,7 +539,6 @@ export default function App() {
               handleToggleTheme={handleToggleTheme}
               handleToggleDarkMode={handleToggleDarkMode}
               handlePlayerName={handlePlayerName}
-              handleIdToken={handleIdToken}
               handleToken={handleToken}
               handleIsPrivate={handleIsPrivate}
               handleNumRows={handleNumRows}
@@ -526,6 +554,8 @@ export default function App() {
               handleComputerGame={handleComputerGame}
               handleSolvePuzzle={handleSolvePuzzle}
               handleHasOngoingGameInServer={handleHasOngoingGameInServer}
+              handleLogin={handleLogin}
+              handleGoToProfile={handleGoToProfile}
             />
           }
         />

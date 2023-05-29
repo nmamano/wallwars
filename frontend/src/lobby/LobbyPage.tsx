@@ -39,7 +39,6 @@ export default function LobbyPage({
   handleToggleTheme,
   handleToggleDarkMode,
   handlePlayerName,
-  handleIdToken,
   handleToken,
   handleIsPrivate,
   handleNumRows,
@@ -55,6 +54,8 @@ export default function LobbyPage({
   handleComputerGame,
   handleSolvePuzzle,
   handleHasOngoingGameInServer,
+  handleLogin,
+  handleGoToProfile,
 }: {
   appState: AppState;
   isLoggedIn: boolean;
@@ -62,7 +63,6 @@ export default function LobbyPage({
   handleToggleTheme: () => void;
   handleToggleDarkMode: () => void;
   handlePlayerName: (name: string) => void;
-  handleIdToken: (idToken: string) => void;
   handleToken: (token: string) => void;
   handleIsPrivate: (isPrivate: boolean) => void;
   handleNumRows: (nr: number) => void;
@@ -78,6 +78,8 @@ export default function LobbyPage({
   handleComputerGame: () => void;
   handleSolvePuzzle: (puzzleId: string) => void;
   handleHasOngoingGameInServer: (hasOngoingGame: boolean) => void;
+  handleLogin: () => void;
+  handleGoToProfile: () => void;
 }): JSX.Element {
   const [state, updateState] = useImmer(
     initialLobbyState(appState.timeControl)
@@ -228,7 +230,8 @@ export default function LobbyPage({
           hasOngoingGame={appState.hasOngoingGame}
           isLoggedIn={isLoggedIn}
           playerName={appState.playerName}
-          handleIdToken={handleIdToken}
+          handleLogin={handleLogin}
+          handleGoToProfile={handleGoToProfile}
         />
         <LobbyForm
           // @ts-ignore
@@ -251,7 +254,6 @@ export default function LobbyPage({
           handleLocalGame={handleLocalGame}
           handleComputerGame={handleComputerGame}
           handleToken={handleToken}
-          handleIdToken={handleIdToken}
         />
         {appState.hasOngoingGame && ( // todo: do we need to check here if the eloId matches?
           <div
