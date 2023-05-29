@@ -71,7 +71,6 @@ function playMoveSound() {
 
 export default function GamePage({
   clientParams,
-  isLoggedIn,
   isLargeScreen,
   handleReturnToLobby,
   handleToggleDarkMode,
@@ -79,7 +78,6 @@ export default function GamePage({
   wasmAIGetMove,
 }: {
   clientParams: AppState;
-  isLoggedIn: boolean;
   isLargeScreen: boolean;
   handleReturnToLobby: () => void;
   handleToggleDarkMode: () => void;
@@ -1030,7 +1028,7 @@ export default function GamePage({
         handleToggleDarkMode={handleToggleDarkMode}
         handleToggleTheme={handleToggleTheme}
         hasOngoingGame={true}
-        isLoggedIn={isLoggedIn}
+        isLoggedIn={clientParams.idToken !== ""}
       />
       <div
         style={{

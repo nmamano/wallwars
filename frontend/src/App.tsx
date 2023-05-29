@@ -5,7 +5,7 @@ import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { MenuThemeName, BoardThemeName, getColor } from "./shared/colorThemes";
 import { RoleEnum, ServerGame } from "./game/gameState";
 import GamePage from "./game/GamePage";
-import { parseFloatOrUndef, auth0Prefix } from "./shared/utils";
+import { parseFloatOrUndef } from "./shared/utils";
 import LobbyPage from "./lobby/LobbyPage";
 import { useMediaQuery } from "react-responsive";
 import { useImmer } from "use-immer";
@@ -531,7 +531,6 @@ export default function App() {
           element={
             <LobbyPage
               appState={state}
-              isLoggedIn={checkIsLoggedIn(state.idToken)}
               isLargeScreen={isLargeScreen}
               handleToggleTheme={handleToggleTheme}
               handleToggleDarkMode={handleToggleDarkMode}
@@ -561,7 +560,6 @@ export default function App() {
           element={
             <GamePage
               clientParams={state}
-              isLoggedIn={checkIsLoggedIn(state.idToken)}
               isLargeScreen={isLargeScreen}
               handleReturnToLobby={handleReturnToLobby}
               handleToggleDarkMode={handleToggleDarkMode}
@@ -575,7 +573,6 @@ export default function App() {
           element={
             <GamePage
               clientParams={state}
-              isLoggedIn={checkIsLoggedIn(state.idToken)}
               isLargeScreen={isLargeScreen}
               handleReturnToLobby={handleReturnToLobby}
               handleToggleDarkMode={handleToggleDarkMode}
@@ -630,8 +627,4 @@ function validateOrFixBoardSettings(bs: BoardSettings): BoardSettings {
   } else {
     return bs;
   }
-}
-
-function checkIsLoggedIn(idToken: string): boolean {
-  return idToken.substring(0, auth0Prefix.length) === auth0Prefix;
 }

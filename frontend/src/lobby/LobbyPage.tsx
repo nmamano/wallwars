@@ -34,7 +34,6 @@ function initialLobbyState(tc: TimeControl): LobbyState {
 
 export default function LobbyPage({
   appState,
-  isLoggedIn,
   isLargeScreen,
   handleToggleTheme,
   handleToggleDarkMode,
@@ -58,7 +57,6 @@ export default function LobbyPage({
   handleGoToProfile,
 }: {
   appState: AppState;
-  isLoggedIn: boolean;
   isLargeScreen: boolean;
   handleToggleTheme: () => void;
   handleToggleDarkMode: () => void;
@@ -228,7 +226,7 @@ export default function LobbyPage({
           handleToggleDarkMode={handleToggleDarkMode}
           handleToggleTheme={handleToggleTheme}
           hasOngoingGame={appState.hasOngoingGame}
-          isLoggedIn={isLoggedIn}
+          isLoggedIn={appState.idToken !== ""}
           playerName={appState.playerName}
           handleLogin={handleLogin}
           handleGoToProfile={handleGoToProfile}
