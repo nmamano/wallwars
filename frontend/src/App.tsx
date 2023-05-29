@@ -28,8 +28,6 @@ import {
 import ErrorPage from "./shared/ErrorPage";
 import { version } from "wallwars-core";
 
-const maxPlayerNameLen = 15;
-
 export type Cookies = {
   isDarkModeOn?: string;
   menuTheme?: MenuThemeName;
@@ -183,13 +181,6 @@ export default function App() {
     return;
   }, [user, isAuthenticated, error, updateState]);
 
-  socket.on("loggedInNameFound", ({ name }: { name: string }) => {
-    console.log(`loggedInNameFound: ${name}`);
-    updateState((draftState) => {
-      draftState.playerName = name;
-    });
-  });
-
   const handleLogin = () => {
     loginWithRedirect();
   };
@@ -197,18 +188,6 @@ export default function App() {
     // TODO: implement
     showToastNotification("Profile page not implemented yet, sorry");
   };
-
-  // When a player logs in for the first time, the server will respond with
-  // a valid unique name generated on the server.
-  socket.on("createdNewPlayer", ({ name }: { name: string }) => {
-    updateState((draftState) => {
-      draftState.playerName = name;
-    });
-  });
-
-  socket.on("createNewPlayerFailed", () => {
-    console.log("problem when saving the new player in the db");
-  });
 
   // ========================================================================
   // Functions to modify the state
@@ -326,15 +305,13 @@ export default function App() {
     const bs = validateOrFixBoardSettings(state.boardSettings);
     setCookie("numRows", bs.dims[0], { path: "/" });
     setCookie("numCols", bs.dims[1], { path: "/" });
-    const name = validateOrFixPlayerName(state.playerName);
-    setCookie("playerName", name, { path: "/" });
 
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.creator;
       draftState.timeControl.duration = dur;
       draftState.timeControl.increment = inc;
       draftState.boardSettings = bs;
-      draftState.playerName = name;
+      draftState.playerName = state.playerName;
       draftState.hasOngoingGame = false;
     });
     socket.emit("createGame", {
@@ -348,6 +325,25 @@ export default function App() {
   };
 
   useEffect(() => {
+    socket.on("loggedInNameFound", ({ name }: { name: string }) => {
+      console.log(`loggedInNameFound: ${name}`);
+      updateState((draftState) => {
+        draftState.playerName = name;
+      });
+    });
+
+    // When a player logs in for the first time, the server will respond with
+    // a valid unique name generated on the server.
+    socket.on("createdNewPlayer", ({ name }: { name: string }) => {
+      updateState((draftState) => {
+        draftState.playerName = name;
+      });
+    });
+
+    socket.on("createNewPlayerFailed", () => {
+      console.log("problem when saving the new player in the db");
+    });
+
     socket.once(
       "gameCreated",
       ({
@@ -412,23 +408,19 @@ export default function App() {
   });
 
   const handleJoinGame = () => {
-    const name = validateOrFixPlayerName(state.playerName);
-    setCookie("playerName", name, { path: "/" });
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.joiner;
-      draftState.playerName = name;
+      draftState.playerName = state.playerName;
       draftState.hasOngoingGame = false;
     });
     navigate(`/game/${state.joinCode}`);
   };
 
   const handleAcceptChallenge = (joinCode: string) => {
-    const name = validateOrFixPlayerName(state.playerName);
-    setCookie("playerName", name, { path: "/" });
     updateState((draftState) => {
       draftState.joinCode = joinCode;
       draftState.clientRole = RoleEnum.joiner;
-      draftState.playerName = name;
+      draftState.playerName = state.playerName;
       draftState.hasOngoingGame = false;
     });
     navigate(`/game/${joinCode}`);
@@ -459,23 +451,19 @@ export default function App() {
     const bs = validateOrFixBoardSettings(state.boardSettings);
     setCookie("numRows", bs.dims[0], { path: "/" });
     setCookie("numCols", bs.dims[1], { path: "/" });
-    const name = validateOrFixPlayerName(state.playerName);
-    setCookie("playerName", name, { path: "/" });
 
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.offline;
       draftState.timeControl.duration = dur;
       draftState.timeControl.increment = inc;
       draftState.boardSettings = bs;
-      draftState.playerName = name;
+      draftState.playerName = state.playerName;
       draftState.hasOngoingGame = false;
     });
     navigate("/game/local", { replace: true });
   };
 
   const handleComputerGame = () => {
-    const name = validateOrFixPlayerName(state.playerName);
-    setCookie("playerName", name, { path: "/" });
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.computer;
       // Overwrite dimensions for computer game (can only be 7x7).
@@ -486,18 +474,16 @@ export default function App() {
         startPos: defaultInitialPlayerPos([internal_dim, internal_dim]),
         goalPos: defaultGoalPos([internal_dim, internal_dim]),
       };
-      draftState.playerName = name;
+      draftState.playerName = state.playerName;
       draftState.hasOngoingGame = false;
     });
     navigate("/game/computer", { replace: true });
   };
 
   const handleSolvePuzzle = (puzzleId: string) => {
-    const name = validateOrFixPlayerName(state.playerName);
-    setCookie("playerName", name, { path: "/" });
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.puzzle;
-      draftState.playerName = name;
+      draftState.playerName = state.playerName;
       draftState.hasOngoingGame = false;
     });
     navigate(`/puzzle/${puzzleId}`);
@@ -644,11 +630,6 @@ function validateOrFixBoardSettings(bs: BoardSettings): BoardSettings {
   } else {
     return bs;
   }
-}
-
-function validateOrFixPlayerName(name: string): string {
-  if (name === "" || name.length > maxPlayerNameLen) return "Guest";
-  return name;
 }
 
 function checkIsLoggedIn(idToken: string): boolean {
