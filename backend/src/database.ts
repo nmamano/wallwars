@@ -215,8 +215,8 @@ export async function getRanking(count: number): Promise<dbRanking | null> {
       gameCount: p.gameCount,
       winCount: p.winCount,
       drawCount: p.drawCount,
-      firstGameDate: p.firstGameDate,
-      lastGameDate: p.lastGameDate,
+      firstGameDate: p.firstGameDate ? p.firstGameDate : null,
+      lastGameDate: p.lastGameDate ? p.lastGameDate : null,
       solvedPuzzles: p.solvedPuzzles,
     });
   });
