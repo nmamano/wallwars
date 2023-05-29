@@ -171,6 +171,7 @@ export default function App() {
       console.error("user.sub is undefined or empty");
       return;
     }
+    console.log(`setting idToken to ${user.sub}`);
     updateState((draftState) => {
       draftState.idToken = user.sub!;
     });
@@ -365,7 +366,9 @@ export default function App() {
       ({ idToken, name }: { idToken: string; name: string }) => {
         if (idToken !== state.idToken) {
           showToastNotification("Name change failed.", 8000);
-          console.error("idToken mismatch during name change");
+          console.error(
+            `idToken mismatch during name change: received ${idToken} vs stored ${state.idToken}`
+          );
           return;
         }
         updateState((draftState) => {
