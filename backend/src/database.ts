@@ -444,8 +444,8 @@ const playerSchema = new Schema({
   gameCount: { type: Number, required: true },
   winCount: { type: Number, required: true },
   drawCount: { type: Number, required: true },
-  firstGameDate: { type: Date, required: true },
-  lastGameDate: { type: Date, required: true },
+  firstGameDate: { type: Date, required: false },
+  lastGameDate: { type: Date, required: false },
   solvedPuzzles: { type: [String], required: true },
 });
 const Player = mongoose.model("Player", playerSchema);
