@@ -379,6 +379,7 @@ export default function App() {
           return;
         }
         updateState((draftState) => {
+          if (draftState.playerName === name) return;
           showToastNotification("Name changed successfully!", 5000);
           draftState.playerName = name;
         });

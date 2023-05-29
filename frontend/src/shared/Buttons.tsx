@@ -371,27 +371,21 @@ export function TextButtonWithTextField({
     setTextFieldInput(text.substring(0, 15));
   };
 
-  let baseButton = (
-    <TextButton
-      text={baseButtonText}
-      tooltip={tooltip}
-      menuTheme={menuTheme}
-      isDarkModeOn={isDarkModeOn}
-      disabled={disabled}
-      onClick={handleOpen}
-    />
-  );
-
-  if (disabled && tooltipOnDisabled) {
-    // The span is needed to make the tooltip work on disabled buttons.
-    baseButton = <span>{baseButton}</span>;
-  }
-
-  baseButton = <Tooltip title={tooltip}>{baseButton}</Tooltip>;
-
   return (
     <>
-      {baseButton}
+      <Tooltip title={tooltip}>
+        {/* The span is needed to make the tooltip work on disabled buttons. */}
+        <span>
+          <TextButton
+            text={baseButtonText}
+            tooltip={tooltip}
+            menuTheme={menuTheme}
+            isDarkModeOn={isDarkModeOn}
+            disabled={disabled}
+            onClick={handleOpen}
+          />
+        </span>
+      </Tooltip>
       <Dialog open={isOpen} onClose={handleClose}>
         <DialogTitle variant="h5" style={{ color: "black" }}>
           {modalTitle}
