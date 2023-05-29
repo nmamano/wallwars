@@ -10,6 +10,7 @@ export default {
   invalidIdTokenErrorMsg: "invalidIdTokenError",
   solvedPuzzleMsg: "solvedPuzzle",
   loggedInMsg: "loggedIn",
+  loggedInNameFoundMsg: "loggedInNameFound",
   createdNewPlayerMsg: "createdNewPlayer",
   createNewPlayerFailedMsg: "createNewPlayerFailed",
   changeNameMsg: "changeName",

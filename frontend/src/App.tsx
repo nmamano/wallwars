@@ -183,6 +183,13 @@ export default function App() {
     return;
   }, [user, isAuthenticated, error, updateState]);
 
+  socket.on("loggedInNameFound", ({ name }: { name: string }) => {
+    console.log(`loggedInNameFound: ${name}`);
+    updateState((draftState) => {
+      draftState.playerName = name;
+    });
+  });
+
   const handleLogin = () => {
     loginWithRedirect();
   };

@@ -469,7 +469,9 @@ io.on(M.connectionMsg, function (socket: any): void {
       logReceivedMessage(M.loggedInMsg, { idToken });
       const player = await db.getPlayer(idToken);
       if (player) {
-        return; // Player already exists, does not need to be created.
+        // If player already exists, return the name.
+        emitMessage(M.loggedInNameFoundMsg, { name: player.name });
+        return;
       }
 
       // Get a random and unique name.
