@@ -5,13 +5,15 @@ import { IconButtonWithTooltip, IconButtonWithInfoModal } from "./Buttons";
 import showToastNotification from "./showToastNotification";
 import { getColor, MenuThemeName } from "./colorThemes";
 
-function UsernameIcon({ playerName }: { playerName: String }): JSX.Element {
+function UsernameLabel({ playerName }: { playerName: String }): JSX.Element {
   return (
     <div
       style={{
-        height: "2.35rem",
-        width: "12rem",
+        height: "2.5rem",
+        width: "auto",
+        maxWidth: "12rem",
         paddingLeft: "0.5rem",
+        paddingRight: "0.5rem",
         marginRight: "5px",
         borderRadius: "5px",
         border: "1px",
@@ -20,6 +22,7 @@ function UsernameIcon({ playerName }: { playerName: String }): JSX.Element {
         display: "flex",
         justifyContent: "flex-start",
         alignItems: "center",
+        cursor: "default",
       }}
     >
       <p
@@ -216,7 +219,7 @@ function Header({
               />
             )}
           </div>
-          <UsernameIcon playerName={playerName} />
+          <UsernameLabel playerName={playerName} />
         </div>
       </div>
     </div>
