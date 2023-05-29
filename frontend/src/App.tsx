@@ -367,14 +367,14 @@ export default function App() {
     socket.on(
       "nameChanged",
       ({ idToken, name }: { idToken: string; name: string }) => {
-        if (idToken !== state.idToken) {
-          showToastNotification("Name change failed.", 8000);
-          console.error(
-            `idToken mismatch during name change: received ${idToken} vs stored ${state.idToken}`
-          );
-          return;
-        }
         updateState((draftState) => {
+          if (idToken !== draftState.idToken) {
+            showToastNotification("Name change failed.", 8000);
+            console.error(
+              `idToken mismatch during name change: received ${idToken} vs stored ${draftState.idToken}`
+            );
+            return;
+          }
           if (draftState.playerName === name) return;
           showToastNotification("Name changed successfully!", 5000);
           draftState.playerName = name;
@@ -405,7 +405,7 @@ export default function App() {
         navigate(`/game/${ongoingGame.joinCode}`);
       }
     );
-  });
+  }, [updateState, navigate]);
 
   const handleJoinGame = () => {
     updateState((draftState) => {
