@@ -181,7 +181,6 @@ export default function LobbyForm({
               modalTitle="Name change"
               modalBody="Enter your new name:"
               onClick={handlePlayerName}
-              tooltipOnDisabled={true}
             />
           </div>
         </Grid>

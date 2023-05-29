@@ -349,17 +349,15 @@ export function TextButtonWithTextField({
   modalTitle,
   modalBody,
   onClick,
-  tooltipOnDisabled,
 }: {
   baseButtonText: string;
-  tooltip: string;
+  tooltip: string; // Tooltip shows even in disabled buttons.
   disabled?: boolean;
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
   modalTitle: string;
   modalBody: string;
   onClick: (text: string) => void; // Triggered when confirming the dialog.
-  tooltipOnDisabled?: boolean;
 }): JSX.Element {
   const [isOpen, setIsOpen] = React.useState<boolean>(false);
   const handleOpen = () => setIsOpen(true);
@@ -378,7 +376,6 @@ export function TextButtonWithTextField({
         <span>
           <TextButton
             text={baseButtonText}
-            tooltip={tooltip}
             menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn}
             disabled={disabled}
