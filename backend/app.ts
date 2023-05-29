@@ -476,8 +476,11 @@ io.on(M.connectionMsg, function (socket: any): void {
       let newName = randPlayerName();
       let tries = 20;
       while (tries > 0) {
-        if (await db.nameExists(newName)) newName = randPlayerName();
-        tries--;
+        console.log("Trying name: " + newName);
+        if (await db.nameExists(newName)) {
+          newName = randPlayerName();
+          tries--;
+        } else break;
       }
       if (tries === 0) {
         console.error("Could not find a unique name for new player");
