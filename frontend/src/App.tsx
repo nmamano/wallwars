@@ -180,7 +180,7 @@ export default function App() {
     // - Otherwise, the server creates a new player with this id token in the
     // DB with a unique name and also returns it to us as our initial non-guest
     // name (that we can later change).
-    console.log("emitting logInOrSignUp");
+    console.log("emitting logInOrSignUp: ", user.sub);
     socket.emit("logInOrSignUp", { idToken: user.sub });
     return;
   }, [user, isAuthenticated, error, updateState]);

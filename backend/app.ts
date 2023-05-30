@@ -90,11 +90,17 @@ io.on(M.connectionMsg, function (socket: any): void {
   socket.on(
     M.logInOrSignUpMsg,
     async function ({
-      receivedIdToken,
+      idToken: receivedIdToken,
     }: {
-      receivedIdToken: string;
+      idToken: string;
     }): Promise<void> {
-      logReceivedMessage(M.logInOrSignUpMsg, { idToken: receivedIdToken });
+      logReceivedMessage(M.logInOrSignUpMsg, { idToken: idToken });
+      if (receivedIdToken === "") {
+        console.error("Received empty idToken");
+        emitMessage(M.signUpFailedMsg);
+        return;
+      }
+
       // Tie this socket connection with the received idToken.
       idToken = receivedIdToken;
 
