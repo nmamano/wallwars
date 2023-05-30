@@ -25,9 +25,15 @@ export default class ChallengeBroadcast {
   }
 
   notifyNewChallenge(game: GameState) {
+    // Remove the token id before broadcasting the game, as it should be kept
+    // secret to the client.
+    const gameWithoutIdTokens: GameState = {
+      ...game,
+    };
+    gameWithoutIdTokens.idTokens = ["", ""];
     for (let i = 0; i < this.subscribedSockets.length; i++) {
       emitMessageSubscriber(this.subscribedSockets[i], M.newChallengeMsg, {
-        challenge: game,
+        challenge: gameWithoutIdTokens,
       });
     }
   }

@@ -173,11 +173,6 @@ export default function GamePage({
       handleReturnToLobby();
     });
 
-    socket.on("invalidIdTokenError", () => {
-      showToastNotification("This Id token is not valid.", 5000);
-      handleReturnToLobby();
-    });
-
     socket.on("joinSelfGameFailed", () => {
       showToastNotification(
         "You cannot play against yourself. To play as both sides from the same browser, play one of the sides from an Incognito window.",
@@ -428,9 +423,7 @@ export default function GamePage({
       });
       socket.emit("joinGame", {
         joinCode: clientParams.joinCode,
-        name: clientParams.playerName,
         token: clientParams.token,
-        idToken: clientParams.idToken,
       });
     } else if (clientParams.clientRole === RoleEnum.spectator) {
       console.log("getGame: " + clientParams.watchGameId);
@@ -755,11 +748,11 @@ export default function GamePage({
         applyPuzzleTakeback(draftState, !creatorToMove(draftState));
       });
     } else if (state.lifeCycleStage === 4) {
-      socket.emit("solvedPuzzle", {
-        idToken: clientParams.idToken,
-        name: state.names[getPuzzle(puzzleId)!.playAsCreator ? 0 : 1],
-        puzzleId: puzzleId,
-      });
+      if (clientParams.idToken !== "") {
+        socket.emit("solvedPuzzle", { puzzleId });
+      }
+      // TODO: for guests, show toast notification indicating that puzzles are
+      // not saved for guests.
     } else {
       updateState((draftState) => {
         if (draftState.lifeCycleStage === 4) return;

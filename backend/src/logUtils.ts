@@ -1,7 +1,8 @@
 import fs from "fs";
 import util from "util";
 import { GameState } from "./gameState";
-import { auth0Prefix, isGuest } from "./authUtils";
+
+const auth0Prefix = "auth0|";
 
 //middleware for logging incoming and outgoing messages
 //format: hh:mm:ss ss|ccc|J -> #SERVER#: m [gg] {p}
@@ -42,16 +43,17 @@ export function logMessage({
   messageTitle,
   messageParams,
 }: {
-  idToken: string;
+  idToken: string; // Empty for guests.
   socketId: string;
   game: GameState | null;
   sent: boolean;
   messageTitle: string;
   messageParams: any;
 }) {
-  let shortIdToken = !isGuest(idToken)
-    ? idToken.substring(auth0Prefix.length, auth0Prefix.length + 3)
-    : "GST";
+  let shortIdToken =
+    idToken === ""
+      ? "GST"
+      : idToken.substring(auth0Prefix.length, auth0Prefix.length + 3);
   const shortSocketId = socketId.substring(0, 2);
   let client = shortSocketId + "," + shortIdToken;
   const date = new Date();

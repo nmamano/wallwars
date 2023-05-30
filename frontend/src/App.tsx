@@ -173,11 +173,15 @@ export default function App() {
     updateState((draftState) => {
       draftState.idToken = user.sub!;
     });
-    // Tell the server that we logged in so that it can create an account for
-    // us in the database, if not already there. This would typically only be
-    // necessary when someone registers for the first time.
-    console.log("emitting loggedIn");
-    socket.emit("loggedIn", { idToken: user.sub });
+    // Tell the server that we have an id token. This asks the server to do one
+    // of 2 things:
+    // - If the server has a player in the DB with this id token, it returns to
+    // us the player's name.
+    // - Otherwise, the server creates a new player with this id token in the
+    // DB with a unique name and also returns it to us as our initial non-guest
+    // name (that we can later change).
+    console.log("emitting logInOrSignUp");
+    socket.emit("logInOrSignUp", { idToken: user.sub });
     return;
   }, [user, isAuthenticated, error, updateState]);
 
@@ -212,7 +216,8 @@ export default function App() {
   };
 
   const handlePlayerName = (name: string) => {
-    socket.emit("changeName", { idToken: state.idToken, name: name });
+    if (state.idToken === "") return; // Guests cannot change name.
+    socket.emit("changeName", { name });
   };
 
   const handleToken = (icon: string) => {
@@ -315,18 +320,17 @@ export default function App() {
       draftState.hasOngoingGame = false;
     });
     socket.emit("createGame", {
-      name: state.playerName,
       token: state.token,
       timeControl: state.timeControl,
       boardSettings: state.boardSettings,
-      idToken: state.idToken,
       isPublic: !state.isPrivate,
     });
   };
 
   useEffect(() => {
-    socket.on("loggedInNameFound", ({ name }: { name: string }) => {
-      console.log(`loggedInNameFound: ${name}`);
+    // We receive our name from the server upon log in.
+    socket.on("loggedIn", ({ name }: { name: string }) => {
+      console.log(`loggedIn: ${name}`);
       updateState((draftState) => {
         draftState.playerName = name;
       });
@@ -334,14 +338,15 @@ export default function App() {
 
     // When a player logs in for the first time, the server will respond with
     // a valid unique name generated on the server.
-    socket.on("createdNewPlayer", ({ name }: { name: string }) => {
+    socket.on("signedUp", ({ name }: { name: string }) => {
+      console.log(`signedUp: ${name}`);
       updateState((draftState) => {
         draftState.playerName = name;
       });
     });
 
-    socket.on("createNewPlayerFailed", () => {
-      console.log("problem when saving the new player in the db");
+    socket.on("signUpFailed", () => {
+      console.log("problem when signing up");
     });
 
     socket.once(
@@ -364,23 +369,17 @@ export default function App() {
       }
     );
 
-    socket.on(
-      "nameChanged",
-      ({ idToken, name }: { idToken: string; name: string }) => {
-        updateState((draftState) => {
-          if (idToken !== draftState.idToken) {
-            showToastNotification("Name change failed.", 8000);
-            console.error(
-              `idToken mismatch during name change: received ${idToken} vs stored ${draftState.idToken}`
-            );
-            return;
-          }
-          if (draftState.playerName === name) return;
-          showToastNotification("Name changed successfully!", 5000);
-          draftState.playerName = name;
-        });
-      }
-    );
+    socket.on("createGameFailed", () => {
+      showToastNotification("Creating a game failed");
+    });
+
+    socket.on("nameChanged", ({ name }: { name: string }) => {
+      updateState((draftState) => {
+        if (draftState.playerName === name) return;
+        showToastNotification("Name changed successfully!", 5000);
+        draftState.playerName = name;
+      });
+    });
 
     socket.on("nameChangeFailed", ({ reason }: { reason: string }) => {
       showToastNotification(`Name change failed: ${reason}`, 10000);
@@ -431,7 +430,7 @@ export default function App() {
       draftState.clientRole = RoleEnum.returner;
       draftState.hasOngoingGame = false;
     });
-    socket.emit("returnToOngoingGame", { idToken: state.idToken });
+    socket.emit("returnToOngoingGame");
   };
 
   const handleViewGame = (watchGameId: string) => {

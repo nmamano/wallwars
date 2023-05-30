@@ -1,6 +1,7 @@
 import { GameState } from "./gameState";
 
-// Manages the pairings between clients currently playing.
+// Manages the pairings between clients currently playing. This is stored in
+// memory, not in the DB, so it is lost if the server restarts.
 export class GameManager {
   unjoinedGames: GameState[];
   ongoingGames: GameState[];
@@ -22,40 +23,39 @@ export class GameManager {
     return null;
   }
 
-  ongoingGameOfClient(idToken: string | null): GameState | null {
+  getOngoingGameByClient(idToken: string, socketId: string): GameState | null {
+    // If the idToken is available, match based on that. If not (the user is a
+    // guest), match based on the socket id.
+    if (idToken !== "") {
+      for (let i = 0; i < this.ongoingGames.length; i++) {
+        const game = this.ongoingGames[i];
+        if (game.idTokens.includes(idToken)) return game;
+      }
+      return null;
+    }
     for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
-      const [idToken1, idToken2] = game.idTokens;
-      if (idToken === idToken1 || idToken === idToken2) return game;
+      if (game.socketIds.includes(socketId)) return game;
     }
     return null;
   }
 
-  getOngoingGameByIdToken(idToken: string): GameState | null {
-    for (let i = 0; i < this.ongoingGames.length; i++) {
-      const game = this.ongoingGames[i];
-      const [idToken1, idToken2] = game.idTokens;
-      if (idToken === idToken1 || idToken === idToken2) return game;
-    }
-    return null;
-  }
-
-  getOpponentSocketId(idToken: string | null): string | null {
-    const game = this.ongoingGameOfClient(idToken);
+  getOpponentSocketId(idToken: string, socketId: string): string | null {
+    const game = this.getOngoingGameByClient(idToken, socketId);
     if (!game) return null;
-    const [socketId1, socketId2] = game.socketIds;
-    return idToken === game.idTokens[0] ? socketId2 : socketId1;
+    return socketId === game.socketIds[0]
+      ? game.socketIds[1]
+      : game.socketIds[0];
   }
 
-  getOpponentIdToken(idToken: string | null): string | null {
-    const game = this.ongoingGameOfClient(idToken);
+  getOpponentIdToken(idToken: string, socketId: string): string | null {
+    const game = this.getOngoingGameByClient(idToken, socketId);
     if (!game) return null;
-    const [idToken1, idToken2] = game.idTokens;
-    return idToken === idToken1 ? idToken2 : idToken1;
+    return socketId === game.socketIds[0] ? game.idTokens[1] : game.idTokens[0];
   }
 
-  hasOngoingGame(IdToken: string): boolean {
-    return this.ongoingGameOfClient(IdToken) !== null;
+  hasOngoingGame(idToken: string, socketId: string): boolean {
+    return this.getOngoingGameByClient(idToken, socketId) !== null;
   }
 
   addUnjoinedGame(game: GameState): void {
@@ -76,18 +76,17 @@ export class GameManager {
     );
   }
 
-  removeGamesByIdToken(IdToken: string): void {
-    this.removeUnjoinedGamesByIdToken(IdToken);
-    this.removeOngoingGamesByIdToken(IdToken);
+  removeGamesByClient(idToken: string, socketId: string): void {
+    this.removeUnjoinedGamesByClient(idToken, socketId);
+    this.removeOngoingGamesByClient(idToken, socketId);
   }
 
-  //in theory, clients can only have one unjoined game at a time,
-  //but we check all to be sure
-  removeUnjoinedGamesByIdToken(IdToken: string): void {
-    if (!IdToken) return;
+  // Remove any games with matching socket id or id token. In theory, clients
+  // can only have one unjoined game at a time, but we check all to be sure.
+  removeUnjoinedGamesByClient(idToken: string, socketId: string): void {
     for (let i = 0; i < this.unjoinedGames.length; i++) {
       const game = this.unjoinedGames[i];
-      if (game.idTokens[0] === IdToken) {
+      if (createdByClient(idToken, socketId, game)) {
         console.log("remove unjoined game: ", JSON.stringify(game));
         this.unjoinedGames.splice(i, 1);
         i--;
@@ -95,12 +94,15 @@ export class GameManager {
     }
   }
 
-  getUnjoinedGamesBySocketId(socketId: string): GameState | undefined {
-    if (!socketId) return;
+  getUnjoinedGameByClient(
+    idToken: string,
+    socketId: string
+  ): GameState | undefined {
     let game;
     for (let i = 0; i < this.unjoinedGames.length; i++) {
-      if (this.unjoinedGames[i].socketIds[0] === socketId) {
+      if (createdByClient(idToken, socketId, this.unjoinedGames[i])) {
         game = this.unjoinedGames[i];
+        break;
       }
     }
     return game;
@@ -117,13 +119,12 @@ export class GameManager {
     return res;
   }
 
-  //in theory, clients can only have one ongoing game at a time,
-  //but we check all to be sure
-  removeOngoingGamesByIdToken(IdToken: string): void {
-    if (!IdToken) return;
+  // In theory, clients can only have one ongoing game at a time,
+  // but we check all to be sure.
+  removeOngoingGamesByClient(idToken: string, socketId: string): void {
     for (let i = 0; i < this.ongoingGames.length; i++) {
       const game = this.ongoingGames[i];
-      if (game.idTokens[0] === IdToken || game.idTokens[1] === IdToken) {
+      if (containsClient(idToken, socketId, game)) {
         this.ongoingGames.splice(i, 1);
         console.log("removed ongoing game: ", JSON.stringify(game));
         i--;
@@ -131,8 +132,69 @@ export class GameManager {
     }
   }
 
+  getSocketIdByIdToken(idToken: string): string | null {
+    for (let i = 0; i < this.ongoingGames.length; i++) {
+      const game = this.ongoingGames[i];
+      if (idToken === game.idTokens[0]) return game.socketIds[0];
+      if (idToken === game.idTokens[1]) return game.socketIds[1];
+    }
+    for (let i = 0; i < this.unjoinedGames.length; i++) {
+      const game = this.unjoinedGames[i];
+      if (idToken === game.idTokens[0]) return game.socketIds[0];
+      if (idToken === game.idTokens[1]) return game.socketIds[1];
+    }
+    return null;
+  }
+
+  // The socket id of any games with this token id gets updated to a new one.
+  updateSocketIdByIdToken(idToken: string, socketId: string): void {
+    for (let i = 0; i < this.ongoingGames.length; i++) {
+      const game = this.ongoingGames[i];
+      if (idToken === game.idTokens[0]) game.socketIds[0] = socketId;
+      if (idToken === game.idTokens[1]) game.socketIds[1] = socketId;
+    }
+    for (let i = 0; i < this.unjoinedGames.length; i++) {
+      const game = this.unjoinedGames[i];
+      if (idToken === game.idTokens[0]) game.socketIds[0] = socketId;
+      if (idToken === game.idTokens[1]) game.socketIds[1] = socketId;
+    }
+  }
+
   printAllGames(): void {
     console.log("Unjoined games:\n", this.unjoinedGames);
     console.log("Ongoing games:\n", this.ongoingGames);
   }
+}
+
+function createdByClient(
+  idToken: string,
+  socketId: string,
+  game: GameState
+): boolean {
+  return (
+    (idToken !== "" && idToken === game.idTokens[0]) ||
+    socketId === game.socketIds[0]
+  );
+}
+
+function joinedByClient(
+  idToken: string,
+  socketId: string,
+  game: GameState
+): boolean {
+  return (
+    (idToken !== "" && idToken === game.idTokens[1]) ||
+    socketId === game.socketIds[1]
+  );
+}
+
+function containsClient(
+  idToken: string,
+  socketId: string,
+  game: GameState
+): boolean {
+  return (
+    createdByClient(idToken, socketId, game) ||
+    joinedByClient(idToken, socketId, game)
+  );
 }

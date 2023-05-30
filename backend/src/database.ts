@@ -4,7 +4,6 @@ import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 import { newRatingAfterGame, initialRating } from "./rating";
 import { GameState } from "./gameState";
-import { auth0Prefix, isGuest } from "./authUtils";
 const url = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.vt6ui.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 var connectedToDB = false;
 
@@ -144,10 +143,8 @@ export async function changeName(
     console.error("when changing name: not connected to DB");
     return false;
   }
-  if (!idToken.startsWith(auth0Prefix)) {
-    console.error(
-      "when changing name: idToken does not start with auth0Prefix"
-    );
+  if (idToken === "") {
+    console.error("when changing name: idToken is empty");
     return false;
   }
   if (name === "") {
@@ -162,8 +159,11 @@ export async function changeName(
   return true;
 }
 
+// Returns null if it cannot connect to DB, the player is a guest (idToken is
+// empty), or there is no player with this id token.
 export async function getPlayer(idToken: string): Promise<dbPlayer | null> {
   if (!connectedToDB) return null;
+  if (idToken === "") return null;
   return await Player.findOne({ idToken: idToken });
 }
 
@@ -172,11 +172,12 @@ export async function addNewPlayer(
   idToken: string,
   name: string
 ): Promise<boolean> {
-  if (!connectedToDB) return false;
-  if (!idToken.startsWith(auth0Prefix)) {
-    console.error(
-      `when adding new player: idToken '${idToken}' does not start with 'auth0|'`
-    );
+  if (!connectedToDB) {
+    console.error("when adding new player: not connected to DB");
+    return false;
+  }
+  if (idToken === "") {
+    console.error("when adding new player: idToken is empty");
     return false;
   }
   if (name === "") {
@@ -193,7 +194,7 @@ export async function addNewPlayer(
     return true;
   } catch (err) {
     console.error(
-      `Store new player to DB ${process.env.DB_NAME} failed:\n${err}`
+      `Store new player to DB ${process.env.DB_NAME} failed: ${err}`
     );
     return false;
   }
@@ -246,14 +247,13 @@ export function defaultDbPlayer(idToken: string, name: string): dbPlayer {
 // already marked as solved. Returns whether it succeeded.
 export async function addPlayerSolvedPuzzle(
   idToken: string,
-  name: string,
   puzzleId: string
 ): Promise<boolean> {
   if (!connectedToDB) {
     console.error("addPlayerSolvedPuzzle: not connected to DB");
     return false;
   }
-  if (isGuest(idToken)) {
+  if (idToken === "") {
     console.error("addPlayerSolvedPuzzle: should not be a guest player");
     return false;
   }
@@ -278,10 +278,17 @@ export async function addPlayerSolvedPuzzle(
   }
 }
 
-// Stores the game to DB and updates the two players in the DB.
-export async function storeGame(game: GameState): Promise<void> {
+// Stores the game to DB and updates the two players in the DB if they are not
+// guests.
+export async function storeGameAndUpdatePlayers(
+  game: GameState
+): Promise<void> {
   if (!connectedToDB) return;
-  if (game.moveHistory.length < 2) return;
+  if (game.moveHistory.length < 2) {
+    // We only want to save games where something substantial happened.
+    return;
+  }
+
   const gameToStore = new Game(game);
   try {
     await gameToStore.save();
@@ -479,22 +486,18 @@ async function updatePlayers(game: GameState): Promise<boolean> {
     console.error("cannot update players because not connected to db");
     return false;
   }
-  if (!game.idTokens[0] || !game.idTokens[1]) {
-    console.error("cannot update players because game.idTokens are not set");
-    return false;
-  }
-  const guest: [boolean, boolean] = [
-    isGuest(game.idTokens[0]),
-    isGuest(game.idTokens[1]),
+  const isGuest: [boolean, boolean] = [
+    game.idTokens[0] === "",
+    game.idTokens[1] === "",
   ];
 
   // Only non-guests exist in the DB. If both are guests, there is nothing to
   // do.
-  if (guest[0] && guest[1]) return true;
+  if (isGuest[0] && isGuest[1]) return true;
 
   // Read the non-guest players from db
   let p1: any, p2: any; // TODO: type this properly
-  if (!guest[0]) {
+  if (!isGuest[0]) {
     const foundPlayer = await Player.findOne({
       idToken: game.idTokens[0],
     });
@@ -505,7 +508,7 @@ async function updatePlayers(game: GameState): Promise<boolean> {
       return false;
     }
   }
-  if (!guest[1]) {
+  if (!isGuest[1]) {
     const foundPlayer = await Player.findOne({
       idToken: game.idTokens[1],
     });
@@ -519,7 +522,7 @@ async function updatePlayers(game: GameState): Promise<boolean> {
 
   // Get the rating statistics for both players, regardless of whether they are
   // guests or not. Guests just get the initial rating.
-  let p1RatingTuple = guest[0]
+  let p1RatingTuple = isGuest[0]
     ? initialRating()
     : {
         rating: p1.rating,
@@ -527,7 +530,7 @@ async function updatePlayers(game: GameState): Promise<boolean> {
         volatility: p1.ratingVolatility,
       };
 
-  let p2RatingTuple = guest[1]
+  let p2RatingTuple = isGuest[1]
     ? initialRating()
     : {
         rating: p2.rating,
@@ -541,13 +544,13 @@ async function updatePlayers(game: GameState): Promise<boolean> {
   else scores = [0, 1];
 
   // Update the players which are not guests.
-  if (!guest[0]) {
+  if (!isGuest[0]) {
     updatePlayerWithGameResult(
       p1,
       game,
       scores[0],
       newRatingAfterGame(p1RatingTuple, p2RatingTuple, scores[0]),
-      guest[1]
+      isGuest[1]
     );
     try {
       await p1.save();
@@ -559,13 +562,13 @@ async function updatePlayers(game: GameState): Promise<boolean> {
       return false;
     }
   }
-  if (!guest[1]) {
+  if (!isGuest[1]) {
     updatePlayerWithGameResult(
       p2,
       game,
       scores[1],
       newRatingAfterGame(p2RatingTuple, p1RatingTuple, scores[1]),
-      guest[0]
+      isGuest[0]
     );
     try {
       await p2.save();

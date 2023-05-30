@@ -29,9 +29,9 @@ export default function PuzzleList({
       updateState((draftState) => {
         draftState.needToRequestSolvedPuzzles = false;
       });
-      socket.emit("getSolvedPuzzles", {
-        idToken: idToken,
-      });
+      if (idToken !== "") {
+        socket.emit("getSolvedPuzzles");
+      }
     }
   }, [idToken, updateState, state.needToRequestSolvedPuzzles]);
   useEffect(() => {

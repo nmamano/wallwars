@@ -101,7 +101,7 @@ export default function LobbyPage({
   // Determine if the "Return To Game" button needs to be shown.
   useEffect(() => {
     if (!appState.hasOngoingGame) {
-      socket.emit("checkHasOngoingGame", { idToken: appState.idToken });
+      socket.emit("checkHasOngoingGame");
     }
   }, [appState.hasOngoingGame, appState.idToken]);
   useEffect(() => {

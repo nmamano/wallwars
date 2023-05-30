@@ -1,6 +1,6 @@
-/* this file contains functions that modify the state of the game
-Note that the server's representation of a game is different than
-the client's representation */
+// Functions that modify the state of the game.
+// Note that the server's representation of a game is different than the
+// client's representation.
 
 export type TimeControl = {
   duration: number;
@@ -20,7 +20,7 @@ export type GameState = {
   joinCode: string;
   matchScore: [number, number];
   socketIds: [string | null, string | null];
-  idTokens: [string, string];
+  idTokens: [string, string]; // "" for guests.
   playerNames: [string | null, string | null];
   playerTokens: [string, string];
   timeControl: TimeControl | null;
@@ -96,9 +96,21 @@ export function playerToMoveHasTimeLeft(game: GameState): boolean {
   return tLeft * 1000 - elapsedMs >= 0;
 }
 
-export function clientIndex(game: GameState, idToken: string): 0 | 1 | null {
-  if (game.idTokens[0] === idToken) return 0;
-  if (game.idTokens[1] === idToken) return 1;
+// Returns 0 if the client identified by idToken and socketId is the creator, 1
+// if it is the joiner, and null if neither.
+export function clientIndex(
+  game: GameState,
+  idToken: string,
+  socketId: string
+): 0 | 1 | null {
+  // Match by id token if available, otherwise by socked it.
+  if (idToken !== "") {
+    if (idToken === game.idTokens[0]) return 0;
+    if (idToken === game.idTokens[1]) return 1;
+    return null;
+  }
+  if (socketId === game.socketIds[0]) return 0;
+  if (socketId === game.socketIds[1]) return 1;
   return null;
 }
 
@@ -146,7 +158,7 @@ export function addCreator({
   token: string;
   timeControl: TimeControl;
   boardSettings: BoardSettings;
-  idToken: string;
+  idToken: string; // Empty for guests.
   isPublic: boolean;
   rating: number;
 }): void {
@@ -174,7 +186,7 @@ export function addJoiner({
   socketId: string;
   name: string;
   token: string;
-  idToken: string;
+  idToken: string; // Empty for guests.
   rating: number;
 }): void {
   game.socketIds[1] = socketId;
@@ -184,6 +196,7 @@ export function addJoiner({
   game.arePlayersPresent[1] = true;
   game.ratings[1] = rating;
 }
+
 export function setupRematch(
   game: GameState,
   newRatings: [number, number]
@@ -227,9 +240,12 @@ export function addMove({
   game.finalDists = distances;
 }
 
-export function applyTakeback(game: GameState, requesterIdToken: string): void {
+export function applyTakeback(
+  game: GameState,
+  requesterSocketId: string
+): void {
   const requesterToMove =
-    requesterIdToken === game.idTokens[creatorToMove(game) ? 0 : 1];
+    requesterSocketId === game.socketIds[creatorToMove(game) ? 0 : 1];
   const numMovesToUndo = requesterToMove ? 2 : 1;
   for (let k = 0; k < numMovesToUndo; k++) game.moveHistory.pop();
   game.numMoves = game.moveHistory.length;
@@ -239,11 +255,11 @@ export function applyTakeback(game: GameState, requesterIdToken: string): void {
 
 export function applyGiveExtraTime(
   game: GameState,
-  receiverIdToken: string
+  receiverSocketId: string
 ): void {
   if (game.moveHistory.length <= 1) return;
   const receiverToMove =
-    receiverIdToken === game.idTokens[creatorToMove(game) ? 0 : 1];
+    receiverSocketId === game.socketIds[creatorToMove(game) ? 0 : 1];
   const lastMoveIdx = game.moveHistory.length - (receiverToMove ? 2 : 1);
   game.moveHistory[lastMoveIdx].remainingTime += 60;
 }

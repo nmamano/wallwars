@@ -29,7 +29,7 @@ import {
 } from "./src/gameState";
 import M from "./src/messageList";
 import { version } from "wallwars-core";
-import { randPlayerName } from "./src/authUtils";
+import { uniqueNamesGenerator, names } from "unique-names-generator";
 
 console.log(`Using ${version()}`);
 
@@ -58,7 +58,25 @@ const GM = new GameManager();
 const ChallengeBC = new ChallengeBroadcast();
 
 io.on(M.connectionMsg, function (socket: any): void {
-  let clientIdToken: string = socket.id;
+  // idToken identifies the (human) user associated with this socket connection.
+  // It is a persistent and unique id for each user (it is the key in the
+  // player DB table). It is empty for non-logged in users (guests).
+  // All connections start as guests. The idToken is set when a client sends the
+  // logInOrSignUp message, which includes their idToken.
+  //
+  // The idToken should not be confused with socket.id, which identifies the
+  // connection itself and is used to route messages to the appropriate client.
+  // The socket.id is never empty, even for guest users. Events like refreshing
+  // the browser create a new socket connection/id.
+  //
+  // Id tokens allow things like continuing a game from a different device.
+  // Changing devices creates a new socket connection/id, but the game can still
+  // be identified by the idToken (continuing from a different connection is not
+  // possible for guests).
+  let idToken = "";
+
+  const isGuest = () => idToken === "";
+  const isLoggedIn = () => idToken !== "";
 
   ////////////////////////////////////
   // New connection start-up.
@@ -70,43 +88,88 @@ io.on(M.connectionMsg, function (socket: any): void {
   // Process incoming messages.
   ////////////////////////////////////
   socket.on(
+    M.logInOrSignUpMsg,
+    async function ({ idToken }: { idToken: string }): Promise<void> {
+      logReceivedMessage(M.logInOrSignUpMsg, { idToken });
+      // Tie this socket connection with the received idToken.
+      idToken = idToken;
+
+      const player = await db.getPlayer(idToken);
+
+      // Case 1: player already exists, do a log in.
+      if (player) {
+        // Tell the client its name.
+        emitMessage(M.loggedInMsg, { name: player.name });
+
+        // Update the socket id of games with this idToken.
+        const oldSocketId = GM.getSocketIdByIdToken(idToken);
+        GM.updateSocketIdByIdToken(idToken, socket.id);
+
+        if (oldSocketId) {
+          // TODO: send a message to the old socket id, stating that the player
+          // has logged in from another connection, and that the old connection
+          // cannot be used anymore. And then terminate the connection.
+        }
+        return;
+      }
+
+      // Case 2: player does not exist yet, do a sign up.
+      // Get a random and unique name for the client and save it in the DB.
+      const newName = await uniqueRandPlayerName();
+      if (newName === "") {
+        console.error("Could not find a unique name for new player");
+        emitMessage(M.signUpFailedMsg);
+        return;
+      }
+      const success = await db.addNewPlayer(idToken, newName);
+      if (success) {
+        emitMessage(M.signedUpMsg, { name: newName });
+      } else {
+        emitMessage(M.signUpFailedMsg);
+      }
+    }
+  );
+
+  socket.on(
     M.createGameMsg,
     async function ({
-      name,
       token,
       timeControl,
       boardSettings,
-      idToken,
       isPublic,
     }: {
-      name: string;
       token: string;
       timeControl: TimeControl;
       boardSettings: BoardSettings;
-      idToken: string;
       isPublic: boolean;
     }): Promise<void> {
       logReceivedMessage(M.createGameMsg, {
-        name,
         token,
         timeControl,
         boardSettings,
-        idToken,
         isPublic,
       });
-      if (!isValidIdToken(idToken)) {
-        emitMessage(M.invalidIdTokenErrorMsg);
-        return;
-      }
-      if (idToken) clientIdToken = idToken;
 
-      const ongoingGame = GM.getOngoingGameByIdToken(clientIdToken);
+      const ongoingGame = GM.getOngoingGameByClient(idToken, socket.id);
       if (ongoingGame) await dealWithLingeringGame(ongoingGame);
-      GM.removeGamesByIdToken(clientIdToken); // Ensure there's no other game for this client.
-      const creatorPlayer = await db.getPlayer(clientIdToken);
-      const creatorRating = creatorPlayer
-        ? creatorPlayer.rating
-        : initialRating().rating;
+      // Ensure there's no other game for this client.
+      GM.removeGamesByClient(idToken, socket.id);
+
+      // Get the named and rating of the client from the DB if it is logged in,
+      // or the default guest name and rating otherwise.
+      let name = "Guest";
+      let rating = initialRating().rating;
+      if (isLoggedIn()) {
+        const clientPlayer = await db.getPlayer(idToken);
+        if (!clientPlayer) {
+          emitMessage(M.createGameFailedMsg);
+          console.error(`Player with id token ${idToken} not found in DB.`);
+          return;
+        }
+        name = clientPlayer.name;
+        rating = clientPlayer.rating;
+      }
+
       const game = newGame();
       addCreator({
         game,
@@ -115,15 +178,15 @@ io.on(M.connectionMsg, function (socket: any): void {
         token,
         timeControl,
         boardSettings,
-        idToken: clientIdToken,
+        idToken,
         isPublic,
-        rating: creatorRating,
+        rating,
       });
       GM.addUnjoinedGame(game);
       emitMessage(M.gameCreatedMsg, {
         joinCode: game.joinCode,
         creatorStarts: game.creatorStarts,
-        rating: creatorRating,
+        rating,
       });
       if (isPublic) ChallengeBC.notifyNewChallenge(game);
     }
@@ -133,47 +196,65 @@ io.on(M.connectionMsg, function (socket: any): void {
     M.joinGameMsg,
     async function ({
       joinCode,
-      name,
       token,
-      idToken,
     }: {
       joinCode: string;
-      name: string;
       token: string;
-      idToken: string;
     }): Promise<void> {
-      logReceivedMessage(M.joinGameMsg, { joinCode, name, token, idToken });
-      if (!isValidIdToken(idToken)) {
-        emitMessage(M.invalidIdTokenErrorMsg);
-        return;
-      }
-      const ongoingGame = GM.getOngoingGameByIdToken(idToken);
+      logReceivedMessage(M.joinGameMsg, { joinCode, token });
+
+      const ongoingGame = GM.getOngoingGameByClient(idToken, socket.id);
       if (ongoingGame) await dealWithLingeringGame(ongoingGame);
+
       const game = GM.unjoinedGame(joinCode);
-      if (!game || !game.idTokens[0]) {
+      if (!game || !game.socketIds[0]) {
         emitMessage(M.gameJoinFailedMsg);
         return;
       }
-      if (game.idTokens[0] === idToken) {
+      if (
+        (isLoggedIn() && idToken === game.idTokens[0]) ||
+        game.socketIds[0] === socket.id
+      ) {
         emitMessage(M.joinSelfGameFailedMsg);
         return;
       }
-      GM.removeGamesByIdToken(idToken); // Ensure there's no other game for this client.
-      if (idToken) clientIdToken = idToken;
-      const joinerPlayer = await db.getPlayer(clientIdToken);
-      const joinerRating = joinerPlayer
-        ? joinerPlayer.rating
-        : initialRating().rating;
-      const creatorPlayer = await db.getPlayer(game.idTokens[0]);
-      const creatorRating = creatorPlayer
-        ? creatorPlayer.rating
-        : initialRating().rating;
+      // Ensure there's no other game for this client.
+      GM.removeGamesByClient(idToken, socket.id);
+
+      // Get the name and rating of the client from the DB if it is logged in,
+      // or the default guest name and rating otherwise.
+      let name = "Guest";
+      let joinerRating = initialRating().rating;
+      if (isLoggedIn()) {
+        const clientPlayer = await db.getPlayer(idToken);
+        if (!clientPlayer) {
+          emitMessage(M.gameJoinFailedMsg);
+          console.error(`Client id token ${idToken} not found in DB.`);
+          return;
+        }
+        name = clientPlayer.name;
+        joinerRating = clientPlayer.rating;
+      }
+
+      let creatorRating = initialRating().rating;
+      if (game.idTokens[0] !== "") {
+        const oppPlayer = await db.getPlayer(game.idTokens[0]);
+        if (!oppPlayer) {
+          emitMessage(M.gameJoinFailedMsg);
+          console.error(
+            `Creator id token ${game.idTokens[0]} not found in DB.`
+          );
+          return;
+        }
+        creatorRating = oppPlayer.rating;
+      }
+
       addJoiner({
         game,
         socketId: socket.id,
         name,
         token,
-        idToken: clientIdToken,
+        idToken,
         rating: joinerRating,
       });
       GM.moveGameFromUnjoinedToOngoing(joinCode);
@@ -184,16 +265,16 @@ io.on(M.connectionMsg, function (socket: any): void {
         boardSettings: game.boardSettings,
         creatorStarts: game.creatorStarts,
         creatorPresent: game.arePlayersPresent[0],
-        creatorRating: creatorRating,
-        joinerRating: joinerRating,
+        creatorRating,
+        joinerRating,
       });
       emitMessageOpponent(M.joinerJoinedMsg, {
         joinerName: name,
         joinerToken: token,
-        joinerRating: joinerRating,
+        joinerRating,
       });
       if (game.isPublic) {
-        // removes game from list of open challenges when player joins
+        // Remove game from the list of open challenges.
         ChallengeBC.notifyDeadChallenge(game.joinCode);
       }
     }
@@ -210,12 +291,8 @@ io.on(M.connectionMsg, function (socket: any): void {
       remainingTime: number;
       distances: [number, number];
     }): void {
-      if (!clientIdToken) {
-        console.log("error: received move without clientIdToken");
-        return;
-      }
       logReceivedMessage(M.moveMsg, { actions, remainingTime });
-      const game = GM.ongoingGameOfClient(clientIdToken);
+      const game = GM.getOngoingGameByClient(idToken, socket.id);
       if (!game) {
         emitGameNotFoundError();
         return;
@@ -226,20 +303,16 @@ io.on(M.connectionMsg, function (socket: any): void {
       }
       addMove({ game, actions, remainingTime, distances });
       emitMessageOpponent(M.movedMsg, {
-        actions: actions,
+        actions,
         moveIndex: turnCount(game),
-        remainingTime: remainingTime,
+        remainingTime,
       });
     }
   );
 
   socket.on(M.offerRematchMsg, function (): void {
     logReceivedMessage(M.offerRematchMsg);
-    if (!clientIdToken) {
-      console.log("error: received rematch offer without clientIdToken");
-      return;
-    }
-    if (!GM.hasOngoingGame(clientIdToken)) {
+    if (!GM.hasOngoingGame(idToken, socket.id)) {
       emitGameNotFoundError();
       return;
     }
@@ -248,11 +321,7 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.rejectRematchMsg, function (): void {
     logReceivedMessage(M.rejectRematchMsg);
-    if (!clientIdToken) {
-      console.log("error: received reject rematch without clientIdToken");
-      return;
-    }
-    if (!GM.hasOngoingGame(clientIdToken)) {
+    if (!GM.hasOngoingGame(idToken, socket.id)) {
       emitGameNotFoundError();
       return;
     }
@@ -261,13 +330,18 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.acceptRematchMsg, async function (): Promise<void> {
     logReceivedMessage(M.acceptRematchMsg);
-    const game = GM.ongoingGameOfClient(clientIdToken);
+    const game = GM.getOngoingGameByClient(idToken, socket.id);
     if (!game) {
       emitGameNotFoundError();
       return;
     }
+
+    // Get the ratings of the players from the DB, if they are not guests.
+    let newRatings: [number, number] = [
+      initialRating().rating,
+      initialRating().rating,
+    ];
     const [creatorPlayer, joinerPlayer] = await getPlayersFromDB(game);
-    let newRatings: [number, number] = [0, 0];
     if (creatorPlayer) newRatings[0] = creatorPlayer.rating;
     if (joinerPlayer) newRatings[1] = joinerPlayer.rating;
     setupRematch(game, newRatings);
@@ -277,13 +351,34 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.resignMsg, async function (): Promise<void> {
     logReceivedMessage(M.resignMsg);
-    const game = GM.ongoingGameOfClient(clientIdToken);
+    const game = GM.getOngoingGameByClient(idToken, socket.id);
     if (!game) {
       emitGameNotFoundError();
       return;
     }
-    if (game.winner !== "") return;
-    const winner = clientIdToken === game.idTokens[0] ? "joiner" : "creator";
+    // Set the winner and store the game in the DB.
+    if (game.winner !== "") {
+      // If the winner is already set, it means that the game is already in the
+      // DB. Nothing to do.
+      return;
+    }
+
+    let winner: "creator" | "joiner" = "creator";
+    if (isLoggedIn()) {
+      if (idToken === game.idTokens[0]) {
+        winner = "joiner";
+      } else if (idToken === game.idTokens[1]) {
+        winner = "creator";
+      }
+    } else if (socket.id === game.socketIds[0]) {
+      winner = "joiner";
+    } else if (socket.id === game.socketIds[1]) {
+      winner = "creator";
+    } else {
+      console.error("received resign from unknown player");
+      return;
+    }
+
     emitMessageOpponent(M.resignedMsg);
     setResult(game, winner, "resign");
     await storeGameAndNotifyRatings(game);
@@ -291,11 +386,7 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.offerDrawMsg, function (): void {
     logReceivedMessage(M.offerDrawMsg);
-    if (!clientIdToken) {
-      console.log("error: received draw offer without clientIdToken");
-      return;
-    }
-    if (!GM.hasOngoingGame(clientIdToken)) {
+    if (!GM.hasOngoingGame(idToken, socket.id)) {
       emitGameNotFoundError();
       return;
     }
@@ -304,7 +395,7 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.acceptDrawMsg, async function (): Promise<void> {
     logReceivedMessage(M.acceptDrawMsg);
-    const game = GM.ongoingGameOfClient(clientIdToken);
+    const game = GM.getOngoingGameByClient(idToken, socket.id);
     if (!game) {
       emitGameNotFoundError();
       return;
@@ -317,11 +408,7 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.rejectDrawMsg, function (): void {
     logReceivedMessage(M.rejectDrawMsg);
-    if (!clientIdToken) {
-      console.log("error: received reject draw message without clientIdToken");
-      return;
-    }
-    if (!GM.hasOngoingGame(clientIdToken)) {
+    if (!GM.hasOngoingGame(idToken, socket.id)) {
       emitGameNotFoundError();
       return;
     }
@@ -330,11 +417,7 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.requestTakebackMsg, function (): void {
     logReceivedMessage(M.requestTakebackMsg);
-    if (!clientIdToken) {
-      console.log("error: received takeback request without clientIdToken");
-      return;
-    }
-    if (!GM.hasOngoingGame(clientIdToken)) {
+    if (!GM.hasOngoingGame(idToken, socket.id)) {
       emitGameNotFoundError();
       return;
     }
@@ -343,30 +426,24 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.acceptTakebackMsg, function (): void {
     logReceivedMessage(M.acceptTakebackMsg);
-    const game = GM.ongoingGameOfClient(clientIdToken);
+    const game = GM.getOngoingGameByClient(idToken, socket.id);
     if (!game) {
       emitGameNotFoundError();
       return;
     }
-    const oppIdToken = GM.getOpponentIdToken(clientIdToken);
-    if (!oppIdToken) {
-      console.log("error: opponent idToken not found");
+    const oppSocketId = GM.getOpponentSocketId(idToken, socket.id);
+    if (!oppSocketId) {
+      console.log("error: opponent socket id not found");
       return;
     }
-    applyTakeback(game, oppIdToken);
+    applyTakeback(game, oppSocketId);
     emitMessageOpponent(M.takebackAcceptedMsg);
   });
 
   socket.on(M.rejectTakebackMsg, function (): void {
     logReceivedMessage(M.rejectTakebackMsg);
-    if (!clientIdToken) {
-      console.log(
-        "error: received takeback rejected message without clientIdToken"
-      );
-      return;
-    }
 
-    if (!GM.hasOngoingGame(clientIdToken)) {
+    if (!GM.hasOngoingGame(idToken, socket.id)) {
       emitGameNotFoundError();
       return;
     }
@@ -375,23 +452,18 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(M.giveExtraTimeMsg, function (): void {
     logReceivedMessage(M.giveExtraTimeMsg);
-    if (!clientIdToken) {
-      console.log("error: extra time without clientIdToken");
-      return;
-    }
-
-    const game = GM.ongoingGameOfClient(clientIdToken);
+    const game = GM.getOngoingGameByClient(idToken, socket.id);
     if (!game) {
       emitGameNotFoundError();
       return;
     }
 
-    const oppIdToken = GM.getOpponentIdToken(clientIdToken);
-    if (!oppIdToken) {
-      console.log("error: opponent idToken not found");
+    const oppSocketId = GM.getOpponentSocketId(idToken, socket.id);
+    if (!oppSocketId) {
+      console.log("error: opponent socket id not found");
       return;
     }
-    applyGiveExtraTime(game, oppIdToken);
+    applyGiveExtraTime(game, oppSocketId);
     emitMessageOpponent(M.extraTimeReceivedMsg);
   });
 
@@ -403,7 +475,7 @@ io.on(M.connectionMsg, function (socket: any): void {
       winner: "creator" | "joiner";
     }): Promise<void> {
       logReceivedMessage(M.playerWonOnTimeMsg, { winner });
-      const game = GM.ongoingGameOfClient(clientIdToken);
+      const game = GM.getOngoingGameByClient(idToken, socket.id);
       if (!game) {
         emitGameNotFoundError();
         return;
@@ -422,7 +494,7 @@ io.on(M.connectionMsg, function (socket: any): void {
       winner: "creator" | "joiner" | "draw";
     }): Promise<void> {
       logReceivedMessage(M.playerReachedGoalMsg, { winner });
-      const game = GM.ongoingGameOfClient(clientIdToken);
+      const game = GM.getOngoingGameByClient(idToken, socket.id);
       if (!game) {
         emitGameNotFoundError();
         return;
@@ -434,17 +506,16 @@ io.on(M.connectionMsg, function (socket: any): void {
   );
 
   function handleClientLeaving(): void {
-    if (!clientIdToken) return;
-    const unjoinedGame = GM.getUnjoinedGamesBySocketId(socket.id);
+    const unjoinedGame = GM.getUnjoinedGameByClient(idToken, socket.id);
     if (unjoinedGame) ChallengeBC.notifyDeadChallenge(unjoinedGame.joinCode);
-    GM.removeUnjoinedGamesByIdToken(clientIdToken);
-    const game = GM.ongoingGameOfClient(clientIdToken);
+    GM.removeUnjoinedGamesByClient(idToken, socket.id);
+    const game = GM.getOngoingGameByClient(idToken, socket.id);
     if (!game) return;
-    const idx = clientIndex(game, clientIdToken);
+    const idx = clientIndex(game, idToken, socket.id);
     if (idx === null) return;
     game.arePlayersPresent[idx] = false;
     emitMessageOpponent(M.leftGameMsg);
-    if (game.winner !== "") GM.removeOngoingGamesByIdToken(clientIdToken);
+    if (game.winner !== "") GM.removeOngoingGamesByClient(idToken, socket.id);
   }
 
   socket.on(M.leaveGameMsg, function (): void {
@@ -464,51 +535,9 @@ io.on(M.connectionMsg, function (socket: any): void {
   });
 
   socket.on(
-    M.loggedInMsg,
-    async function ({ idToken }: { idToken: string }): Promise<void> {
-      logReceivedMessage(M.loggedInMsg, { idToken });
-      const player = await db.getPlayer(idToken);
-      if (player) {
-        // If player already exists, return the name.
-        emitMessage(M.loggedInNameFoundMsg, { name: player.name });
-        return;
-      }
-
-      // Get a random and unique name.
-      let newName = randPlayerName();
-      let tries = 20;
-      while (tries > 0) {
-        console.log("Trying name: " + newName);
-        if (await db.nameExists(newName)) {
-          newName = randPlayerName();
-          tries--;
-        } else break;
-      }
-      if (tries === 0) {
-        console.error("Could not find a unique name for new player");
-        emitMessage(M.createNewPlayerFailedMsg);
-        return;
-      }
-
-      let success = await db.addNewPlayer(idToken, newName);
-      if (!success) {
-        emitMessage(M.createNewPlayerFailedMsg);
-      } else {
-        emitMessage(M.createdNewPlayerMsg, { name: newName });
-      }
-    }
-  );
-
-  socket.on(
     M.changeNameMsg,
-    async function ({
-      idToken,
-      name,
-    }: {
-      idToken: string;
-      name: string;
-    }): Promise<void> {
-      logReceivedMessage(M.changeNameMsg, { idToken, name });
+    async function ({ name }: { name: string }): Promise<void> {
+      logReceivedMessage(M.changeNameMsg, { name });
       // Perform formatting validation.
       if (name.length > 15) {
         emitMessage(M.nameChangeFailedMsg, { reason: "Name too long" });
@@ -530,8 +559,10 @@ io.on(M.connectionMsg, function (socket: any): void {
         });
         return;
       }
-      if (idToken === "") {
-        emitMessage(M.nameChangeFailedMsg, { reason: "Internal error" });
+      if (isGuest()) {
+        emitMessage(M.nameChangeFailedMsg, {
+          reason: "Guests cannot change names",
+        });
         return;
       }
       const nameExists = await db.nameExists(name);
@@ -543,12 +574,12 @@ io.on(M.connectionMsg, function (socket: any): void {
       }
       const success = await db.changeName(idToken, name);
       if (!success) {
-        emitMessage(M.nameChangeFailedMsg, { reason: "Internal error" });
+        emitMessage(M.nameChangeFailedMsg, { reason: "Server error" });
       } else {
-        // The input parameters are passed back in the response in case the
-        // client sent multiple changeName messages, so we know which one the
-        // server is responding to.
-        emitMessage(M.nameChangedMsg, { idToken: idToken, name: name });
+        // The input name is passed back in the response in case the client sent
+        // multiple changeName messages, so it knows which one the server is
+        // responding to.
+        emitMessage(M.nameChangedMsg, { name });
       }
     }
   );
@@ -559,7 +590,7 @@ io.on(M.connectionMsg, function (socket: any): void {
       logReceivedMessage(M.getGameMsg, { gameId });
       // In the future, this should also handle live games.
       const game = await db.getGame(gameId);
-      if (game) emitMessage(M.requestedGameMsg, { game: game });
+      if (game) emitMessage(M.requestedGameMsg, { game });
       else emitMessage(M.gameNotFoundErrorMsg);
     }
   );
@@ -567,19 +598,14 @@ io.on(M.connectionMsg, function (socket: any): void {
   socket.on(M.getRandomGameMsg, async function (): Promise<void> {
     logReceivedMessage(M.getRandomGameMsg);
     const game = await db.getRandomGame();
-    if (game)
-      emitMessage(M.requestedRandomGameMsg, {
-        game: game,
-      });
+    if (game) emitMessage(M.requestedRandomGameMsg, { game });
     else emitMessage(M.randomGameNotFoundMsg);
   });
 
   socket.on(M.requestCurrentChallengesMsg, function (): void {
     logReceivedMessage(M.requestCurrentChallengesMsg);
     const challenges = GM.getOpenChallenges();
-    emitMessage(M.requestedCurrentChallengesMsg, {
-      challenges: challenges,
-    });
+    emitMessage(M.requestedCurrentChallengesMsg, { challenges });
   });
 
   socket.on(
@@ -588,39 +614,41 @@ io.on(M.connectionMsg, function (socket: any): void {
       logReceivedMessage(M.getRankingMsg, { count });
       const ranking = await db.getRanking(count);
       if (ranking) {
-        emitMessage(M.requestedRankingMsg, {
-          ranking: ranking,
-        });
+        emitMessage(M.requestedRankingMsg, { ranking });
       } else emitMessage(M.rankingNotFoundMsg);
     }
   );
 
-  socket.on(
-    M.getSolvedPuzzlesMsg,
-    async function ({ idToken }: { idToken: string }): Promise<void> {
-      logReceivedMessage(M.getSolvedPuzzlesMsg, { idToken });
+  socket.on(M.getSolvedPuzzlesMsg, async function (): Promise<void> {
+    logReceivedMessage(M.getSolvedPuzzlesMsg);
+
+    let solvedPuzzles: string[] = [];
+    if (isLoggedIn()) {
       const player = await db.getPlayer(idToken);
       if (player) {
-        emitMessage(M.requestedSolvedPuzzlesMsg, {
-          solvedPuzzles: player.solvedPuzzles,
-        });
-      } else emitMessage(M.solvedPuzzlesNotFoundMsg);
+        solvedPuzzles = player.solvedPuzzles;
+      } else {
+        emitMessage(M.solvedPuzzlesNotFoundMsg);
+        return;
+      }
     }
-  );
+    emitMessage(M.requestedSolvedPuzzlesMsg, { solvedPuzzles });
+  });
 
   socket.on(
     M.solvedPuzzleMsg,
     async function ({
-      idToken,
-      name,
       puzzleId,
     }: {
-      idToken: string;
       name: string;
       puzzleId: string;
     }): Promise<void> {
-      logReceivedMessage(M.solvedPuzzleMsg, { idToken, name, puzzleId });
-      await db.addPlayerSolvedPuzzle(idToken, name, puzzleId);
+      logReceivedMessage(M.solvedPuzzleMsg, { puzzleId });
+      if (isGuest()) {
+        // We do not track solved puzzles for guests.
+        return;
+      }
+      await db.addPlayerSolvedPuzzle(idToken, puzzleId);
     }
   );
 
@@ -637,64 +665,45 @@ io.on(M.connectionMsg, function (socket: any): void {
     }
   );
 
-  socket.on(
-    M.checkHasOngoingGameMsg,
-    function ({ idToken }: { idToken: string }): void {
-      logReceivedMessage(M.checkHasOngoingGameMsg, { idToken });
-      if (!isValidIdToken(idToken)) {
-        emitMessage(M.respondHasOngoingGameMsg, { res: false });
-        return;
-      }
-      const game = GM.getOngoingGameByIdToken(idToken);
-      emitMessage(M.respondHasOngoingGameMsg, { res: game !== null });
-    }
-  );
+  socket.on(M.checkHasOngoingGameMsg, function (): void {
+    logReceivedMessage(M.checkHasOngoingGameMsg);
+    const game = GM.getOngoingGameByClient(idToken, socket.id);
+    emitMessage(M.respondHasOngoingGameMsg, { res: game !== null });
+  });
 
-  socket.on(
-    M.returnToOngoingGameMsg,
-    function ({ idToken }: { idToken: string }): void {
-      logReceivedMessage(M.returnToOngoingGameMsg, { idToken });
-      if (!isValidIdToken(idToken)) {
-        emitMessage(M.ongoingGameNotFoundMsg);
-        return;
-      }
-      if (idToken) clientIdToken = idToken;
-      const game = GM.getOngoingGameByIdToken(clientIdToken);
-      if (!game) {
-        emitMessage(M.ongoingGameNotFoundMsg);
-        return;
-      }
-      const idx = clientIndex(game, clientIdToken);
-      if (idx === null) {
-        console.log("Client index not found");
-        return;
-      }
-      game.arePlayersPresent[idx] = true;
-      // When a client returns to a game, we need to update its socket id.
-      game.socketIds[idx] = socket.id;
-      let gameWithoutIdTokens = JSON.parse(JSON.stringify(game));
-      delete gameWithoutIdTokens.idTokens;
-      emitMessage(M.returnedToOngoingGameMsg, {
-        ongoingGame: gameWithoutIdTokens,
-        isCreator: idx === 0,
-        timeLeft: timeLeftByPlayer(game),
-      });
-      emitMessageOpponent(M.opponentReturnedMsg);
+  socket.on(M.returnToOngoingGameMsg, function (): void {
+    logReceivedMessage(M.returnToOngoingGameMsg);
+    const game = GM.getOngoingGameByClient(idToken, socket.id);
+    if (!game) {
+      emitMessage(M.ongoingGameNotFoundMsg);
+      return;
     }
-  );
+    const idx = clientIndex(game, idToken, socket.id);
+    if (idx === null) {
+      console.error("Client index not found");
+      emitMessage(M.ongoingGameNotFoundMsg);
+      return;
+    }
+    game.arePlayersPresent[idx] = true;
+    // Remove the id token of the opponent, which is secret.
+    let gameWithoutIdTokens = JSON.parse(JSON.stringify(game));
+    delete gameWithoutIdTokens.idTokens;
+    emitMessage(M.returnedToOngoingGameMsg, {
+      ongoingGame: gameWithoutIdTokens,
+      isCreator: idx === 0,
+      timeLeft: timeLeftByPlayer(game),
+    });
+    emitMessageOpponent(M.opponentReturnedMsg);
+  });
 
   ////////////////////////////////////
   // Utility functions.
   ////////////////////////////////////
 
-  function isValidIdToken(idToken: string | null | undefined): boolean {
-    return idToken !== null && idToken !== undefined && idToken !== "undefined";
-  }
-
   function logReceivedMessage(msgTitle: string, msgParams?: any): void {
-    const game = GM.ongoingGameOfClient(clientIdToken);
+    const game = GM.getOngoingGameByClient(idToken, socket.id);
     logMessage({
-      idToken: clientIdToken,
+      idToken,
       socketId: socket.id,
       game,
       sent: false,
@@ -706,9 +715,9 @@ io.on(M.connectionMsg, function (socket: any): void {
   function emitMessage(msgTitle: string, msgParams?: any): void {
     if (msgParams) socket.emit(msgTitle, msgParams);
     else socket.emit(msgTitle);
-    const game = GM.ongoingGameOfClient(clientIdToken);
+    const game = GM.getOngoingGameByClient(idToken, socket.id);
     logMessage({
-      idToken: clientIdToken,
+      idToken,
       socketId: socket.id,
       game,
       sent: true,
@@ -718,17 +727,17 @@ io.on(M.connectionMsg, function (socket: any): void {
   }
 
   function emitMessageOpponent(msgTitle: string, msgParams?: any): void {
-    const oppSocketId = GM.getOpponentSocketId(clientIdToken);
-    const oppIdToken = GM.getOpponentIdToken(clientIdToken);
+    const oppSocketId = GM.getOpponentSocketId(idToken, socket.id);
+    const oppIdToken = GM.getOpponentIdToken(idToken, socket.id);
     if (!oppSocketId) {
       console.log(`error: couldn't send message ${msgTitle} to opponent`);
       return;
     }
     if (msgParams) io.to(oppSocketId).emit(msgTitle, msgParams);
     else io.to(oppSocketId).emit(msgTitle);
-    const game = GM.ongoingGameOfClient(clientIdToken);
+    const game = GM.getOngoingGameByClient(idToken, socket.id);
     logMessage({
-      idToken: oppIdToken!,
+      idToken: oppIdToken ? oppIdToken : "",
       socketId: oppSocketId,
       game,
       sent: true,
@@ -741,55 +750,66 @@ io.on(M.connectionMsg, function (socket: any): void {
     return emitMessage(M.gameNotFoundErrorMsg);
   }
 
-  // Assumes `game` has both idTokens and both players already exist in the DB.
   async function getPlayersFromDB(
     game: GameState
   ): Promise<[db.dbPlayer | null, db.dbPlayer | null]> {
-    if (!game.idTokens[0] || !game.idTokens[1]) return [null, null];
-
-    const creator = await db.getPlayer(game.idTokens[0]);
-    const joiner = await db.getPlayer(game.idTokens[1]);
-    return [creator, joiner];
+    return [
+      await db.getPlayer(game.idTokens[0]),
+      await db.getPlayer(game.idTokens[1]),
+    ];
   }
 
   // Stores game to db, updates players in db, messages both players about
   // new ratings.
   async function storeGameAndNotifyRatings(game: GameState): Promise<void> {
-    if (!clientIdToken) return;
+    // Store game and updated player statistics to DB.
+    await db.storeGameAndUpdatePlayers(game);
 
-    await db.storeGame(game);
+    // Message new ratings to both players.
     const [creatorPlayer, joinerPlayer] = await getPlayersFromDB(game);
-    if (!creatorPlayer || !joinerPlayer) return;
+    if (!creatorPlayer || !joinerPlayer) {
+      // If either player is a guest, there is no rating update, so we have
+      // nothing to do.
+      return;
+    }
     const oldRatings = game.ratings;
 
     const newRatings = [creatorPlayer.rating, joinerPlayer.rating];
-    const clientIdx = clientIndex(game, clientIdToken);
+    const clientIdx = clientIndex(game, idToken, socket.id);
     const opponentIdx = clientIdx === 0 ? 1 : 0;
     emitMessage(M.newRatingsNotificationMsg, {
-      clientIdx: clientIdx,
-      oldRatings: oldRatings,
-      newRatings: newRatings,
+      clientIdx,
+      oldRatings,
+      newRatings,
     });
     emitMessageOpponent(M.newRatingsNotificationMsg, {
       clientIdx: opponentIdx,
-      oldRatings: oldRatings,
-      newRatings: newRatings,
+      oldRatings,
+      newRatings,
     });
   }
 
-  // Communicate the the opponent that the client is not coming back
-  // and store the game to the DB if it had started.
+  // Communicate to the opponent that the client is not coming back, mark the
+  // client as the loser if the game is still ongoing, and store the game to the
+  // DB if not saved yet.
   async function dealWithLingeringGame(game: GameState): Promise<void> {
-    if (!clientIdToken) return;
+    const idx = clientIndex(game, idToken, socket.id);
+    if (idx === null) return;
+    if (game.winner !== "") {
+      // Games that already have an assigned winner are already been saved in
+      // the DB. Nothing else to do.
+      return;
+    }
 
-    const idx = clientIndex(game, clientIdToken);
-    if (game.winner === "" && game.arePlayersPresent[idx === 0 ? 1 : 0])
+    // Notify the opponent that the client is not coming back.
+    if (game.arePlayersPresent[idx === 0 ? 1 : 0])
       emitMessageOpponent(M.abandonedGameMsg);
 
-    if (game.winner === "" && game.moveHistory.length > 1) {
+    // Set the person who abandoned the game as loser, and store the game in the
+    // db.
+    if (game.moveHistory.length > 1) {
       if (playerToMoveHasTimeLeft(game)) {
-        const winner =
-          clientIdToken === game.idTokens[0] ? "joiner" : "creator";
+        const winner = idx === 0 ? "joiner" : "creator";
         setResult(game, winner, "abandon");
       } else {
         const winner = creatorToMove(game) ? "joiner" : "creator";
@@ -799,5 +819,26 @@ io.on(M.connectionMsg, function (socket: any): void {
     }
   }
 });
+
+function randPlayerName(): string {
+  return uniqueNamesGenerator({
+    dictionaries: [names],
+    length: 1,
+  }).slice(0, 10);
+}
+
+// Returns a random player name that is not already in the DB. Returns an empty
+// string if no unique name could be found.
+async function uniqueRandPlayerName(): Promise<string> {
+  let name = randPlayerName();
+  let tries = 20;
+  while (tries > 0) {
+    if (await db.nameExists(name)) {
+      name = randPlayerName();
+      tries--;
+    } else break;
+  }
+  return tries === 0 ? "" : name;
+}
 
 server.listen(port, () => console.log(`Listening on port ${port}`));
