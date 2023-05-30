@@ -89,10 +89,14 @@ io.on(M.connectionMsg, function (socket: any): void {
   ////////////////////////////////////
   socket.on(
     M.logInOrSignUpMsg,
-    async function ({ idToken }: { idToken: string }): Promise<void> {
-      logReceivedMessage(M.logInOrSignUpMsg, { idToken });
+    async function ({
+      receivedIdToken,
+    }: {
+      receivedIdToken: string;
+    }): Promise<void> {
+      logReceivedMessage(M.logInOrSignUpMsg, { idToken: receivedIdToken });
       // Tie this socket connection with the received idToken.
-      idToken = idToken;
+      idToken = receivedIdToken;
 
       const player = await db.getPlayer(idToken);
 

@@ -4,7 +4,6 @@ export default function showToastNotification(
   text: string,
   duration?: number
 ): void {
-  console.log("inside showToastNotification: " + text);
   if (!duration || duration === 0) duration = 2500;
   toast(text, {
     autoClose: duration,

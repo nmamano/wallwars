@@ -330,7 +330,6 @@ export default function App() {
   useEffect(() => {
     // We receive our name from the server upon log in.
     socket.on("loggedIn", ({ name }: { name: string }) => {
-      console.log(`loggedIn: ${name}`);
       updateState((draftState) => {
         draftState.playerName = name;
       });
