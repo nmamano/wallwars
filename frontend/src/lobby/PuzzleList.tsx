@@ -8,13 +8,13 @@ import socket from "../socket";
 
 export default function PuzzleList({
   name,
-  idToken,
+  isLoggedIn,
   menuTheme,
   isDarkModeOn,
   handleSolvePuzzle,
 }: {
   name: string;
-  idToken: string;
+  isLoggedIn: boolean;
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
   handleSolvePuzzle: (puzzleId: string) => void;
@@ -41,11 +41,11 @@ export default function PuzzleList({
       updateState((draftState) => {
         draftState.needToRequestSolvedPuzzles = false;
       });
-      if (idToken !== "") {
+      if (isLoggedIn) {
         socket.emit("getSolvedPuzzles");
       }
     }
-  }, [idToken, updateState, state.needToRequestSolvedPuzzles]);
+  }, [isLoggedIn, updateState, state.needToRequestSolvedPuzzles]);
 
   useEffect(() => {
     socket.once(
@@ -99,7 +99,10 @@ export default function PuzzleList({
             <th style={headEntryStyle}>Puzzle</th>
             <th style={headEntryStyle}>Rating</th>
             <th style={headEntryStyle}>Author</th>
-            <th style={headEntryStyle}>Solved</th>
+            {/* Guests can solve the puzzles, but they don't see the mark of
+            whether they have already solved it, since that's a feature for
+            logged-in users. */}
+            {isLoggedIn && <th style={headEntryStyle}>Solved</th>}
           </tr>
         </thead>
         <tbody>
@@ -117,9 +120,11 @@ export default function PuzzleList({
                 <td style={entryStyle}>{puzzle.id}</td>
                 <td style={entryStyle}>{puzzle.difficulty}</td>
                 <td style={entryStyle}>{puzzle.author}</td>
-                <td style={entryStyle}>
-                  {state.solvedPuzzles.includes(puzzle.id) ? "Yes" : "No"}
-                </td>
+                {isLoggedIn && (
+                  <td style={entryStyle}>
+                    {state.solvedPuzzles.includes(puzzle.id) ? "Yes" : "No"}
+                  </td>
+                )}
               </tr>
             );
           })}
