@@ -295,7 +295,7 @@ export default function GamePage({
     });
 
     socket.on("extraTimeReceived", () => {
-      showToastNotification("The opponent added 60s to your clock.", 5000);
+      showToastNotification("The opponent added 60s to your clock.", 1600);
       updateState((draftState) => {
         const playerIndex = draftState.clientRole === RoleEnum.creator ? 0 : 1;
         applyAddExtraTime(draftState, playerIndex);
@@ -596,7 +596,7 @@ export default function GamePage({
 
   const handleGiveExtraTime = () => {
     if (isOnlineMode()) {
-      showToastNotification("Added 60s to the opponent's clock.", 3000);
+      showToastNotification("+60s to the opponent's clock.", 1200);
       socket.emit("giveExtraTime");
       updateState((draftState) => {
         const receiverIndex =

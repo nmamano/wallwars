@@ -1,8 +1,6 @@
 import * as React from "react";
-import { useEffect } from "react";
 import Grid from "@mui/material/Grid";
 import { getColor } from "../shared/colorThemes";
-import showToastNotification from "../shared/showToastNotification";
 import { TextButton, TextButtonWithTextField } from "../shared/Buttons";
 import { maxBoardDims } from "../shared/globalSettings";
 import { AppState, PosSetting } from "../App";
@@ -62,21 +60,6 @@ export default function LobbyForm({
   const menuTheme = appState.menuTheme;
   const isDarkModeOn = appState.isDarkModeOn;
   const BS = appState.boardSettings;
-
-  useEffect(() => {
-    window.addEventListener("keydown", downHandler);
-    return () => {
-      window.removeEventListener("keydown", downHandler);
-    };
-  });
-  const downHandler = ({ key }: { key: string }) => {
-    if (key !== "Enter") return;
-    if (appState.joinCode.length > 0) handleJoinGame();
-    else {
-      showToastNotification("Created new game", 5000);
-      handleCreateGame(inputtedDuration, inputtedIncrement);
-    }
-  };
 
   const defaultToken = (
     <div style={{ fontSize: "30px" }}>
