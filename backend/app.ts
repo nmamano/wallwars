@@ -58,6 +58,16 @@ const GM = new GameManager();
 const ChallengeBC = new ChallengeBroadcast();
 
 io.on(M.connectionMsg, function (socket: any): void {
+  // Inject middleware to log incoming messages.
+  const originalOn = socket.on;
+  socket.on = function (this: any, event: string, listener: Function): any {
+    const wrappedListener = function (this: any, ...args: any[]) {
+      logReceivedMessage(event, args[0]);
+      listener.apply(this, args);
+    };
+    return originalOn.call(this, event, wrappedListener);
+  };
+
   // idToken identifies the (human) user associated with this socket connection.
   // It is a persistent and unique id for each user (it is the key in the
   // player DB table). It is empty for non-logged in users (guests).
@@ -94,7 +104,6 @@ io.on(M.connectionMsg, function (socket: any): void {
     }: {
       idToken: string;
     }): Promise<void> {
-      logReceivedMessage(M.logInOrSignUpMsg, { idToken: receivedIdToken });
       if (receivedIdToken === "") {
         console.error("Received empty idToken");
         emitMessage(M.signUpFailedMsg);
@@ -153,13 +162,6 @@ io.on(M.connectionMsg, function (socket: any): void {
       boardSettings: BoardSettings;
       isPublic: boolean;
     }): Promise<void> {
-      logReceivedMessage(M.createGameMsg, {
-        token,
-        timeControl,
-        boardSettings,
-        isPublic,
-      });
-
       const ongoingGame = GM.getOngoingGameByClient(idToken, socket.id);
       if (ongoingGame) await dealWithLingeringGame(ongoingGame);
       // Ensure there's no other game for this client.
@@ -211,8 +213,6 @@ io.on(M.connectionMsg, function (socket: any): void {
       joinCode: string;
       token: string;
     }): Promise<void> {
-      logReceivedMessage(M.joinGameMsg, { joinCode, token });
-
       const ongoingGame = GM.getOngoingGameByClient(idToken, socket.id);
       if (ongoingGame) await dealWithLingeringGame(ongoingGame);
 
@@ -301,7 +301,6 @@ io.on(M.connectionMsg, function (socket: any): void {
       remainingTime: number;
       distances: [number, number];
     }): void {
-      logReceivedMessage(M.moveMsg, { actions, remainingTime });
       const game = GM.getOngoingGameByClient(idToken, socket.id);
       if (!game) {
         emitGameNotFoundError();
@@ -321,7 +320,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   );
 
   socket.on(M.offerRematchMsg, function (): void {
-    logReceivedMessage(M.offerRematchMsg);
     if (!GM.hasOngoingGame(idToken, socket.id)) {
       emitGameNotFoundError();
       return;
@@ -330,7 +328,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   });
 
   socket.on(M.rejectRematchMsg, function (): void {
-    logReceivedMessage(M.rejectRematchMsg);
     if (!GM.hasOngoingGame(idToken, socket.id)) {
       emitGameNotFoundError();
       return;
@@ -339,7 +336,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   });
 
   socket.on(M.acceptRematchMsg, async function (): Promise<void> {
-    logReceivedMessage(M.acceptRematchMsg);
     const game = GM.getOngoingGameByClient(idToken, socket.id);
     if (!game) {
       emitGameNotFoundError();
@@ -360,7 +356,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   });
 
   socket.on(M.resignMsg, async function (): Promise<void> {
-    logReceivedMessage(M.resignMsg);
     const game = GM.getOngoingGameByClient(idToken, socket.id);
     if (!game) {
       emitGameNotFoundError();
@@ -395,7 +390,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   });
 
   socket.on(M.offerDrawMsg, function (): void {
-    logReceivedMessage(M.offerDrawMsg);
     if (!GM.hasOngoingGame(idToken, socket.id)) {
       emitGameNotFoundError();
       return;
@@ -404,7 +398,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   });
 
   socket.on(M.acceptDrawMsg, async function (): Promise<void> {
-    logReceivedMessage(M.acceptDrawMsg);
     const game = GM.getOngoingGameByClient(idToken, socket.id);
     if (!game) {
       emitGameNotFoundError();
@@ -417,7 +410,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   });
 
   socket.on(M.rejectDrawMsg, function (): void {
-    logReceivedMessage(M.rejectDrawMsg);
     if (!GM.hasOngoingGame(idToken, socket.id)) {
       emitGameNotFoundError();
       return;
@@ -426,7 +418,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   });
 
   socket.on(M.requestTakebackMsg, function (): void {
-    logReceivedMessage(M.requestTakebackMsg);
     if (!GM.hasOngoingGame(idToken, socket.id)) {
       emitGameNotFoundError();
       return;
@@ -435,7 +426,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   });
 
   socket.on(M.acceptTakebackMsg, function (): void {
-    logReceivedMessage(M.acceptTakebackMsg);
     const game = GM.getOngoingGameByClient(idToken, socket.id);
     if (!game) {
       emitGameNotFoundError();
@@ -451,8 +441,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   });
 
   socket.on(M.rejectTakebackMsg, function (): void {
-    logReceivedMessage(M.rejectTakebackMsg);
-
     if (!GM.hasOngoingGame(idToken, socket.id)) {
       emitGameNotFoundError();
       return;
@@ -461,7 +449,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   });
 
   socket.on(M.giveExtraTimeMsg, function (): void {
-    logReceivedMessage(M.giveExtraTimeMsg);
     const game = GM.getOngoingGameByClient(idToken, socket.id);
     if (!game) {
       emitGameNotFoundError();
@@ -484,7 +471,6 @@ io.on(M.connectionMsg, function (socket: any): void {
     }: {
       winner: "creator" | "joiner";
     }): Promise<void> {
-      logReceivedMessage(M.playerWonOnTimeMsg, { winner });
       const game = GM.getOngoingGameByClient(idToken, socket.id);
       if (!game) {
         emitGameNotFoundError();
@@ -503,7 +489,6 @@ io.on(M.connectionMsg, function (socket: any): void {
     }: {
       winner: "creator" | "joiner" | "draw";
     }): Promise<void> {
-      logReceivedMessage(M.playerReachedGoalMsg, { winner });
       const game = GM.getOngoingGameByClient(idToken, socket.id);
       if (!game) {
         emitGameNotFoundError();
@@ -529,25 +514,21 @@ io.on(M.connectionMsg, function (socket: any): void {
   }
 
   socket.on(M.leaveGameMsg, function (): void {
-    logReceivedMessage(M.leaveGameMsg);
     handleClientLeaving();
   });
 
   socket.on(M.disconnectMsg, function (): void {
-    logReceivedMessage(M.disconnectMsg);
     ChallengeBC.removeSubscriber(socket.id);
     handleClientLeaving();
   });
 
   socket.on(M.pingServerMsg, function (): void {
-    logReceivedMessage(M.pingServerMsg);
     emitMessage(M.pongFromServerMsg);
   });
 
   socket.on(
     M.changeNameMsg,
     async function ({ name }: { name: string }): Promise<void> {
-      logReceivedMessage(M.changeNameMsg, { name });
       // Perform formatting validation.
       if (name.length > 15) {
         emitMessage(M.nameChangeFailedMsg, { reason: "Name too long" });
@@ -597,7 +578,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   socket.on(
     M.getGameMsg,
     async function ({ gameId }: { gameId: string }): Promise<void> {
-      logReceivedMessage(M.getGameMsg, { gameId });
       // In the future, this should also handle live games.
       const game = await db.getGame(gameId);
       if (game) emitMessage(M.requestedGameMsg, { game });
@@ -606,14 +586,12 @@ io.on(M.connectionMsg, function (socket: any): void {
   );
 
   socket.on(M.getRandomGameMsg, async function (): Promise<void> {
-    logReceivedMessage(M.getRandomGameMsg);
     const game = await db.getRandomGame();
     if (game) emitMessage(M.requestedRandomGameMsg, { game });
     else emitMessage(M.randomGameNotFoundMsg);
   });
 
   socket.on(M.requestCurrentChallengesMsg, function (): void {
-    logReceivedMessage(M.requestCurrentChallengesMsg);
     const challenges = GM.getOpenChallenges();
     emitMessage(M.requestedCurrentChallengesMsg, { challenges });
   });
@@ -621,7 +599,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   socket.on(
     M.getRankingMsg,
     async function ({ count }: { count: number }): Promise<void> {
-      logReceivedMessage(M.getRankingMsg, { count });
       const ranking = await db.getRanking(count);
       if (ranking) {
         emitMessage(M.requestedRankingMsg, { ranking });
@@ -630,8 +607,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   );
 
   socket.on(M.getSolvedPuzzlesMsg, async function (): Promise<void> {
-    logReceivedMessage(M.getSolvedPuzzlesMsg);
-
     let solvedPuzzles: string[] = [];
     if (isLoggedIn()) {
       const player = await db.getPlayer(idToken);
@@ -647,13 +622,7 @@ io.on(M.connectionMsg, function (socket: any): void {
 
   socket.on(
     M.solvedPuzzleMsg,
-    async function ({
-      puzzleId,
-    }: {
-      name: string;
-      puzzleId: string;
-    }): Promise<void> {
-      logReceivedMessage(M.solvedPuzzleMsg, { puzzleId });
+    async function ({ puzzleId }: { puzzleId: string }): Promise<void> {
       if (isGuest()) {
         // We do not track solved puzzles for guests.
         return;
@@ -665,7 +634,6 @@ io.on(M.connectionMsg, function (socket: any): void {
   socket.on(
     M.getRecentGameSummariesMsg,
     async function ({ count }: { count: number }): Promise<void> {
-      logReceivedMessage(M.getRecentGameSummariesMsg, { count });
       const recentGameSummaries = await db.getRecentGameSummaries(count);
       if (recentGameSummaries)
         emitMessage(M.requestedRecentGameSummariesMsg, {
@@ -676,13 +644,11 @@ io.on(M.connectionMsg, function (socket: any): void {
   );
 
   socket.on(M.checkHasOngoingGameMsg, function (): void {
-    logReceivedMessage(M.checkHasOngoingGameMsg);
     const game = GM.getOngoingGameByClient(idToken, socket.id);
     emitMessage(M.respondHasOngoingGameMsg, { res: game !== null });
   });
 
   socket.on(M.returnToOngoingGameMsg, function (): void {
-    logReceivedMessage(M.returnToOngoingGameMsg);
     const game = GM.getOngoingGameByClient(idToken, socket.id);
     if (!game) {
       emitMessage(M.ongoingGameNotFoundMsg);
