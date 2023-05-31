@@ -26,6 +26,16 @@ export default function PuzzleList({
     needToRequestSolvedPuzzles: true,
     solvedPuzzles: [],
   });
+
+  // Indicate that we need to request solved puzzles on name change. This is
+  // because we want to request the list of solved puzzles when the user logs
+  // in, and their name changes, when they login.
+  useEffect(() => {
+    updateState((draftState) => {
+      draftState.needToRequestSolvedPuzzles = true;
+    });
+  }, [name, updateState]);
+
   useEffect(() => {
     if (state.needToRequestSolvedPuzzles) {
       updateState((draftState) => {
@@ -35,7 +45,8 @@ export default function PuzzleList({
         socket.emit("getSolvedPuzzles");
       }
     }
-  }, [name, idToken, updateState, state.needToRequestSolvedPuzzles]);
+  }, [idToken, updateState, state.needToRequestSolvedPuzzles]);
+
   useEffect(() => {
     socket.once(
       "requestedSolvedPuzzles",

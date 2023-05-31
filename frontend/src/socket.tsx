@@ -12,4 +12,8 @@ socket.onAny((eventName: any, ...args: any) => {
   console.log(eventName, args);
 });
 
+socket.onAnyOutgoing((eventName: any, ...args: any) => {
+  console.log(eventName, args);
+});
+
 export default socket;

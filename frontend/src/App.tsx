@@ -169,7 +169,6 @@ export default function App() {
       console.error("user.sub is undefined or empty");
       return;
     }
-    console.log(`setting idToken to ${user.sub}`);
     updateState((draftState) => {
       draftState.idToken = user.sub!;
     });
