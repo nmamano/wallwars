@@ -152,9 +152,9 @@ export default function App() {
   // ========================================================================
   const { error, isAuthenticated, user, loginWithRedirect } = useAuth0();
   useEffect(() => {
-    console.log("user:\n", user);
-    console.log("error:\n", error);
-    console.log("isAuthenticated:\n", isAuthenticated);
+    console.log(
+      `user: ${user}, isAuthenticated: ${isAuthenticated}, error: ${error}`
+    );
     if (error) {
       console.log("There was an error while authenticating:\n", error);
       return;

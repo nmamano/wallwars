@@ -327,6 +327,7 @@ export default function LobbyPage({
           }}
         >
           <PuzzleList
+            name={appState.playerName}
             idToken={appState.idToken}
             menuTheme={appState.menuTheme}
             isDarkModeOn={appState.isDarkModeOn}

@@ -596,7 +596,7 @@ export default function GamePage({
 
   const handleGiveExtraTime = () => {
     if (isOnlineMode()) {
-      showToastNotification("You added 60s to the opponent's clock.", 5000);
+      showToastNotification("Added 60s to the opponent's clock.", 3000);
       socket.emit("giveExtraTime");
       updateState((draftState) => {
         const receiverIndex =
