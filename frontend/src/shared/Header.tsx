@@ -118,14 +118,8 @@ function Header({
   const padding = isLargeScreen ? 20 : 11;
   const buttonCol = getColor(menuTheme, "headerButton", isDarkModeOn);
 
-  // TODO: the user should be allowed to log out show even if there is an
-  // ongoing game.
-  const allowToToggleLogin =
-    context === contextEnum.lobby && (!hasOngoingGame || isLoggedIn);
-
-  let buttonCount = 3; // night mode, help, and info/return to lobby buttons
+  let buttonCount = 4; // night mode, help, and info/return to lobby buttons
   if (isLargeScreen) buttonCount++; // the "change theme" button is only shown in large screens
-  if (allowToToggleLogin) buttonCount++; // the login/profile button
 
   return (
     <div>
@@ -187,28 +181,22 @@ function Header({
               modalBody={helpText}
             />
             {context === contextEnum.lobby && (
-              <>
-                <IconButtonWithInfoModal
-                  icon="info"
-                  tooltip="About"
-                  bgColor={buttonCol}
-                  horizontalPadding={padding}
-                  modalTitle="About"
-                  modalBody={aboutText!}
-                />
-                {allowToToggleLogin && (
-                  <IconButtonWithTooltip
-                    icon={
-                      isLoggedIn ? "account_circle" : "account_circle_outlined"
-                    }
-                    tooltip={isLoggedIn ? "Profile (WIP)" : "Log in"}
-                    bgColor={buttonCol}
-                    horizontalPadding={padding}
-                    onClick={isLoggedIn ? handleGoToProfile! : handleLogin!}
-                  />
-                )}
-              </>
+              <IconButtonWithInfoModal
+                icon="info"
+                tooltip="About"
+                bgColor={buttonCol}
+                horizontalPadding={padding}
+                modalTitle="About"
+                modalBody={aboutText!}
+              />
             )}
+            <IconButtonWithTooltip
+              icon={isLoggedIn ? "account_circle" : "account_circle_outlined"}
+              tooltip={isLoggedIn ? "Profile (WIP)" : "Log in"}
+              bgColor={buttonCol}
+              horizontalPadding={padding}
+              onClick={isLoggedIn ? handleGoToProfile! : handleLogin!}
+            />
             {context !== contextEnum.lobby && (
               <IconButtonWithTooltip
                 icon="home"
