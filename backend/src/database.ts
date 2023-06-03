@@ -36,6 +36,7 @@ export type dbPlayer = {
   firstGameDate: Date | null; // null indicates that the player has not played any game yet.
   lastGameDate: Date | null; // null indicates that the player has not played any game yet.
   solvedPuzzles: string[];
+  creationDate: Date;
 };
 
 export type dbPlayerWithoutIdToken = Omit<dbPlayer, "idToken">;
@@ -170,7 +171,8 @@ export async function getPlayer(idToken: string): Promise<dbPlayer | null> {
 // Returns whether it succeeds in adding a new player.
 export async function addNewPlayer(
   idToken: string,
-  name: string
+  name: string,
+  creationDate: Date
 ): Promise<boolean> {
   if (!connectedToDB) {
     console.error("when adding new player: not connected to DB");
@@ -184,8 +186,12 @@ export async function addNewPlayer(
     console.error("when adding new player: name is empty");
     return false;
   }
+  if (creationDate === null) {
+    console.error("when adding new player: creationDate is null");
+    return false;
+  }
 
-  const p = new Player(defaultDbPlayer(idToken, name));
+  const p = new Player(defaultDbPlayer(idToken, name, creationDate));
   try {
     await p.save();
     console.log(
@@ -219,13 +225,18 @@ export async function getRanking(count: number): Promise<dbRanking | null> {
       firstGameDate: p.firstGameDate ? p.firstGameDate : null,
       lastGameDate: p.lastGameDate ? p.lastGameDate : null,
       solvedPuzzles: p.solvedPuzzles,
+      creationDate: p.creationDate,
     });
   });
   return players;
 }
 
 // Does not insert the player in the database, it just initializes some of the fields.
-export function defaultDbPlayer(idToken: string, name: string): dbPlayer {
+export function defaultDbPlayer(
+  idToken: string,
+  name: string,
+  creationDate: Date
+): dbPlayer {
   const r = initialRating();
   return {
     idToken: idToken,
@@ -240,6 +251,7 @@ export function defaultDbPlayer(idToken: string, name: string): dbPlayer {
     firstGameDate: null,
     lastGameDate: null,
     solvedPuzzles: [],
+    creationDate: creationDate,
   };
 }
 
@@ -454,6 +466,7 @@ const playerSchema = new Schema({
   firstGameDate: { type: Date, required: false },
   lastGameDate: { type: Date, required: false },
   solvedPuzzles: { type: [String], required: true },
+  creationDate: { type: Date, required: true },
 });
 const Player = mongoose.model("Player", playerSchema);
 

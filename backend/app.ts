@@ -140,7 +140,8 @@ io.on(M.connectionMsg, function (socket: any): void {
         emitMessage(M.signUpFailedMsg);
         return;
       }
-      const success = await db.addNewPlayer(idToken, newName);
+      const currentDate = new Date();
+      const success = await db.addNewPlayer(idToken, newName, currentDate);
       if (success) {
         emitMessage(M.signedUpMsg, { name: newName });
       } else {
