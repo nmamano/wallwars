@@ -478,7 +478,7 @@ function updatePlayerWithGameResult(
   newRatingTuple: { rating: number; deviation: number; volatility: number },
   isVsGuest: boolean
 ): void {
-  if (!isVsGuest) {
+  if (!isVsGuest && game.isRated) {
     // The rating is a competitive statistic, so it is not influenced by games
     // vs guests.
     player.rating = newRatingTuple.rating;
@@ -737,6 +737,7 @@ const gameSchema = new Schema(
         "ratings should have 2 entries",
       ],
     },
+    isRated: { type: Boolean, required: true },
   },
   { versionKey: false }
 );

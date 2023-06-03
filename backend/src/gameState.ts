@@ -38,6 +38,7 @@ export type GameState = {
   finalDists: [number, number];
   numMoves: number;
   ratings: [number, number];
+  isRated: boolean;
 };
 
 //Game "constructor"
@@ -77,6 +78,7 @@ export function newGame(): GameState {
     finalDists: [-1, -1], //-1,-1 until a move is registered
     numMoves: 0,
     ratings: [0, 0],
+    isRated: false,
   };
 }
 
@@ -151,6 +153,7 @@ export function addCreator({
   idToken,
   isPublic,
   rating,
+  isRated,
 }: {
   game: GameState;
   socketId: string;
@@ -161,6 +164,7 @@ export function addCreator({
   idToken: string; // Empty for guests.
   isPublic: boolean;
   rating: number;
+  isRated: boolean;
 }): void {
   game.socketIds[0] = socketId;
   game.playerNames[0] = name;
@@ -172,6 +176,7 @@ export function addCreator({
   game.isPublic = isPublic;
   game.creationDate = new Date(Date.now());
   game.ratings[0] = rating;
+  game.isRated = isRated;
 }
 
 export function addJoiner({

@@ -113,6 +113,7 @@ export default function GamePage({
         creatorPresent,
         creatorRating,
         joinerRating,
+        isRated,
       }: {
         creatorName: string;
         creatorToken: string;
@@ -122,6 +123,7 @@ export default function GamePage({
         creatorPresent: boolean;
         creatorRating: number;
         joinerRating: number;
+        isRated: boolean;
       }) => {
         updateState((draftState) => {
           applyJoinedOnServer({
@@ -134,8 +136,11 @@ export default function GamePage({
             creatorPresent,
             creatorRating,
             joinerRating,
+            isRated,
           });
-          if (
+          if (!isRated) {
+            showToastNotification("Unrated game: will not affect ELO");
+          } else if (
             draftState.names[0] === "Guest" ||
             draftState.names[1] === "Guest"
           ) {
@@ -214,8 +219,8 @@ export default function GamePage({
           draftState.arePlayersPresent[1] = true;
           draftState.waitingForPing = 0;
           if (
-            draftState.names[0] === "Guest" ||
-            draftState.names[1] === "Guest"
+            draftState.isRated &&
+            (draftState.names[0] === "Guest" || draftState.names[1] === "Guest")
           ) {
             showToastNotification("Games with guests will not affect ELO.");
           }
@@ -402,6 +407,7 @@ export default function GamePage({
           boardSettings: clientParams.boardSettings,
           name: clientParams.playerName,
           token: clientParams.token,
+          isRated: clientParams.isRated,
         });
         applyCreatedOnServer({
           draftState,
@@ -410,6 +416,9 @@ export default function GamePage({
           rating: clientParams.rating,
         });
         draftState.arePlayersPresent[0] = true;
+        if (!clientParams.isRated) {
+          showToastNotification("Unrated game: will not affect ELO", 5000);
+        }
       });
     } else if (clientParams.clientRole === RoleEnum.joiner) {
       updateState((draftState) => {

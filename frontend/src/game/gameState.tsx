@@ -87,6 +87,7 @@ export type ServerGame = {
   winner: WinnerEnum;
   finishReason: FinishReason;
   arePlayersPresent: [boolean, boolean];
+  isRated: boolean;
 };
 
 export type GameState = {
@@ -173,6 +174,7 @@ export type GameState = {
   showRematchDialog: boolean;
 
   boardSettings: BoardSettings;
+  isRated: boolean;
 };
 
 // =================================
@@ -223,6 +225,7 @@ export function createInitialState(cookies: Cookies): GameState {
 
     // By default, startPos and goalPos are at the corners.
     boardSettings: defaultBoardSettings,
+    isRated: false,
   };
   applyCookieSettings(draftState, cookies);
   return draftState;
@@ -273,12 +276,14 @@ export function applyAddCreator({
   boardSettings,
   name,
   token,
+  isRated,
 }: {
   draftState: GameState;
   timeControl: TimeControl;
   boardSettings: BoardSettings;
   name: string;
   token: string;
+  isRated: boolean;
 }): void {
   draftState.clientRole = RoleEnum.creator;
   draftState.lifeCycleStage = -1;
@@ -291,6 +296,7 @@ export function applyAddCreator({
   draftState.moveHistory[0].grid = emptyGrid(boardSettings.dims);
   draftState.moveHistory[0].playerPos = boardSettings.startPos;
   draftState.moveHistory[0].distances = emptyBoardDistances(boardSettings);
+  draftState.isRated = isRated;
 }
 
 export function applyAddJoiner({
@@ -342,6 +348,7 @@ export function applyJoinedOnServer({
   creatorPresent,
   creatorRating,
   joinerRating,
+  isRated,
 }: {
   draftState: GameState;
   creatorName: string;
@@ -352,6 +359,7 @@ export function applyJoinedOnServer({
   creatorPresent: boolean;
   creatorRating: number;
   joinerRating: number;
+  isRated: boolean;
 }): void {
   // If life cycle stage is already 1, it means we already joined.
   if (draftState.lifeCycleStage === 1) return;
@@ -368,6 +376,7 @@ export function applyJoinedOnServer({
   draftState.moveHistory[0].distances = emptyBoardDistances(boardSettings);
   draftState.lifeCycleStage = 1;
   draftState.ratings = [creatorRating, joinerRating];
+  draftState.isRated = isRated;
 }
 
 export function applyJoinerJoined({
@@ -408,6 +417,7 @@ export function applyCreatedLocally({
     boardSettings,
     name: name + "1",
     token,
+    isRated: false,
   });
   applyCreatedOnServer({
     draftState,
@@ -438,7 +448,14 @@ export function applyCreatedVsComputer({
     duration: 60,
     increment: 0,
   };
-  applyAddCreator({ draftState, timeControl, boardSettings, name, token });
+  applyAddCreator({
+    draftState,
+    timeControl,
+    boardSettings,
+    name,
+    token,
+    isRated: false,
+  });
   applyCreatedOnServer({
     draftState,
     joinCode: "AI",
@@ -476,6 +493,7 @@ export function applyCreatedPuzzle({
     ),
     name: puzzle.playAsCreator ? name : puzzle.author,
     token: puzzle.playAsCreator ? token : "extension",
+    isRated: false,
   });
   applyCreatedOnServer({
     draftState,
@@ -518,6 +536,7 @@ export function applyReturnToGame(
       boardSettings: serverGame.boardSettings,
       name: serverGame.playerNames[0],
       token: serverGame.playerTokens[0],
+      isRated: serverGame.isRated,
     });
     applyCreatedOnServer({
       draftState,
@@ -548,6 +567,7 @@ export function applyReturnToGame(
       creatorPresent: true,
       creatorRating: serverGame.ratings[0],
       joinerRating: serverGame.ratings[1],
+      isRated: serverGame.isRated,
     });
   }
   draftState.arePlayersPresent = serverGame.arePlayersPresent;
@@ -579,6 +599,7 @@ export function applyReceivedGame(
     boardSettings: serverGame.boardSettings,
     name: serverGame.playerNames[0],
     token: serverGame.playerTokens[0],
+    isRated: serverGame.isRated,
   });
   applyCreatedOnServer({
     draftState,

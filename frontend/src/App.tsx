@@ -37,6 +37,7 @@ export type Cookies = {
   numRows?: string;
   numCols?: string;
   isPrivate?: string;
+  isRated?: string;
   isVolumeOn?: string;
   zoomLevel?: string;
 };
@@ -75,6 +76,9 @@ export type AppState = {
   isDarkModeOn: boolean;
   menuTheme: MenuThemeName;
   boardTheme: BoardThemeName;
+
+  // Indicates if the game is rated or not when the user clicks the "create game" button.
+  isRated: boolean;
 };
 
 // Specifies the row or column of the start or goal position
@@ -107,6 +111,7 @@ function initialAppState(cookies: Cookies): AppState {
     },
     watchGameId: null,
     isPrivate: cookies.isPrivate && cookies.isPrivate === "true" ? true : false,
+    isRated: cookies.isRated && cookies.isRated === "false" ? false : true,
     idToken: "", // guests (logged out users) have an empty-string idToken
 
     creatorStarts: false,
@@ -141,6 +146,7 @@ export default function App() {
     "numRows",
     "numCols",
     "isPrivate",
+    "isRated",
   ]);
 
   const [state, updateState] = useImmer<AppState>(initialAppState(cookies));
@@ -235,6 +241,15 @@ export default function App() {
     });
   };
 
+  const handleIsRated = (val: boolean) => {
+    updateState((draftState) => {
+      draftState.isRated = val;
+    });
+    setCookie("isRated", val ? "true" : "false", {
+      path: "/",
+    });
+  };
+
   const handleNumRows = (nr: number) => {
     updateState((draftState) => {
       const curNr = draftState.boardSettings.dims[0];
@@ -323,6 +338,7 @@ export default function App() {
       timeControl: state.timeControl,
       boardSettings: state.boardSettings,
       isPublic: !state.isPrivate,
+      isRated: state.isRated,
     });
   };
 
@@ -534,6 +550,7 @@ export default function App() {
               handlePlayerName={handlePlayerName}
               handleToken={handleToken}
               handleIsPrivate={handleIsPrivate}
+              handleIsRated={handleIsRated}
               handleNumRows={handleNumRows}
               handleNumCols={handleNumCols}
               handlePosSetting={handlePosSetting}

@@ -157,11 +157,13 @@ io.on(M.connectionMsg, function (socket: any): void {
       timeControl,
       boardSettings,
       isPublic,
+      isRated,
     }: {
       token: string;
       timeControl: TimeControl;
       boardSettings: BoardSettings;
       isPublic: boolean;
+      isRated: boolean;
     }): Promise<void> {
       const ongoingGame = GM.getOngoingGameByClient(idToken, socket.id);
       if (ongoingGame) await dealWithLingeringGame(ongoingGame);
@@ -194,6 +196,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         idToken,
         isPublic,
         rating,
+        isRated,
       });
       GM.addUnjoinedGame(game);
       emitMessage(M.gameCreatedMsg, {
@@ -278,6 +281,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         creatorPresent: game.arePlayersPresent[0],
         creatorRating,
         joinerRating,
+        isRated: game.isRated,
       });
       emitMessageOpponent(M.joinerJoinedMsg, {
         joinerName: name,
@@ -743,6 +747,11 @@ io.on(M.connectionMsg, function (socket: any): void {
     await db.storeGameAndUpdatePlayers(game);
 
     // Message new ratings to both players.
+    if (!game.isRated) {
+      // If the game is not rated, there is no rating update, so we have
+      // nothing to do.
+      return;
+    }
     const [creatorPlayer, joinerPlayer] = await getPlayersFromDB(game);
     if (!creatorPlayer || !joinerPlayer) {
       // If either player is a guest, there is no rating update, so we have

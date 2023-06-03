@@ -40,6 +40,7 @@ export default function LobbyPage({
   handlePlayerName,
   handleToken,
   handleIsPrivate,
+  handleIsRated,
   handleNumRows,
   handleNumCols,
   handlePosSetting,
@@ -63,6 +64,7 @@ export default function LobbyPage({
   handlePlayerName: (name: string) => void;
   handleToken: (token: string) => void;
   handleIsPrivate: (isPrivate: boolean) => void;
+  handleIsRated: (isRated: boolean) => void;
   handleNumRows: (nr: number) => void;
   handleNumCols: (nc: number) => void;
   handlePosSetting: (posSetting: PosSetting) => void;
@@ -242,6 +244,7 @@ export default function LobbyPage({
           handleInputtedDuration={handleInputtedDuration}
           handleInputtedIncrement={handleInputtedIncrement}
           handleIsPrivate={handleIsPrivate}
+          handleIsRated={handleIsRated}
           handleNumRows={handleNumRows}
           handleNumCols={handleNumCols}
           handleShowMoreOptions={handleShowMoreOptions}

@@ -26,6 +26,7 @@ export default function LobbyForm({
   handleInputtedDuration,
   handleInputtedIncrement,
   handleIsPrivate,
+  handleIsRated,
   handleNumRows,
   handleNumCols,
   handleShowMoreOptions,
@@ -46,6 +47,7 @@ export default function LobbyForm({
   handleInputtedDuration: (duration: string) => void;
   handleInputtedIncrement: (increment: string) => void;
   handleIsPrivate: (isPrivate: boolean) => void;
+  handleIsRated: (isRated: boolean) => void;
   handleNumRows: (numRows: number) => void;
   handleNumCols: (numCols: number) => void;
   handleShowMoreOptions: (showMoreOptions: boolean) => void;
@@ -410,7 +412,24 @@ export default function LobbyForm({
                   inputProps={{ "aria-label": "controlled" }}
                 />
               }
-              label="Create Private Games"
+              label="Make games private"
+              style={{ color: "white" }}
+            />
+          </div>
+          <div style={gridItemStyle}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  id="isRatedCheckbox"
+                  sx={{ color: "white", paddingLeft: "24px" }}
+                  checked={appState.isRated}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                    handleIsRated(event.target.checked);
+                  }}
+                  inputProps={{ "aria-label": "controlled" }}
+                />
+              }
+              label="Make games rated"
               style={{ color: "white" }}
             />
           </div>
