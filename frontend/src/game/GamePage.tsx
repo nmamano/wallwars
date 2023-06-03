@@ -76,6 +76,8 @@ export default function GamePage({
   handleToggleDarkMode,
   handleToggleTheme,
   wasmAIGetMove,
+  handleLogin,
+  handleGoToProfile,
 }: {
   clientParams: AppState;
   isLargeScreen: boolean;
@@ -83,6 +85,8 @@ export default function GamePage({
   handleToggleDarkMode: () => void;
   handleToggleTheme: () => void;
   wasmAIGetMove?: (s: string) => string;
+  handleLogin: () => void;
+  handleGoToProfile: () => void;
 }): JSX.Element {
   const { gameId, puzzleId } = useParams();
   const isPuzzleMode = puzzleId !== undefined;
@@ -1029,8 +1033,9 @@ export default function GamePage({
         playerName={clientParams.playerName}
         handleToggleDarkMode={handleToggleDarkMode}
         handleToggleTheme={handleToggleTheme}
-        hasOngoingGame={true}
         isLoggedIn={clientParams.idToken !== ""}
+        handleLogin={handleLogin}
+        handleGoToProfile={handleGoToProfile}
       />
       <div
         style={{

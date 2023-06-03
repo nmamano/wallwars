@@ -227,7 +227,6 @@ export default function LobbyPage({
           aboutText={aboutText}
           handleToggleDarkMode={handleToggleDarkMode}
           handleToggleTheme={handleToggleTheme}
-          hasOngoingGame={appState.hasOngoingGame}
           isLoggedIn={appState.idToken !== ""}
           playerName={appState.playerName}
           handleLogin={handleLogin}

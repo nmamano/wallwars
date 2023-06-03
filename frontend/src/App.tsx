@@ -579,6 +579,8 @@ export default function App() {
               handleToggleDarkMode={handleToggleDarkMode}
               handleToggleTheme={handleToggleTheme}
               wasmAIGetMove={wasmAIGetMove}
+              handleLogin={handleLogin}
+              handleGoToProfile={handleGoToProfile}
             />
           }
         />
@@ -591,6 +593,8 @@ export default function App() {
               handleReturnToLobby={handleReturnToLobby}
               handleToggleDarkMode={handleToggleDarkMode}
               handleToggleTheme={handleToggleTheme}
+              handleLogin={handleLogin}
+              handleGoToProfile={handleGoToProfile}
             />
           }
         />

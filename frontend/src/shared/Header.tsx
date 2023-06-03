@@ -55,7 +55,6 @@ function Header({
   isLargeScreen,
   menuTheme,
   isDarkModeOn,
-  hasOngoingGame,
   isLoggedIn,
   playerName,
   handleToggleDarkMode,
@@ -71,7 +70,6 @@ function Header({
   isLargeScreen: boolean;
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
-  hasOngoingGame: boolean;
   isLoggedIn: boolean;
   playerName: string;
   handleToggleDarkMode: () => void;
