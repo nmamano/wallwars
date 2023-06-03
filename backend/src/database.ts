@@ -26,6 +26,7 @@ mongoose
 export type dbPlayer = {
   idToken: string;
   name: string;
+  lowercaseName: string; // Used for case-insensitive search.
   rating: number;
   peakRating: number;
   ratingDeviation: number;
@@ -116,7 +117,7 @@ export type dbFinishedGameWithoutIdTokens = Omit<dbFinishedGame, "idTokens">;
 // ============================================
 
 // Returns whether there is a player with the given name. Also returns false in
-// case of error.
+// case of error. It is case insensitive.
 export async function nameExists(name: string): Promise<boolean> {
   if (!connectedToDB) {
     console.error("when checking if name exists: not connected to DB");
@@ -126,7 +127,9 @@ export async function nameExists(name: string): Promise<boolean> {
     console.error("when checking if name exists: name is empty");
     return false;
   }
-  const count = await Player.countDocuments({ name: name });
+  const count = await Player.countDocuments({
+    lowercaseName: name.toLowerCase(),
+  });
   if (count > 1) {
     console.error(`name exists ${count} times`);
     return false; // false because it is an error.
@@ -152,7 +155,10 @@ export async function changeName(
     console.error("when changing name: name is empty");
     return false;
   }
-  const res = await Player.updateOne({ idToken: idToken }, { name: name });
+  const res = await Player.updateOne(
+    { idToken: idToken },
+    { name: name, lowercaseName: name.toLowerCase() }
+  );
   if (res.modifiedCount !== 1) {
     console.error(`name changed modified ${res.modifiedCount} players`);
     return false;
@@ -215,6 +221,7 @@ export async function getRanking(count: number): Promise<dbRanking | null> {
   playersResults.forEach((p) => {
     players.push({
       name: p.name,
+      lowercaseName: p.lowercaseName,
       rating: p.rating,
       peakRating: p.peakRating,
       ratingDeviation: p.ratingDeviation,
@@ -241,6 +248,7 @@ export function defaultDbPlayer(
   return {
     idToken: idToken,
     name: name,
+    lowercaseName: name.toLowerCase(),
     rating: r.rating,
     peakRating: r.rating,
     ratingDeviation: r.deviation,
@@ -467,6 +475,7 @@ const playerSchema = new Schema({
   lastGameDate: { type: Date, required: false },
   solvedPuzzles: { type: [String], required: true },
   creationDate: { type: Date, required: true },
+  lowercaseName: { type: String, required: true },
 });
 const Player = mongoose.model("Player", playerSchema);
 
