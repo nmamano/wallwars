@@ -20,6 +20,7 @@ export type Challenge = {
   playerNames: [string, string];
   boardSettings: BoardSettings;
   creationDate: Date;
+  isRated: boolean;
 };
 
 export default function LobbyTabs({
@@ -211,7 +212,7 @@ export default function LobbyTabs({
           }}
           onMouseEnter={() => handleMouseEnter(LobbyTabName.Challenges)}
           onMouseLeave={handleMouseLeave}
-          title={"Players looking for an opponent"}
+          title={"Players looking for an opponent. * means rated"}
         >
           {`Challenges (${state.challenges.length})`}
         </div>
@@ -224,7 +225,7 @@ export default function LobbyTabs({
           }}
           onMouseEnter={() => handleMouseEnter(LobbyTabName.Recent)}
           onMouseLeave={handleMouseLeave}
-          title={"Games played recently"}
+          title={"Games played recently."}
         >
           Recent Games
         </div>

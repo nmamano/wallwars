@@ -77,7 +77,8 @@ export default function ChallengeList({
                 key={i}
               >
                 <td style={entryStyle}>
-                  {timeControlToString(game.timeControl)}
+                  {(game.isRated ? "*" : "") +
+                    timeControlToString(game.timeControl)}
                 </td>
                 <td style={entryStyle}>{game.playerNames[0]}</td>
                 <td style={entryStyle}>
