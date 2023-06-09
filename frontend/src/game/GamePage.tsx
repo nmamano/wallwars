@@ -43,6 +43,7 @@ import {
   applyPuzzleTakeback,
   ServerGame,
   FinishReason,
+  applyUploadedGame,
 } from "./gameState";
 import { lastPuzzleMoveIsCorrect } from "./puzzleLogic";
 import Board from "./Board";
@@ -92,6 +93,7 @@ export default function GamePage({
   const isPuzzleMode = puzzleId !== undefined;
   const isComputerMode = gameId === "computer";
   const isLocalMode = gameId === "local";
+  const isUploadedMode = gameId === "uploaded";
 
   const menuTheme = clientParams.menuTheme;
   const isDarkModeOn = clientParams.isDarkModeOn;
@@ -462,6 +464,15 @@ export default function GamePage({
         draftState.arePlayersPresent[0] = true;
         draftState.arePlayersPresent[1] = true;
       });
+    } else if (isUploadedMode) {
+      updateState((draftState) => {
+        applyUploadedGame({
+          draftState,
+          gameSpec: clientParams.gameSpec!,
+        });
+        draftState.arePlayersPresent[0] = true;
+        draftState.arePlayersPresent[1] = true;
+      });
     } else if (isComputerMode) {
       updateState((draftState) => {
         applyCreatedVsComputer({
@@ -496,7 +507,8 @@ export default function GamePage({
     }
   });
 
-  const isOfflineMode = () => isLocalMode || isComputerMode || isPuzzleMode;
+  const isOfflineMode = () =>
+    isLocalMode || isComputerMode || isPuzzleMode || isUploadedMode;
   const isOnlineMode = () => !isOfflineMode();
 
   const handleLeaveGame = () => {
@@ -542,6 +554,7 @@ export default function GamePage({
       socket.emit("offerDraw");
     } else {
       updateState((draftState) => {
+        if (isUploadedMode) return;
         applyDrawGame(draftState, FinishReason.Agreement);
       });
     }
@@ -581,6 +594,8 @@ export default function GamePage({
           const tc = turnCount(draftState);
           if (tc <= getPuzzle(puzzleId)!.startIndex) return;
           applyTakeback(draftState, creatorToMove(draftState));
+        } else if (isUploadedMode) {
+          // Cannot undo in uploaded games.
         } else {
           console.log("unreachable case");
         }
@@ -618,6 +633,7 @@ export default function GamePage({
       });
     } else {
       updateState((draftState) => {
+        if (isUploadedMode) return;
         // In offline mode, the player to move gets extra time.
         applyAddExtraTime(draftState, creatorToMove(draftState) ? 0 : 1);
       });
@@ -632,6 +648,7 @@ export default function GamePage({
       });
     } else {
       updateState((draftState) => {
+        if (isUploadedMode) return;
         if (isLocalMode) {
           // In local games, the player that resigns is the one to move.
           applyResignGame(draftState, creatorToMove(draftState));
@@ -674,7 +691,8 @@ export default function GamePage({
   useEffect(() => {
     const pingInterval = 5000;
     const interval = setInterval(() => {
-      if (isLocalMode || isComputerMode || isPuzzleMode) return;
+      if (isLocalMode || isComputerMode || isPuzzleMode || isUploadedMode)
+        return;
       if (state.lifeCycleStage !== 3) return;
       if (state.waitingForPing === 1) {
         socket.emit("pingServer");
@@ -696,6 +714,7 @@ export default function GamePage({
     isPuzzleMode,
     isComputerMode,
     isLocalMode,
+    isUploadedMode,
   ]);
 
   //===================================================
@@ -706,6 +725,7 @@ export default function GamePage({
   // make a full move, in which case it is also sent to the other client.
   const handleSelectedCell = (pos: Pos) => {
     updateState((draftState) => {
+      if (isUploadedMode) return;
       if (isLocalMode || isPuzzleMode) {
         // It is always the client's turn in local games.
         applySelectedCell(draftState, pos, true);
@@ -783,7 +803,8 @@ export default function GamePage({
       state.clientRole === RoleEnum.spectator ||
       isLocalMode ||
       isComputerMode ||
-      isPuzzleMode
+      isPuzzleMode ||
+      isUploadedMode
     )
       return;
     if (state.finishReason === "goal") {
@@ -800,6 +821,7 @@ export default function GamePage({
     isPuzzleMode,
     isComputerMode,
     isLocalMode,
+    isUploadedMode,
   ]);
 
   const handleBoardClick = (clickedPos: Pos) => handleSelectedCell(clickedPos);
@@ -1124,6 +1146,7 @@ export default function GamePage({
       </div>
       {state.lifeCycleStage === 4 &&
         state.clientRole !== RoleEnum.spectator &&
+        !isUploadedMode &&
         !isPuzzleMode && (
           <div
             style={{

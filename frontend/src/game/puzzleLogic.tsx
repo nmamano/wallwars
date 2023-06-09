@@ -38,22 +38,22 @@ export function lastPuzzleMoveIsCorrect(
   return false;
 }
 
-export function parsePuzzleMoveList(move_list_str: string): PuzzleMoveList {
+export function parsePuzzleMoveList(moveListStr: string): PuzzleMoveList {
   // A list where each entry is a string representing a list of alternative moves.
-  const move_str_list = move_list_str.split(";");
+  const moveStrList = moveListStr.split(";");
 
   // A list where each entry is a list of strings representing the alternative moves.
-  const alternative_move_str_list_list = move_str_list.map((move_str) =>
-    move_str.split(",")
+  const alternativeMoveStrListList = moveStrList.map((moveStr) =>
+    moveStr.split(",")
   );
 
   let res: PuzzleMoveList = [];
-  alternative_move_str_list_list.forEach((alternative_move_str_list) => {
-    let alternative_moves: Move[] = [];
-    alternative_move_str_list.forEach((move_str) => {
-      alternative_moves.push(parseMoveString(move_str));
+  alternativeMoveStrListList.forEach((alternativeMoveStrList) => {
+    let alternativeMoves: Move[] = [];
+    alternativeMoveStrList.forEach((moveStr) => {
+      alternativeMoves.push(parseMoveString(moveStr));
     });
-    res.push(alternative_moves);
+    res.push(alternativeMoves);
   });
   return res;
 }
@@ -87,29 +87,29 @@ function isSameMove(actions1: Pos[], actions2: Pos[]): boolean {
   );
 }
 
-function actionStrToCoordinates(action_str: string): Pos {
-  const col_letter = action_str[0].toLowerCase();
-  const row_num = action_str[1];
-  let internal_row_idx =
-    ((row_num === "x" || row_num === "X" ? 10 : +row_num) - 1) * 2;
-  let internal_col_idx = (col_letter.charCodeAt(0) - 97) * 2;
-  if (action_str.length === 3) {
-    if (action_str[2] === "v" || action_str[2] === "V") {
-      internal_row_idx++;
-    } else if (action_str[2] === ">") {
-      internal_col_idx++;
+function actionStrToCoordinates(actionStr: string): Pos {
+  const colLetter = actionStr[0].toLowerCase();
+  const rowNum = actionStr[1];
+  let internalRowIdx =
+    ((rowNum === "x" || rowNum === "X" ? 10 : +rowNum) - 1) * 2;
+  let internalColIdx = (colLetter.charCodeAt(0) - 97) * 2;
+  if (actionStr.length === 3) {
+    if (actionStr[2] === "v" || actionStr[2] === "V") {
+      internalRowIdx++;
+    } else if (actionStr[2] === ">") {
+      internalColIdx++;
     } else {
-      console.error("actionStrToCoordinates error: ", action_str);
+      console.error("actionStrToCoordinates error: ", actionStr);
     }
   }
-  return [internal_row_idx, internal_col_idx];
+  return [internalRowIdx, internalColIdx];
 }
 
-function parseMoveString(move_str: string): Move {
-  const action_strs = move_str.trim().split(" ");
+function parseMoveString(moveStr: string): Move {
+  const actionStrs = moveStr.trim().split(" ");
   let res: Move = [];
-  action_strs.forEach((action_str) => {
-    res.push(actionStrToCoordinates(action_str));
+  actionStrs.forEach((actionStr) => {
+    res.push(actionStrToCoordinates(actionStr));
   });
   return res;
 }

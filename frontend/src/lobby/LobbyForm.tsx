@@ -37,6 +37,7 @@ export default function LobbyForm({
   handleLocalGame,
   handleComputerGame,
   handleToken,
+  handleUploadedGame,
 }: {
   appState: AppState;
   isLargeScreen: boolean;
@@ -58,6 +59,7 @@ export default function LobbyForm({
   handleLocalGame: (strDur: string, strInc: string) => void;
   handleComputerGame: () => void;
   handleToken: (token: string) => void;
+  handleUploadedGame: (gameSpecStr: string) => void;
 }): JSX.Element {
   const menuTheme = appState.menuTheme;
   const isDarkModeOn = appState.isDarkModeOn;
@@ -166,6 +168,7 @@ export default function LobbyForm({
               modalTitle="Name change"
               modalBody="Enter your new name:"
               onClick={handlePlayerName}
+              maxInputLen={15}
             />
           </div>
         </Grid>
@@ -433,6 +436,29 @@ export default function LobbyForm({
               style={{ color: "white" }}
             />
           </div>
+          <Grid
+            container
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            textAlign="center"
+            spacing={0}
+          >
+            <Grid item style={gridItemStyle} xs={4}>
+              <div style={gridItemStyle}>
+                <TextButtonWithTextField
+                  baseButtonText="Upload game"
+                  tooltip="Upload a game in JSON format"
+                  menuTheme={menuTheme}
+                  isDarkModeOn={isDarkModeOn}
+                  modalTitle="Game JSON"
+                  modalBody="Enter the JSON string here:"
+                  onClick={handleUploadedGame}
+                  maxInputLen={10000}
+                />
+              </div>
+            </Grid>
+          </Grid>
         </>
       )}
     </div>

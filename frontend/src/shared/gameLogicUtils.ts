@@ -41,6 +41,15 @@ export type MoveInHistory = {
 
 export type MoveHistory = MoveInHistory[];
 
+export type GameSpec = {
+  rows: number;
+  columns: number;
+  creator: string; // Name of the creator.
+  joiner: string; // Name of the joiner.
+  // Assumes creator starts. The moves alternate between creator and joiner.
+  moves: Move[];
+};
+
 /* Internal coordinate system:
 Walls and junctions between four "walkable" cells (called pillars) also count as cells for the
 coordinate system, so the number of rows/columns with "walkable" cells (called ground cells) is
@@ -247,6 +256,7 @@ export function distance(grid: Grid, start: Pos, target: Pos): number {
   return -1;
 }
 
+// Takes a string like "b2" or "b3v c2>" and returns the corresponding move.
 export function MoveNotationToMove(s: string): Pos[] {
   let actions: Pos[] = [];
   let str_actions = s.split(" ");
@@ -264,6 +274,54 @@ export function getStandardNotation(moveHistory: MoveHistory): string {
     res += ". " + moveNotation(moveHistory[i].actions);
   }
   return res;
+}
+
+// Takes a string encoding a game in JSON format. The JSON is expected to have
+// the following fields:
+// rows: a number,
+// columns: a number,
+// creator: a string for the name of the creator,
+// joiner: a string for the name of the joiner,
+// moves: a string for the moves in standard notation.
+// It is assumed that:
+// - The players and goals start in the corners, as in the standard
+// configuration.
+// - If neither player reaches the goal, the game is unfinished.
+// - The creator starts.
+// Moves after the first player reaches the goal are ignored.
+// Example:
+// {"rows": 10, "columns": 12, "creator": "alice", "joiner": "bob", "moves": "1. b2 2. b3v c2> 3. a2> b1v 4. k2 5. i2> k3v 6. k1v k2> 7. a3> c1v 8. j1v k3> 9. c3 10. j3 11. e3"}
+export function parseGameSpec(gameSpec: string): GameSpec | null {
+  try {
+    const jsonData = JSON.parse(gameSpec);
+    if (
+      typeof jsonData.rows !== "number" ||
+      typeof jsonData.columns !== "number" ||
+      typeof jsonData.creator !== "string" ||
+      typeof jsonData.joiner !== "string" ||
+      typeof jsonData.moves !== "string"
+    ) {
+      throw new Error("invalid data types");
+    }
+    const rawMoves: string = jsonData.moves;
+    const movePattern = /\d+\.\s*(([a-zA-Z](\d|x|X)[>vV]?)(\s|$))+/g;
+    const parsedMoves = rawMoves.match(movePattern);
+    const moves: Move[] =
+      parsedMoves?.map((s: string) =>
+        MoveNotationToMove(s.trim().replace(/\d+\.\s*/, ""))
+      ) ?? [];
+
+    return {
+      rows: jsonData.rows,
+      columns: jsonData.columns,
+      creator: jsonData.creator,
+      joiner: jsonData.joiner,
+      moves: moves,
+    };
+  } catch (error) {
+    console.error("Error parsing gameSpec:", error);
+    return null;
+  }
 }
 
 // ===========================================

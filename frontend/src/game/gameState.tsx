@@ -15,8 +15,13 @@ import {
   canBuildWall,
   emptyBoardDistances,
   CellType,
+  GameSpec,
 } from "../shared/gameLogicUtils";
-import { defaultBoardSettings } from "../shared/globalSettings";
+import {
+  defaultBoardSettings,
+  defaultGoalPos,
+  defaultInitialPlayerPos,
+} from "../shared/globalSettings";
 import {
   Puzzle,
   parsePuzzleMoveList,
@@ -37,6 +42,7 @@ export enum RoleEnum {
   offline = "offline",
   computer = "computer",
   puzzle = "puzzle",
+  uploaded = "uploaded",
 }
 
 export enum WinnerEnum {
@@ -518,6 +524,51 @@ export function applyPuzzleMove(draftState: GameState, puzzle: Puzzle): void {
   const tc = turnCount(draftState);
   const actions = parsePuzzleMoveList(puzzle.moves)[tc][0];
   applyMove(draftState, actions, 60 * 60, tc + 1);
+}
+
+export function applyUploadedGame({
+  draftState,
+  gameSpec,
+}: {
+  draftState: GameState;
+  gameSpec: GameSpec;
+}): void {
+  const timeControl = {
+    duration: 60,
+    increment: 0,
+  };
+  const internalRows = gameSpec.rows * 2 - 1;
+  const internalCols = gameSpec.columns * 2 - 1;
+  const boardSettings: BoardSettings = {
+    dims: [internalRows, internalCols],
+    startPos: defaultInitialPlayerPos([internalRows, internalCols]),
+    goalPos: defaultGoalPos([internalRows, internalCols]),
+  };
+
+  applyAddCreator({
+    draftState,
+    timeControl,
+    boardSettings: boardSettings,
+    name: gameSpec.creator === "" ? "Anon" : gameSpec.creator,
+    token: "default",
+    isRated: false,
+  });
+  applyCreatedOnServer({
+    draftState,
+    joinCode: "Uploaded",
+    creatorStarts: true,
+    rating: 0,
+  });
+  applyJoinerJoined({
+    draftState,
+    joinerName: gameSpec.joiner === "" ? "Anon" : gameSpec.joiner,
+    joinerToken: "default",
+    joinerRating: 0,
+  });
+  // Play setup moves:
+  for (let i = 0; i < gameSpec.moves.length; i++) {
+    applyMove(draftState, gameSpec.moves[i], 60 * 60, i + 1);
+  }
 }
 
 export function applyReturnToGame(

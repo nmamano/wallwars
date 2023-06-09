@@ -70,8 +70,10 @@ export default function GameControlPanel({
     (lifeCycleStage === 2 &&
       creatorStarts === (clientRole === RoleEnum.creator));
 
-  // All game functions are disabled for spectator.
+  // All game functions are disabled for spectator and uploaded.
   const isSpectator = clientRole === RoleEnum.spectator;
+  const isUploaded = clientRole === RoleEnum.uploaded;
+
   const isPuzzle = clientRole === RoleEnum.puzzle;
 
   return (
@@ -92,7 +94,7 @@ export default function GameControlPanel({
       <IconButtonWithDialog
         icon={"flag"}
         tooltip={"Resign"}
-        disabled={isSpectator || isPuzzle || lifeCycleStage !== 3}
+        disabled={isSpectator || isUploaded || isPuzzle || lifeCycleStage !== 3}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
         modalTitle={"Resign"}
@@ -104,7 +106,11 @@ export default function GameControlPanel({
         icon={"local_florist"}
         tooltip={"Offer Draw"}
         disabled={
-          isSpectator || isPuzzle || !isOpponentPresent || lifeCycleStage !== 3
+          isSpectator ||
+          isUploaded ||
+          isPuzzle ||
+          !isOpponentPresent ||
+          lifeCycleStage !== 3
         }
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
@@ -117,7 +123,11 @@ export default function GameControlPanel({
         icon={"replay"}
         tooltip={"Request takeback"}
         disabled={
-          isSpectator || isPuzzle || !isOpponentPresent || !takebackEnabled
+          isSpectator ||
+          isUploaded ||
+          isPuzzle ||
+          !isOpponentPresent ||
+          !takebackEnabled
         }
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
@@ -126,7 +136,7 @@ export default function GameControlPanel({
       <IconButtonWithTooltip
         icon={"add_alarm"}
         tooltip={"Give 60 seconds"}
-        disabled={isSpectator || isPuzzle || lifeCycleStage !== 3}
+        disabled={isSpectator || isUploaded || isPuzzle || lifeCycleStage !== 3}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}
         onClick={handleGiveExtraTime}

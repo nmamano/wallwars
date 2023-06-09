@@ -78,7 +78,10 @@ function Header({
   handleGoToProfile?: () => void; // Undefined in the game page.
 }): JSX.Element {
   const hasJoinCode =
-    joinCode !== "local" && joinCode !== "puzzle" && joinCode !== "AI";
+    joinCode !== "local" &&
+    joinCode !== "puzzle" &&
+    joinCode !== "AI" &&
+    joinCode !== "Uploaded";
   let mainText;
   if (context === contextEnum.lobby) {
     mainText = <span>WallWars</span>;

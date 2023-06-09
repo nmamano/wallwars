@@ -349,6 +349,7 @@ export function TextButtonWithTextField({
   modalTitle,
   modalBody,
   onClick,
+  maxInputLen,
 }: {
   baseButtonText: string;
   tooltip: string; // Tooltip shows even in disabled buttons.
@@ -357,6 +358,7 @@ export function TextButtonWithTextField({
   isDarkModeOn: boolean;
   modalTitle: string;
   modalBody: string;
+  maxInputLen: number;
   onClick: (text: string) => void; // Triggered when confirming the dialog.
 }): JSX.Element {
   const [isOpen, setIsOpen] = React.useState<boolean>(false);
@@ -365,8 +367,7 @@ export function TextButtonWithTextField({
   const [textFieldInput, setTextFieldInput] = React.useState<string>("");
 
   const setTextFieldInputWithLimit = (text: string): void => {
-    // TODO: 15 should be a prop.
-    setTextFieldInput(text.substring(0, 15));
+    setTextFieldInput(text.substring(0, maxInputLen));
   };
 
   return (

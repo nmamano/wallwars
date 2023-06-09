@@ -24,6 +24,8 @@ import {
   emptyBoardDistances,
   BoardSettings,
   TimeControl,
+  parseGameSpec,
+  GameSpec,
 } from "./shared/gameLogicUtils";
 import ErrorPage from "./shared/ErrorPage";
 import { version } from "wallwars-core";
@@ -79,6 +81,8 @@ export type AppState = {
 
   // Indicates if the game is rated or not when the user clicks the "create game" button.
   isRated: boolean;
+
+  gameSpec: GameSpec | null; // For uploaded games.
 };
 
 // Specifies the row or column of the start or goal position
@@ -126,6 +130,8 @@ function initialAppState(cookies: Cookies): AppState {
     menuTheme:
       cookies.menuTheme && cookies.menuTheme === "green" ? "green" : "blue",
     boardTheme: "monochromeBoard",
+
+    gameSpec: null,
   };
 }
 
@@ -476,16 +482,30 @@ export default function App() {
     navigate("/game/local", { replace: true });
   };
 
+  const handleUploadedGame = (gameSpecStr: string) => {
+    const gameSpec = parseGameSpec(gameSpecStr);
+    if (gameSpec === null) {
+      showToastNotification("Invalid game specification");
+      return;
+    }
+    updateState((draftState) => {
+      draftState.clientRole = RoleEnum.uploaded;
+      draftState.hasOngoingGame = false;
+      draftState.gameSpec = gameSpec;
+    });
+    navigate(`/game/uploaded`, { replace: true });
+  };
+
   const handleComputerGame = () => {
     updateState((draftState) => {
       draftState.clientRole = RoleEnum.computer;
       // Overwrite dimensions for computer game (can only be 7x7).
-      const board_dim = 7;
-      const internal_dim = board_dim * 2 - 1;
+      const boardDim = 7;
+      const internalDim = boardDim * 2 - 1;
       draftState.boardSettings = {
-        dims: [internal_dim, internal_dim],
-        startPos: defaultInitialPlayerPos([internal_dim, internal_dim]),
-        goalPos: defaultGoalPos([internal_dim, internal_dim]),
+        dims: [internalDim, internalDim],
+        startPos: defaultInitialPlayerPos([internalDim, internalDim]),
+        goalPos: defaultGoalPos([internalDim, internalDim]),
       };
       draftState.playerName = state.playerName;
       draftState.hasOngoingGame = false;
@@ -566,6 +586,7 @@ export default function App() {
               handleHasOngoingGameInServer={handleHasOngoingGameInServer}
               handleLogin={handleLogin}
               handleGoToProfile={handleGoToProfile}
+              handleUploadedGame={handleUploadedGame}
             />
           }
         />

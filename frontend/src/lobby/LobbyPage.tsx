@@ -56,6 +56,7 @@ export default function LobbyPage({
   handleHasOngoingGameInServer,
   handleLogin,
   handleGoToProfile,
+  handleUploadedGame,
 }: {
   appState: AppState;
   isLargeScreen: boolean;
@@ -80,6 +81,7 @@ export default function LobbyPage({
   handleHasOngoingGameInServer: (hasOngoingGame: boolean) => void;
   handleLogin: () => void;
   handleGoToProfile: () => void;
+  handleUploadedGame: (gameSpecStr: string) => void;
 }): JSX.Element {
   const [state, updateState] = useImmer(
     initialLobbyState(appState.timeControl)
@@ -254,6 +256,7 @@ export default function LobbyPage({
           handleLocalGame={handleLocalGame}
           handleComputerGame={handleComputerGame}
           handleToken={handleToken}
+          handleUploadedGame={handleUploadedGame}
         />
         {appState.hasOngoingGame && ( // todo: do we need to check here if the eloId matches?
           <div
