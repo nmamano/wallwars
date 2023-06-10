@@ -561,22 +561,33 @@ io.on(M.connectionMsg, function (socket: any): void {
         });
         return;
       }
-      const nameExists = await db.nameExists(name);
-      if (nameExists) {
+      const currName = await db.getName(idToken);
+      if (currName === null) {
         emitMessage(M.nameChangeFailedMsg, {
-          reason: "Name already taken",
+          reason: "Did not find the player in the DB",
         });
         return;
+      }
+      // If the new name is not just a change of case sensitivity, we need to
+      // ensure that it is not already taken.
+      if (currName.toLowerCase() !== name.toLowerCase()) {
+        const nameExists = await db.nameExists(name);
+        if (nameExists) {
+          emitMessage(M.nameChangeFailedMsg, {
+            reason: "Name already taken",
+          });
+          return;
+        }
       }
       const success = await db.changeName(idToken, name);
       if (!success) {
         emitMessage(M.nameChangeFailedMsg, { reason: "Server error" });
-      } else {
-        // The input name is passed back in the response in case the client sent
-        // multiple changeName messages, so it knows which one the server is
-        // responding to.
-        emitMessage(M.nameChangedMsg, { name });
+        return;
       }
+      // The input name is passed back in the response in case the client sent
+      // multiple changeName messages, so it knows which one the server is
+      // responding to.
+      emitMessage(M.nameChangedMsg, { name });
     }
   );
 

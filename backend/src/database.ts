@@ -116,6 +116,20 @@ export type dbFinishedGameWithoutIdTokens = Omit<dbFinishedGame, "idTokens">;
 // Functions to interact with the database.
 // ============================================
 
+export async function getName(idToken: string): Promise<string | null> {
+  if (!connectedToDB) {
+    console.error("when getting name: not connected to DB");
+    return null;
+  }
+  if (idToken === "") {
+    console.error("when getting name: idToken is empty");
+    return null;
+  }
+  const player = await Player.findOne({ idToken: idToken });
+  if (player === null) return null;
+  return player.name;
+}
+
 // Returns whether there is a player with the given name. Also returns false in
 // case of error. It is case insensitive.
 export async function nameExists(name: string): Promise<boolean> {
