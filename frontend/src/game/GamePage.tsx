@@ -1048,7 +1048,7 @@ export default function GamePage({
         }
         joinCode={state.joinCode!}
         helpText={isPuzzleMode ? puzzleHelp : gameHelp}
-        handleLeaveGame={handleLeaveGame}
+        handleReturnToLobby={handleLeaveGame}
         isLargeScreen={isLargeScreen}
         menuTheme={menuTheme}
         isDarkModeOn={isDarkModeOn}

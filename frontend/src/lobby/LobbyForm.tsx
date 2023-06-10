@@ -4,7 +4,6 @@ import { getColor } from "../shared/colorThemes";
 import { TextButton, TextButtonWithTextField } from "../shared/Buttons";
 import { maxBoardDims } from "../shared/globalSettings";
 import { AppState, PosSetting } from "../App";
-import TokenDropdown from "./TokenDropdown";
 import TextInputField from "../shared/TextInputField";
 import Checkbox from "@mui/material/Checkbox";
 import { FormControlLabel } from "@mui/material";
@@ -22,7 +21,6 @@ export default function LobbyForm({
   showMoreOptions,
   inputtedDuration,
   inputtedIncrement,
-  handlePlayerName,
   handleInputtedDuration,
   handleInputtedIncrement,
   handleIsPrivate,
@@ -36,7 +34,6 @@ export default function LobbyForm({
   handleJoinGame,
   handleLocalGame,
   handleComputerGame,
-  handleToken,
   handleUploadedGame,
 }: {
   appState: AppState;
@@ -44,7 +41,6 @@ export default function LobbyForm({
   showMoreOptions: boolean;
   inputtedDuration: string;
   inputtedIncrement: string;
-  handlePlayerName: (name: string) => void;
   handleInputtedDuration: (duration: string) => void;
   handleInputtedIncrement: (increment: string) => void;
   handleIsPrivate: (isPrivate: boolean) => void;
@@ -58,31 +54,11 @@ export default function LobbyForm({
   handleJoinGame: () => void;
   handleLocalGame: (strDur: string, strInc: string) => void;
   handleComputerGame: () => void;
-  handleToken: (token: string) => void;
   handleUploadedGame: (gameSpecStr: string) => void;
 }): JSX.Element {
   const menuTheme = appState.menuTheme;
   const isDarkModeOn = appState.isDarkModeOn;
   const BS = appState.boardSettings;
-
-  const defaultToken = (
-    <div style={{ fontSize: "30px" }}>
-      <i className={`material-icons white-text`} style={{ height: `100%` }}>
-        face
-      </i>
-      {isLargeScreen ? " / " : "/"}
-      <i className={`material-icons white-text`} style={{ height: `100%` }}>
-        outlet
-      </i>
-    </div>
-  );
-  const customToken = (
-    <span className={"white-text"} style={{ fontSize: "30px" }}>
-      <i className={`material-icons white-text`} style={{ height: `100%` }}>
-        {appState.token}
-      </i>
-    </span>
-  );
 
   const gridItemStyle = {
     paddingLeft: "10px",
@@ -91,11 +67,6 @@ export default function LobbyForm({
     paddingBottom: "15px",
   };
   const horizontalSep = <span style={{ paddingLeft: "20px" }}></span>;
-
-  const [tokenDropdownAnchorEl, setTokenDropdownAnchorEl] =
-    React.useState<null | HTMLElement>(null);
-
-  const isLoggedIn = appState.idToken !== "";
 
   return (
     <div
@@ -147,32 +118,6 @@ export default function LobbyForm({
           />
         </Grid>
       </Grid>
-      <Grid
-        container
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        textAlign="center"
-        spacing={0}
-      >
-        <Grid item style={gridItemStyle} xs={4}>
-          <div style={gridItemStyle}>
-            <TextButtonWithTextField
-              baseButtonText="Change Name"
-              tooltip={
-                isLoggedIn ? "Change your name." : "Log in to change your name."
-              }
-              disabled={!isLoggedIn}
-              menuTheme={menuTheme}
-              isDarkModeOn={isDarkModeOn}
-              modalTitle="Name change"
-              modalBody="Enter your new name:"
-              onClick={handlePlayerName}
-              maxInputLen={15}
-            />
-          </div>
-        </Grid>
-      </Grid>
       <div>
         <FormControlLabel
           style={{ color: "white" }}
@@ -192,26 +137,6 @@ export default function LobbyForm({
       </div>
       {showMoreOptions && (
         <>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <span
-              style={{
-                paddingLeft: "20px",
-                paddingRight: "20px",
-                fontSize: "20px",
-              }}
-            >
-              {isLargeScreen ? "Your token:" : "Token:"}
-            </span>
-            {appState.token === "default" ? defaultToken : customToken}
-            <span style={{ paddingLeft: "20px" }}></span>
-            {TokenDropdown(
-              tokenDropdownAnchorEl,
-              setTokenDropdownAnchorEl,
-              handleToken,
-              menuTheme,
-              isDarkModeOn
-            )}
-          </div>
           <div
             style={{
               display: "flex",

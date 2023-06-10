@@ -22,8 +22,8 @@ export const lobbyHelpText = (
       in the <em>Recente Games</em> tab in the lobby.
     </h6>
     <h6>
-      A random <em>player name</em> has been chosen for you, but you can change
-      it. You can also choose the look of your token.
+      By default, players start as guests. You can create an account to have
+      your own name, play rated games, and more.
     </h6>
   </div>
 );

@@ -37,8 +37,6 @@ export default function LobbyPage({
   isLargeScreen,
   handleToggleTheme,
   handleToggleDarkMode,
-  handlePlayerName,
-  handleToken,
   handleIsPrivate,
   handleIsRated,
   handleNumRows,
@@ -62,8 +60,6 @@ export default function LobbyPage({
   isLargeScreen: boolean;
   handleToggleTheme: () => void;
   handleToggleDarkMode: () => void;
-  handlePlayerName: (name: string) => void;
-  handleToken: (token: string) => void;
   handleIsPrivate: (isPrivate: boolean) => void;
   handleIsRated: (isRated: boolean) => void;
   handleNumRows: (nr: number) => void;
@@ -241,7 +237,6 @@ export default function LobbyPage({
           showMoreOptions={state.showMoreOptions}
           inputtedDuration={state.inputtedDuration}
           inputtedIncrement={state.inputtedIncrement}
-          handlePlayerName={handlePlayerName}
           handleInputtedDuration={handleInputtedDuration}
           handleInputtedIncrement={handleInputtedIncrement}
           handleIsPrivate={handleIsPrivate}
@@ -255,7 +250,6 @@ export default function LobbyPage({
           handleJoinGame={handleJoinGame}
           handleLocalGame={handleLocalGame}
           handleComputerGame={handleComputerGame}
-          handleToken={handleToken}
           handleUploadedGame={handleUploadedGame}
         />
         {appState.hasOngoingGame && ( // todo: do we need to check here if the eloId matches?

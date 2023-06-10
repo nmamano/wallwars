@@ -44,6 +44,7 @@ const contextEnum = {
   player: "player",
   spectator: "spectator",
   lobby: "lobby",
+  profile: "profile",
 };
 
 function Header({
@@ -51,7 +52,7 @@ function Header({
   helpText,
   aboutText,
   joinCode,
-  handleLeaveGame,
+  handleReturnToLobby,
   isLargeScreen,
   menuTheme,
   isDarkModeOn,
@@ -62,11 +63,11 @@ function Header({
   handleLogin,
   handleGoToProfile,
 }: {
-  context: string;
+  context: "lobby" | "player" | "spectator" | "profile";
   helpText: JSX.Element;
   aboutText?: JSX.Element;
   joinCode?: string;
-  handleLeaveGame?: () => void;
+  handleReturnToLobby?: () => void;
   isLargeScreen: boolean;
   menuTheme: MenuThemeName;
   isDarkModeOn: boolean;
@@ -78,16 +79,17 @@ function Header({
   handleGoToProfile?: () => void; // Undefined in the game page.
 }): JSX.Element {
   const hasJoinCode =
+    joinCode !== undefined &&
     joinCode !== "local" &&
     joinCode !== "puzzle" &&
     joinCode !== "AI" &&
     joinCode !== "Uploaded";
   let mainText;
-  if (context === contextEnum.lobby) {
+  if (context === contextEnum.lobby || context === contextEnum.profile) {
     mainText = <span>WallWars</span>;
   } else if (context === contextEnum.spectator) {
     mainText = (
-      <span style={{ cursor: "pointer" }} onClick={handleLeaveGame}>
+      <span style={{ cursor: "pointer" }} onClick={handleReturnToLobby}>
         WallWars
       </span>
     );
@@ -95,7 +97,7 @@ function Header({
     mainText = (
       <span>
         {(isLargeScreen || !hasJoinCode) && (
-          <span style={{ cursor: "pointer" }} onClick={handleLeaveGame}>
+          <span style={{ cursor: "pointer" }} onClick={handleReturnToLobby}>
             WallWars
           </span>
         )}
@@ -119,8 +121,10 @@ function Header({
   const padding = isLargeScreen ? 20 : 11;
   const buttonCol = getColor(menuTheme, "headerButton", isDarkModeOn);
 
-  let buttonCount = 4; // night mode, help, and info/return to lobby buttons
-  if (isLargeScreen) buttonCount++; // the "change theme" button is only shown in large screens
+  // Night mode, help, login, and lobby info OR return to lobby buttons.
+  let buttonCount = 4;
+  // The "change theme" button is only shown in large screens
+  if (isLargeScreen) buttonCount++;
 
   return (
     <div>
@@ -181,6 +185,13 @@ function Header({
               modalTitle="Help"
               modalBody={helpText}
             />
+            <IconButtonWithTooltip
+              icon={isLoggedIn ? "account_circle" : "account_circle_outlined"}
+              tooltip={isLoggedIn ? "Profile" : "Log in"}
+              bgColor={buttonCol}
+              horizontalPadding={padding}
+              onClick={isLoggedIn ? handleGoToProfile! : handleLogin!}
+            />
             {context === contextEnum.lobby && (
               <IconButtonWithInfoModal
                 icon="info"
@@ -191,20 +202,13 @@ function Header({
                 modalBody={aboutText!}
               />
             )}
-            <IconButtonWithTooltip
-              icon={isLoggedIn ? "account_circle" : "account_circle_outlined"}
-              tooltip={isLoggedIn ? "Profile (WIP)" : "Log in"}
-              bgColor={buttonCol}
-              horizontalPadding={padding}
-              onClick={isLoggedIn ? handleGoToProfile! : handleLogin!}
-            />
             {context !== contextEnum.lobby && (
               <IconButtonWithTooltip
                 icon="home"
-                tooltip="Leave game"
+                tooltip="Return to lobby"
                 bgColor={buttonCol}
                 horizontalPadding={padding}
-                onClick={handleLeaveGame!}
+                onClick={handleReturnToLobby!}
               />
             )}
           </div>

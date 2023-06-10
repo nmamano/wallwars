@@ -30,6 +30,7 @@ import {
 import ErrorPage from "./shared/ErrorPage";
 import { version } from "wallwars-core";
 import { TextFieldDialog } from "./shared/Dialog";
+import ProfilePage from "./profile/ProfilePage";
 
 export type Cookies = {
   isDarkModeOn?: string;
@@ -199,7 +200,7 @@ export default function App() {
     console.log("emitting logInOrSignUp: ", fakeIdToken);
     socket.emit("logInOrSignUp", { idToken: fakeIdToken });
   };
-  
+
   const { authError, isAuth, authUser, loginWithRedirect } =
     useCustomAuth(setIsAuthDialogOpen);
 
@@ -244,8 +245,7 @@ export default function App() {
     loginWithRedirect();
   };
   const handleGoToProfile = () => {
-    // TODO: implement
-    showToastNotification("Profile page not implemented yet, sorry");
+    navigate(`/player/${state.playerName}`);
   };
 
   // ========================================================================
@@ -621,8 +621,6 @@ export default function App() {
               isLargeScreen={isLargeScreen}
               handleToggleTheme={handleToggleTheme}
               handleToggleDarkMode={handleToggleDarkMode}
-              handlePlayerName={handlePlayerName}
-              handleToken={handleToken}
               handleIsPrivate={handleIsPrivate}
               handleIsRated={handleIsRated}
               handleNumRows={handleNumRows}
@@ -641,6 +639,21 @@ export default function App() {
               handleLogin={handleLogin}
               handleGoToProfile={handleGoToProfile}
               handleUploadedGame={handleUploadedGame}
+            />
+          }
+        />
+        <Route
+          path="/player/:playerName"
+          element={
+            <ProfilePage
+              appState={state}
+              isLargeScreen={isLargeScreen}
+              handleToggleTheme={handleToggleTheme}
+              handleToggleDarkMode={handleToggleDarkMode}
+              handlePlayerName={handlePlayerName}
+              handleToken={handleToken}
+              handleLogin={handleLogin}
+              handleReturnToLobby={handleReturnToLobby}
             />
           }
         />
