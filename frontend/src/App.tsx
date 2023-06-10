@@ -29,6 +29,7 @@ import {
 } from "./shared/gameLogicUtils";
 import ErrorPage from "./shared/ErrorPage";
 import { version } from "wallwars-core";
+import { TextFieldDialog } from "./shared/Dialog";
 
 export type Cookies = {
   isDarkModeOn?: string;
@@ -43,6 +44,8 @@ export type Cookies = {
   isVolumeOn?: string;
   zoomLevel?: string;
 };
+
+const isProduction = process.env.NODE_ENV === "production";
 
 // Main piece of state, relevant across routes.
 export type AppState = {
@@ -135,6 +138,30 @@ function initialAppState(cookies: Cookies): AppState {
   };
 }
 
+// In production, this is just a wrapper around the `useAuth0` hook. In
+// development, the auth0 hook is bypassed and instead a dialog is shown where
+// the user can enter any id token manually.
+function useCustomAuth(setIsAuthDialogOpen: (b: boolean) => void) {
+  const {
+    error: authError,
+    isAuthenticated: isAuth,
+    user: authUser,
+    loginWithRedirect,
+  } = useAuth0();
+  if (isProduction) {
+    return { authError, isAuth, authUser, loginWithRedirect };
+  }
+
+  console.log("Bypassing auth0 for local development.");
+  // authError, isAuth, and authUser are not used in development.
+  return {
+    authError: null,
+    isAuth: false,
+    authUser: null,
+    loginWithRedirect: () => setIsAuthDialogOpen(true),
+  };
+}
+
 export default function App() {
   useEffect(() => {
     console.log(`Using ${version()}`);
@@ -162,27 +189,44 @@ export default function App() {
   // ========================================================================
   // Authentication logic
   // ========================================================================
-  const { error, isAuthenticated, user, loginWithRedirect } = useAuth0();
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState<boolean>(false);
+  const setFakeLoggedIn = (fakeIdToken: string) => {
+    console.log("doing fake sign up/log in");
+    setIsAuthDialogOpen(false);
+    updateState((draftState) => {
+      draftState.idToken = fakeIdToken;
+    });
+    console.log("emitting logInOrSignUp: ", fakeIdToken);
+    socket.emit("logInOrSignUp", { idToken: fakeIdToken });
+  };
+  
+  const { authError, isAuth, authUser, loginWithRedirect } =
+    useCustomAuth(setIsAuthDialogOpen);
+
   useEffect(() => {
-    console.log(
-      `user: ${user}, isAuthenticated: ${isAuthenticated}, error: ${error}`
-    );
-    if (error) {
-      console.log("There was an error while authenticating:\n", error);
+    if (!isProduction) return;
+    if (state.idToken !== "") {
       return;
     }
-    if (!isAuthenticated) return;
+    console.log(
+      `user: ${authUser}, isAuthenticated: ${isAuth}, error: ${authError}`
+    );
+    if (authError) {
+      console.log("There was an error while authenticating:\n", authError);
+      return;
+    }
+    if (!isAuth) return;
 
-    if (user === undefined) {
+    if (authUser === undefined || authUser === null) {
       console.error("user is authenticated but undefined");
       return;
     }
-    if (user.sub === undefined || user.sub === "") {
+    if (authUser.sub === undefined || authUser.sub === "") {
       console.error("user.sub is undefined or empty");
       return;
     }
     updateState((draftState) => {
-      draftState.idToken = user.sub!;
+      draftState.idToken = authUser.sub!;
     });
     // Tell the server that we have an id token. This asks the server to do one
     // of 2 things:
@@ -191,10 +235,10 @@ export default function App() {
     // - Otherwise, the server creates a new player with this id token in the
     // DB with a unique name and also returns it to us as our initial non-guest
     // name (that we can later change).
-    console.log("emitting logInOrSignUp: ", user.sub);
-    socket.emit("logInOrSignUp", { idToken: user.sub });
+    console.log("emitting logInOrSignUp: ", authUser.sub);
+    socket.emit("logInOrSignUp", { idToken: authUser.sub });
     return;
-  }, [user, isAuthenticated, error, updateState]);
+  }, [authUser, isAuth, authError, updateState, state.idToken]);
 
   const handleLogin = () => {
     loginWithRedirect();
@@ -558,6 +602,16 @@ export default function App() {
   return (
     <>
       <ToastContainer />
+      <TextFieldDialog
+        isOpen={isAuthDialogOpen}
+        setIsOpen={setIsAuthDialogOpen}
+        title={"Fake auth"}
+        body={"Development mode: choose your id token directly"}
+        menuTheme={state.menuTheme}
+        isDarkModeOn={state.isDarkModeOn}
+        maxInputLen={30}
+        onClick={setFakeLoggedIn}
+      />
       <Routes>
         <Route
           path="/"
