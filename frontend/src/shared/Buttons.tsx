@@ -9,10 +9,10 @@ import Typography from "@mui/material/Typography";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
-import TextInputField from "../shared/TextInputField";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import { TextFieldDialog } from "./Dialog";
 
 // Icons:
 import Flag from "@mui/icons-material/Flag";
@@ -348,8 +348,8 @@ export function TextButtonWithTextField({
   isDarkModeOn,
   modalTitle,
   modalBody,
-  onClick,
   maxInputLen,
+  onClick,
 }: {
   baseButtonText: string;
   tooltip: string; // Tooltip shows even in disabled buttons.
@@ -362,14 +362,6 @@ export function TextButtonWithTextField({
   onClick: (text: string) => void; // Triggered when confirming the dialog.
 }): JSX.Element {
   const [isOpen, setIsOpen] = React.useState<boolean>(false);
-  const handleOpen = () => setIsOpen(true);
-  const handleClose = () => setIsOpen(false);
-  const [textFieldInput, setTextFieldInput] = React.useState<string>("");
-
-  const setTextFieldInputWithLimit = (text: string): void => {
-    setTextFieldInput(text.substring(0, maxInputLen));
-  };
-
   return (
     <>
       <Tooltip title={tooltip}>
@@ -380,38 +372,20 @@ export function TextButtonWithTextField({
             menuTheme={menuTheme}
             isDarkModeOn={isDarkModeOn}
             disabled={disabled}
-            onClick={handleOpen}
+            onClick={() => setIsOpen(true)}
           />
         </span>
       </Tooltip>
-      <Dialog open={isOpen} onClose={handleClose}>
-        <DialogTitle variant="h5" style={{ color: "black" }}>
-          {modalTitle}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText style={{ color: "black" }}>
-            {modalBody}
-          </DialogContentText>
-          <TextInputField
-            id="text_field_input"
-            value={textFieldInput}
-            onChange={setTextFieldInputWithLimit}
-            blackText={true}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <TextButton
-            text="Accept"
-            onClick={() => {
-              handleClose();
-              onClick(textFieldInput);
-            }}
-            menuTheme={menuTheme}
-            isDarkModeOn={isDarkModeOn || false}
-          />
-        </DialogActions>
-      </Dialog>
+      <TextFieldDialog
+        isOpen={isOpen}
+        setIsOpen={setIsOpen}
+        title={modalTitle}
+        body={modalBody}
+        menuTheme={menuTheme}
+        isDarkModeOn={isDarkModeOn}
+        maxInputLen={maxInputLen}
+        onClick={onClick}
+      />
     </>
   );
 }
