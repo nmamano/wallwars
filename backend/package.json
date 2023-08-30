@@ -14,7 +14,7 @@
   "dependencies": {
     "express": "^4.18.2",
     "express-openid-connect": "^2.12.0",
-    "mongodb": "^5.0.1",
+    "mongodb": "^5.8.0",
     "mongoose": "^6.9.1",
     "socket.io": "^4.6.0",
     "unique-names-generator": "^4.7.1",
