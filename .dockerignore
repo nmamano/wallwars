@@ -1,0 +1,8 @@
+frontend
+AI
+docs
+.git
+**/.gitignore
+**/*.md
+**/node_modules
+**/dist

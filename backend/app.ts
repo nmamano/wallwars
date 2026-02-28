@@ -36,16 +36,19 @@ console.log(`Using ${version()}`);
 ////////////////////////////////////
 // Boilerplate server setup.
 ////////////////////////////////////
-const port = process.env.PORT || 4001;
+const port = Number(process.env.PORT) || 4001;
 const app = express();
 // The server doesn't serve any HTML, but it needs a route to listen for incoming connections.
-app.use(cors);
+app.use(cors());
 app.use(index);
 
 const server = http.createServer(app);
+const corsOrigin = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",").map((s) => s.trim())
+  : undefined;
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL,
+    origin: corsOrigin,
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -838,4 +841,6 @@ async function uniqueRandPlayerName(): Promise<string> {
   return tries === 0 ? "" : name;
 }
 
-server.listen(port, () => console.log(`Listening on port ${port}`));
+server.listen(port as number, "0.0.0.0", () =>
+  console.log(`Listening on port ${port}`)
+);

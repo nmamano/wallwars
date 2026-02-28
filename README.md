@@ -1,8 +1,8 @@
 # WallWars
 
-## [Click here to play](http://wallwars.net)
+## [Click here to play](https://wallwars.net)
 
-Url to play: http://wallwars.net
+Url to play: https://wallwars.net
 
 WallWars discord: https://discord.gg/nwHWzbyJtd
 (to find players to play, or discuss the game's development)
@@ -54,15 +54,14 @@ place a wall in the same turn).
 ### Frontend
 
 - React as the framework.
-- [gh-pages module](https://www.npmjs.com/package/gh-pages) to host the client directly from this github repo (it uses the gh-pages branch).
+- Vercel for hosting and continuous deployment.
 
 ### Backend
 
 - Node.js and express for the server.
 - [Socket.io](https://socket.io/) for real-time two-way client-server communication.
 - MongoDB as the database.
-- Heroku to deploy the backend server with Git integration.
-- [Kaffeine](http://kaffeine.herokuapp.com/) to keep the backend awake.
+- Fly.io to deploy the backend server.
 
 ### AI
 
