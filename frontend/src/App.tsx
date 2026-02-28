@@ -601,6 +601,25 @@ export default function App() {
 
   return (
     <>
+      <div
+        style={{
+          backgroundColor: "#d97706",
+          color: "white",
+          textAlign: "center",
+          padding: "8px 16px",
+          fontSize: "14px",
+        }}
+      >
+        ✨ Check out the new version of this game at{" "}
+        <a
+          href="https://wallgame.io"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "white", textDecoration: "underline" }}
+        >
+          wallgame.io
+        </a>
+      </div>
       <ToastContainer />
       <TextFieldDialog
         isOpen={isAuthDialogOpen}
