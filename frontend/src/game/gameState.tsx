@@ -1,5 +1,6 @@
 import cloneDeep from "lodash.clonedeep";
 import { Cookies } from "../App";
+import { parseBooleanCookie } from "../shared/cookieUtils";
 import {
   Pos,
   Move,
@@ -1050,8 +1051,7 @@ function countActions({
 
 function applyCookieSettings(draftState: GameState, cookies: Cookies) {
   if (!cookies) return;
-  if (cookies.isVolumeOn && cookies.isVolumeOn === "true")
-    draftState.isVolumeOn = true;
+  draftState.isVolumeOn = parseBooleanCookie(cookies.isVolumeOn, false);
   if (cookies.zoomLevel) {
     const zoomVal = parseInt(cookies.zoomLevel);
     if (zoomVal >= 0 && zoomVal <= 10) draftState.zoomLevel = zoomVal;

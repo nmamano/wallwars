@@ -31,18 +31,19 @@ import ErrorPage from "./shared/ErrorPage";
 import { version } from "wallwars-core";
 import { TextFieldDialog } from "./shared/Dialog";
 import ProfilePage from "./profile/ProfilePage";
+import { parseBooleanCookie } from "./shared/cookieUtils";
 
 export type Cookies = {
-  isDarkModeOn?: string;
+  isDarkModeOn?: string | boolean;
   menuTheme?: MenuThemeName;
   token?: string;
   duration?: string;
   increment?: string;
   numRows?: string;
   numCols?: string;
-  isPrivate?: string;
-  isRated?: string;
-  isVolumeOn?: string;
+  isPrivate?: string | boolean;
+  isRated?: string | boolean;
+  isVolumeOn?: string | boolean;
   zoomLevel?: string;
 };
 
@@ -118,8 +119,8 @@ function initialAppState(cookies: Cookies): AppState {
       increment: parseFloatOrUndef(cookies.increment, 5),
     },
     watchGameId: null,
-    isPrivate: cookies.isPrivate && cookies.isPrivate === "true" ? true : false,
-    isRated: cookies.isRated && cookies.isRated === "false" ? false : true,
+    isPrivate: parseBooleanCookie(cookies.isPrivate, false),
+    isRated: parseBooleanCookie(cookies.isRated, true),
     idToken: "", // guests (logged out users) have an empty-string idToken
 
     creatorStarts: false,
@@ -129,8 +130,7 @@ function initialAppState(cookies: Cookies): AppState {
     isCreator: false,
     timeLeft: [0, 0],
 
-    isDarkModeOn:
-      cookies.isDarkModeOn && cookies.isDarkModeOn === "true" ? true : false,
+    isDarkModeOn: parseBooleanCookie(cookies.isDarkModeOn, false),
     menuTheme:
       cookies.menuTheme && cookies.menuTheme === "green" ? "green" : "blue",
     boardTheme: "monochromeBoard",
