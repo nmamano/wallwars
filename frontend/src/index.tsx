@@ -9,11 +9,11 @@ import { CookiesProvider } from "react-cookie";
 const url = "https://wallwars.net";
 
 function AppWrapper() {
-  if (!process.env.REACT_APP_AUTH0_DOMAIN) {
+  if (!import.meta.env.REACT_APP_AUTH0_DOMAIN) {
     console.error("REACT_APP_AUTH0_DOMAIN not set");
     return <div></div>;
   }
-  if (!process.env.REACT_APP_AUTH0_CLIENT_ID) {
+  if (!import.meta.env.REACT_APP_AUTH0_CLIENT_ID) {
     console.error("REACT_APP_AUTH0_CLIENT_ID not set");
     return <div></div>;
   }
@@ -23,8 +23,8 @@ function AppWrapper() {
       <CookiesProvider>
         <BrowserRouter>
           <Auth0Provider
-            domain={process.env.REACT_APP_AUTH0_DOMAIN}
-            clientId={process.env.REACT_APP_AUTH0_CLIENT_ID}
+            domain={import.meta.env.REACT_APP_AUTH0_DOMAIN}
+            clientId={import.meta.env.REACT_APP_AUTH0_CLIENT_ID}
             authorizationParams={{
               redirect_uri: url,
             }}

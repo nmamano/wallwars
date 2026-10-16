@@ -1,4 +1,3 @@
-import "materialize-css";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import "react-toastify/dist/ReactToastify.css";
 import { IconButtonWithTooltip, IconButtonWithInfoModal } from "./Buttons";

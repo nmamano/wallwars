@@ -47,7 +47,7 @@ export type Cookies = {
   zoomLevel?: string;
 };
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = import.meta.env.PROD;
 
 // Main piece of state, relevant across routes.
 export type AppState = {

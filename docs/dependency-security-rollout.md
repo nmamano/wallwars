@@ -9,7 +9,7 @@ This runbook covers a later, separately approved rollout of dependency-only secu
 - Use the reviewed commit that contains only the approved dependency manifests, lockfiles, and this document.
 - Record the commit ID and the reviewed dependency-diff fingerprint before rollout.
 - Confirm that both lockfiles install without modification.
-- Use Node 18 for baseline and release verification. The backend container declares `node:18-slim` in both build and runtime stages.
+- Use Node 22 for baseline and release verification. The backend container declares `node:22-slim` in both build and runtime stages.
 - Confirm the resolved versions for each fixed advisory. Do not treat a lower audit count as proof of a fix.
 - Record all residual advisory package paths and the reason each path remains.
 
@@ -17,7 +17,7 @@ This runbook covers a later, separately approved rollout of dependency-only secu
 
 Backend:
 
-1. Run `npm ci` with Node 18.
+1. Run `npm ci` with Node 22.
 2. Run `npm ls --all --json` and require a clean dependency graph.
 3. Run `npm audit --json` and compare each resolved package version with its advisory range.
 4. Run the backend test entry point. Record that this legacy repository currently has a placeholder test that exits with status 1.
@@ -26,12 +26,11 @@ Backend:
 
 Frontend:
 
-1. Run `npm ci` with Node 18.
+1. Run `npm ci` with Node 22.
 2. Run `npm ls --all --json` and require a clean dependency graph.
 3. Run `npm audit --json` and record exact residual paths.
-4. Run `CI=true npm test -- --watchAll=false`. Record the current expected no-tests result until tests are added.
-5. Run `npm run build` and require a successful optimized build.
-6. Run the reviewed browser-persistence checks for theme, dark mode, private and rated settings, board dimensions, sound volume, and board zoom.
+4. Frontend tests were removed with the CRA test libraries; run `npm run build` (tsc, then Vite) and require a successful optimized build.
+5. Run the reviewed browser-persistence checks for theme, dark mode, private and rated settings, board dimensions, sound volume, and board zoom.
 
 ## Gated rollout coordination
 

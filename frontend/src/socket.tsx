@@ -1,5 +1,5 @@
 import { io } from "socket.io-client";
-const BACKEND_ENDPOINT = process.env.REACT_APP_BACKEND_URL || "localhost:4001";
+const BACKEND_ENDPOINT = import.meta.env.REACT_APP_BACKEND_URL || "localhost:4001";
 
 const socket = io(BACKEND_ENDPOINT, {
   transports: ["websocket", "polling", "flashsocket"],
