@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { useImmer } from "use-immer";
 import UIfx from "uifx";
 import moveSoundAudio from "./../static/moveSound.mp3";

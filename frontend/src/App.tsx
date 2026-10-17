@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import socket from "./socket";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { MenuThemeName, BoardThemeName, getColor } from "./shared/colorThemes";
 import { RoleEnum, ServerGame } from "./game/gameState";
 import GamePage from "./game/GamePage";
