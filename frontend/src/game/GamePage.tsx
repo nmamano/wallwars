@@ -176,9 +176,10 @@ export default function GamePage({
       handleReturnToLobby();
     });
 
-    socket.on("gameJoinFailed", () => {
+    socket.on("gameJoinFailed", (params?: { reason?: string }) => {
       showToastNotification(
-        "There is no game with this code waiting for someone to join.",
+        params?.reason ??
+          "There is no game with this code waiting for someone to join.",
         5000
       );
       handleReturnToLobby();
@@ -303,6 +304,13 @@ export default function GamePage({
         applySetupRematch(draftState);
         draftState.waitingForPing = 0;
       });
+    });
+
+    // The server refused the rematch (it is about to restart). The client that
+    // accepted has already reset its board, so both clients go to the lobby.
+    socket.on("rematchFailed", ({ reason }: { reason: string }) => {
+      showToastNotification(reason, 5000);
+      handleReturnToLobby();
     });
 
     socket.on("extraTimeReceived", () => {

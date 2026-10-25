@@ -41,6 +41,7 @@ export default {
   rematchRejectedMsg: "rematchRejected",
   acceptRematchMsg: "acceptRematch",
   rematchAcceptedMsg: "rematchAccepted",
+  rematchFailedMsg: "rematchFailed",
   offerDrawMsg: "offerDraw",
   drawOfferedMsg: "drawOffered",
   acceptDrawMsg: "acceptDraw",

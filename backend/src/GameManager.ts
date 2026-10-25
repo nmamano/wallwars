@@ -1,4 +1,4 @@
-import { GameState } from "./gameState";
+import { GameState, playerToMoveHasTimeLeft } from "./gameState";
 
 // Manages the pairings between clients currently playing. This is stored in
 // memory, not in the DB, so it is lost if the server restarts.
@@ -158,6 +158,20 @@ export class GameManager {
       if (idToken === game.idTokens[0]) game.socketIds[0] = socketId;
       if (idToken === game.idTokens[1]) game.socketIds[1] = socketId;
     }
+  }
+
+  // Number of games that a server restart would interrupt (deploy gate). A game
+  // counts if it has no result, at least one player is on the game page, and the
+  // player to move still has time. The server never ends a game by itself, so
+  // games that both players left, or that were lost on time with no client
+  // message, stay in ongoingGames; they do not count.
+  gamesInFlight(): number {
+    return this.ongoingGames.filter(
+      (game) =>
+        game.winner === "" &&
+        game.arePlayersPresent.some((present) => present) &&
+        (game.moveHistory.length < 2 || playerToMoveHasTimeLeft(game))
+    ).length;
   }
 
   printAllGames(): void {

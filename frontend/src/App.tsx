@@ -433,8 +433,8 @@ export default function App() {
       }
     );
 
-    socket.on("createGameFailed", () => {
-      showToastNotification("Creating a game failed");
+    socket.on("createGameFailed", (params?: { reason?: string }) => {
+      showToastNotification(params?.reason ?? "Creating a game failed", 5000);
     });
 
     socket.on("nameChanged", ({ name }: { name: string }) => {

@@ -61,6 +61,37 @@ const GM = new GameManager();
 // For informing clients about new challenges.
 const ChallengeBC = new ChallengeBroadcast();
 
+// Deploy gate on the shared VPS. While draining, the server refuses new games
+// (create, join, rematch) and running games go on, so a restart loses no game.
+// The state is in memory: a new process starts with draining off.
+let draining = false;
+const drainingReason =
+  "We are updating the server. Please try again in a few minutes.";
+
+const appSocket = process.env.APP_SOCKET;
+
+// Only on the unix socket: Caddy on the VPS sends only /socket.io/* to the app.
+// On Fly the app is public on PORT, so these routes do not exist there.
+if (appSocket) {
+  const drainStatus = () => ({
+    draining,
+    gamesInFlight: GM.gamesInFlight(),
+    openChallenges: GM.unjoinedGames.length,
+  });
+  app.get("/internal/drain", (req, res) => {
+    res.send(drainStatus());
+  });
+  app.post("/internal/drain", express.json(), (req, res) => {
+    if (typeof req.body?.draining !== "boolean") {
+      res.status(400).send({ error: 'body must be {"draining": true|false}' });
+      return;
+    }
+    draining = req.body.draining;
+    console.log(`Draining: ${draining}`);
+    res.send(drainStatus());
+  });
+}
+
 io.on(M.connectionMsg, function (socket: any): void {
   // Inject middleware to log incoming messages.
   const originalOn = socket.on;
@@ -169,6 +200,10 @@ io.on(M.connectionMsg, function (socket: any): void {
       isPublic: boolean;
       isRated: boolean;
     }): Promise<void> {
+      if (draining) {
+        emitMessage(M.createGameFailedMsg, { reason: drainingReason });
+        return;
+      }
       const ongoingGame = GM.getOngoingGameByClient(idToken, socket.id);
       if (ongoingGame) await dealWithLingeringGame(ongoingGame);
       // Ensure there's no other game for this client.
@@ -221,6 +256,10 @@ io.on(M.connectionMsg, function (socket: any): void {
       joinCode: string;
       token: string;
     }): Promise<void> {
+      if (draining) {
+        emitMessage(M.gameJoinFailedMsg, { reason: drainingReason });
+        return;
+      }
       const ongoingGame = GM.getOngoingGameByClient(idToken, socket.id);
       if (ongoingGame) await dealWithLingeringGame(ongoingGame);
 
@@ -348,6 +387,15 @@ io.on(M.connectionMsg, function (socket: any): void {
     const game = GM.getOngoingGameByClient(idToken, socket.id);
     if (!game) {
       emitGameNotFoundError();
+      return;
+    }
+    if (draining) {
+      // The client that accepted has already reset its board.
+      emitMessage(M.rematchFailedMsg, { reason: drainingReason });
+      emitMessageOpponent(M.rematchFailedMsg, { reason: drainingReason });
+      // Both clients go to the lobby; the finished game is already stored.
+      // After the emits: emitMessageOpponent finds the opponent via the game.
+      GM.removeOngoingGamesByClient(idToken, socket.id);
       return;
     }
 
@@ -844,7 +892,6 @@ async function uniqueRandPlayerName(): Promise<string> {
 
 // On the shared VPS the app listens on a unix socket that the host's Caddy
 // connects to (APP_SOCKET); elsewhere (Fly, local dev) it listens on PORT.
-const appSocket = process.env.APP_SOCKET;
 if (appSocket) {
   fs.rmSync(appSocket, { force: true }); // a socket left by a stopped container
   server.listen(appSocket, () => {
