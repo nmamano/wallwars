@@ -1,5 +1,6 @@
 import express from "express";
 import http from "http";
+import fs from "fs";
 import { Server } from "socket.io";
 
 import { initialRating } from "./src/rating";
@@ -841,6 +842,17 @@ async function uniqueRandPlayerName(): Promise<string> {
   return tries === 0 ? "" : name;
 }
 
-server.listen(port as number, "0.0.0.0", () =>
-  console.log(`Listening on port ${port}`)
-);
+// On the shared VPS the app listens on a unix socket that the host's Caddy
+// connects to (APP_SOCKET); elsewhere (Fly, local dev) it listens on PORT.
+const appSocket = process.env.APP_SOCKET;
+if (appSocket) {
+  fs.rmSync(appSocket, { force: true }); // a socket left by a stopped container
+  server.listen(appSocket, () => {
+    fs.chmodSync(appSocket, 0o666); // Caddy runs as another user
+    console.log(`Listening on ${appSocket}`);
+  });
+} else {
+  server.listen(port as number, "0.0.0.0", () =>
+    console.log(`Listening on port ${port}`)
+  );
+}

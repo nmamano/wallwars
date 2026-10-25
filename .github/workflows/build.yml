@@ -1,0 +1,127 @@
+# Self-hosting: build the backend and the static frontend images on every push to master
+# and push them to GHCR (public packages). The VPS pulls them by digest and never builds
+# (~/nil/self-host-playbook.md, step 5). Fly and Vercel keep their own deploys until the move.
+name: Build images
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: build-images
+  cancel-in-progress: false
+env:
+  IMAGE_OWNER: nmamano
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out the pushed commit
+        run: |
+          git init --quiet .
+          git fetch --quiet --depth 1 "https://github.com/${{ github.repository }}.git" "$GITHUB_SHA"
+          git checkout --quiet FETCH_HEAD
+      # The content key is the git tree of backend/ (every file the image is built from,
+      # with backend/Dockerfile). A commit that does not touch backend/ gets the same key,
+      # and the VPS skips it.
+      - name: Content key
+        id: key
+        run: echo "key=$(git rev-parse HEAD:backend)" >> "$GITHUB_OUTPUT"
+      - name: Build, check and push
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/$IMAGE_OWNER/wallwars-backend"
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          if docker buildx imagetools inspect "$image:key-$KEY" >/dev/null 2>&1; then
+            echo "backend/ is unchanged: tag the existing image."
+            docker buildx imagetools create -t "$image:sha-$GITHUB_SHA" "$image:key-$KEY"
+          else
+            docker build -f backend/Dockerfile \
+              --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+              --label "content-key=$KEY" \
+              -t "$image:sha-$GITHUB_SHA" -t "$image:key-$KEY" .
+            # Smoke check with no DB: the app must start, answer / with 200 and
+            # /healthz with 503 (DB down).
+            docker run -d --name smoke -p 127.0.0.1:4001:4001 "$image:sha-$GITHUB_SHA"
+            for i in $(seq 30); do curl -fsS http://127.0.0.1:4001/ >/dev/null 2>&1 && break; sleep 1; done
+            curl -fsS http://127.0.0.1:4001/
+            test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4001/healthz)" = 503
+            docker rm -f smoke
+            # The same on the unix socket that the VPS uses (APP_SOCKET).
+            mkdir -m 0777 sock
+            docker run -d --name smoke-sock --user "$(id -u):$(id -g)" --read-only --tmpfs /tmp -e APP_SOCKET=/run/wallwars/app.sock \
+              -v "$PWD/sock:/run/wallwars" "$image:sha-$GITHUB_SHA"
+            for i in $(seq 30); do curl -fsS --unix-socket sock/app.sock http://x/ >/dev/null 2>&1 && break; sleep 1; done
+            curl -fsS --unix-socket sock/app.sock http://x/
+            test "$(curl -s -o /dev/null -w '%{http_code}' --unix-socket sock/app.sock http://x/healthz)" = 503
+            docker rm -f smoke-sock
+            docker push "$image:sha-$GITHUB_SHA"
+            docker push "$image:key-$KEY"
+          fi
+          digest=$(docker buildx imagetools inspect "$image:sha-$GITHUB_SHA" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          echo "Backend: $image@$digest (commit $GITHUB_SHA, key $KEY)" >> "$GITHUB_STEP_SUMMARY"
+          docker logout ghcr.io
+
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    env:
+      # Public values (they ship in the bundle): GitHub Actions repository variables.
+      REACT_APP_BACKEND_URL: ${{ vars.REACT_APP_BACKEND_URL }}
+      REACT_APP_AUTH0_DOMAIN: ${{ vars.REACT_APP_AUTH0_DOMAIN }}
+      REACT_APP_AUTH0_CLIENT_ID: ${{ vars.REACT_APP_AUTH0_CLIENT_ID }}
+    steps:
+      - name: Check out the pushed commit
+        run: |
+          git init --quiet .
+          git fetch --quiet --depth 1 "https://github.com/${{ github.repository }}.git" "$GITHUB_SHA"
+          git checkout --quiet FETCH_HEAD
+      # The content key covers the git tree of frontend/ and the three build values.
+      - name: Content key
+        id: key
+        run: |
+          set -euo pipefail
+          test -n "$REACT_APP_BACKEND_URL" && test -n "$REACT_APP_AUTH0_DOMAIN" && test -n "$REACT_APP_AUTH0_CLIENT_ID"
+          key=$(printf '%s\n' "$(git rev-parse HEAD:frontend)" "$REACT_APP_BACKEND_URL" "$REACT_APP_AUTH0_DOMAIN" "$REACT_APP_AUTH0_CLIENT_ID" | sha256sum | cut -c1-40)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+      - name: Build, check and push
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/$IMAGE_OWNER/wallwars-web"
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          if docker buildx imagetools inspect "$image:key-$KEY" >/dev/null 2>&1; then
+            echo "frontend/ is unchanged: tag the existing image."
+            docker buildx imagetools create -t "$image:sha-$GITHUB_SHA" "$image:key-$KEY"
+          else
+            docker build -f frontend/Dockerfile \
+              --build-arg REACT_APP_BACKEND_URL --build-arg REACT_APP_AUTH0_DOMAIN --build-arg REACT_APP_AUTH0_CLIENT_ID \
+              --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+              --label "content-key=$KEY" \
+              -t "$image:sha-$GITHUB_SHA" -t "$image:key-$KEY" frontend
+            # Check: the build has index.html, its hashed assets, and the backend URL.
+            id=$(docker create "$image:sha-$GITHUB_SHA" none)
+            docker cp "$id:/build" ./out
+            docker rm "$id" >/dev/null
+            test -f out/index.html
+            ls out/assets/*.js >/dev/null
+            grep -rqF "$REACT_APP_BACKEND_URL" out/assets
+            docker push "$image:sha-$GITHUB_SHA"
+            docker push "$image:key-$KEY"
+          fi
+          digest=$(docker buildx imagetools inspect "$image:sha-$GITHUB_SHA" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          echo "Web: $image@$digest (commit $GITHUB_SHA, key $KEY)" >> "$GITHUB_STEP_SUMMARY"
+          docker logout ghcr.io

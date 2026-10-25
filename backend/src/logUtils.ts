@@ -16,9 +16,11 @@ const auth0Prefix = "auth0|";
 //in the local environment (not production) all the logs are saved to 'debug.log'
 const DEBUG_FILE = "/../debug.log";
 const SAVE_FULL_LOGS = process.env.LOG_MESSAGES || false;
-var messageLogFile = fs.createWriteStream(__dirname + DEBUG_FILE, {
-  flags: "w",
-});
+// Open the file only when full logs are on: in a read-only container (the shared
+// VPS) opening it would crash the process.
+const messageLogFile = SAVE_FULL_LOGS
+  ? fs.createWriteStream(__dirname + DEBUG_FILE, { flags: "w" })
+  : null;
 const cropAndLogMessage = (txt: string) => {
   const maxLogLen = 1000;
   const maxTerminalLen = 140;
@@ -27,7 +29,7 @@ const cropAndLogMessage = (txt: string) => {
     if (logTxt.length > maxLogLen) {
       logTxt = logTxt.substring(0, maxLogLen - 3) + "...";
     }
-    messageLogFile.write(util.format(logTxt) + "\n");
+    messageLogFile?.write(util.format(logTxt) + "\n");
   }
   if (txt.length > maxTerminalLen) {
     txt = txt.substring(0, maxTerminalLen - 3) + "...";
