@@ -1,5 +1,7 @@
 # Self-hosting: build the backend and the static frontend images on every push to master
-# and push them to GHCR (public packages). The VPS pulls them by digest and never builds
+# and push them to GHCR (public packages), tagged sha-<commit> and key-<content key>. When
+# both jobs are green, the promote job moves the master tag on both images. The VPS follows
+# `master` and pulls by digest; it never builds
 # (~/nil/self-host-playbook.md, step 5). Fly and Vercel keep their own deploys until the move.
 name: Build images
 on:
@@ -124,4 +126,32 @@ jobs:
           fi
           digest=$(docker buildx imagetools inspect "$image:sha-$GITHUB_SHA" --format '{{json .Manifest.Digest}}' | tr -d '"')
           echo "Web: $image@$digest (commit $GITHUB_SHA, key $KEY)" >> "$GITHUB_STEP_SUMMARY"
+          docker logout ghcr.io
+
+  # The VPS follows the master tag (a registry read, no GitHub API call). Move it only
+  # when both images passed their checks, so a half-green run never deploys, and only
+  # for the current tip of master, so a re-run of an older run does not roll it back.
+  promote:
+    needs: [backend, web]
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Move the master tag
+        run: |
+          set -euo pipefail
+          tip=$(git ls-remote "https://github.com/${{ github.repository }}.git" refs/heads/master | cut -f1)
+          if [ "$tip" != "$GITHUB_SHA" ]; then
+            echo "Not the master tip ($tip): master tag not moved."
+            exit 0
+          fi
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          for name in wallwars-backend wallwars-web; do
+            image="ghcr.io/$IMAGE_OWNER/$name"
+            docker buildx imagetools create -t "$image:master" "$image:sha-$GITHUB_SHA"
+            echo "$name:master -> commit $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          done
           docker logout ghcr.io
