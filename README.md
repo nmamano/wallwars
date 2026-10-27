@@ -54,14 +54,18 @@ place a wall in the same turn).
 ### Frontend
 
 - React as the framework.
-- Vercel for hosting and continuous deployment.
 
 ### Backend
 
 - Node.js and express for the server.
 - [Socket.io](https://socket.io/) for real-time two-way client-server communication.
 - MongoDB as the database.
-- Fly.io to deploy the backend server.
+
+### Deployment
+
+- On every push to `master`, GitHub Actions builds a backend image and a static frontend image and pushes them to GHCR.
+- A self-hosted server pulls the new images and runs them behind Caddy, which serves HTTPS.
+- The database has a nightly backup.
 
 ### AI
 
