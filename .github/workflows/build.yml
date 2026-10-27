@@ -1,8 +1,7 @@
 # Self-hosting: build the backend and the static frontend images on every push to master
 # and push them to GHCR (public packages), tagged sha-<commit> and key-<content key>. When
 # both jobs are green, the promote job moves the master tag on both images. The VPS follows
-# `master` and pulls by digest; it never builds
-# (~/nil/self-host-playbook.md, step 5). Fly and Vercel keep their own deploys until the move.
+# `master` and pulls by digest; it never builds (self-host playbook, step 5).
 name: Build images
 on:
   push:

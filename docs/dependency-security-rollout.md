@@ -34,14 +34,13 @@ Frontend:
 
 ## Gated rollout coordination
 
-Each deployment needs separate approval. Before a rollout, confirm how the Vercel project is triggered and whether an authorized operator can hold, cancel, or promote a frontend deployment. The repository README describes Vercel continuous deployment, so this runbook does not assume that the backend and frontend can be released manually in sequence.
+Each deployment needs separate approval. A push to `master` is a deployment: GitHub Actions builds and checks the backend and frontend images, and when both pass, it moves the `master` tag on both images. The self-hosted server follows that tag and deploys both images automatically. Do not push the reviewed commit before the rollout is approved.
 
-The reviewed backend and frontend must remain mutually compatible throughout the release window. If Vercel deployment is automatic and cannot be held, use one of these later-approved coordination methods:
+The server switches the frontend as soon as it deploys it. The backend swap waits for the drain gate: the server waits until no game is in flight, turns on draining (the backend then refuses new games, joins and rematches), checks again, and then replaces the backend container. If no quiet moment occurs within the wait limit, the server does not swap the backend, and an operator decides.
 
-- make the dependency release safe in either order and verify that both the old and new frontend work with both the old and new backend; or
-- use the verified Vercel control to hold or delay frontend promotion until the approved backend checks pass.
+Thus the new frontend can run with the old backend for some time. The reviewed backend and frontend must remain mutually compatible in either order: verify that both the old and new frontend work with both the old and new backend. If this is not possible, hold the automatic deploy and release the two parts manually in a known order.
 
-At the deployment gate, record the actual Vercel trigger, available controls, chosen compatibility method, and rollback controls. Only then define the release order. The backend uses the repository's Fly configuration and `backend/Dockerfile`; the frontend uses the repository's Vercel project. After each platform changes, confirm process or build health, HTTPS reachability, a normal Socket.IO connection without creating test games, and the `index.html` rewrite for direct client-side routes.
+At the deployment gate, record the pushed commit, the image digests that the build reports, and the commit that the server reports as deployed. After each part changes, confirm backend health, HTTPS reachability, a normal Socket.IO connection without creating test games, and the `index.html` rewrite for direct client-side routes.
 
 ## Post-rollout checks
 
@@ -51,14 +50,14 @@ At the deployment gate, record the actual Vercel trigger, available controls, ch
 - Reload after changing theme, dark mode, private/rated settings, and board dimensions. Confirm that each setting persists.
 - Open an offline or puzzle board. Change sound volume and zoom, leave the board, return, and confirm that both settings persist.
 - Confirm that player profile and client-side game routes load directly through the frontend rewrite.
-- Review backend and frontend platform logs for new startup, dependency, connection, or client exceptions.
+- Review the backend and web server logs for new startup, dependency, connection, or client exceptions.
 - Record the deployed commit ID, verification time, and results.
 
 ## Rollback
 
 1. Stop the rollout if startup, build, connection, routing, or persistence checks fail.
-2. Redeploy the previously recorded known-good backend release through Fly.
-3. Redeploy the previously recorded known-good frontend release through Vercel.
+2. If a backend check fails right after the swap, the deploy puts the previous backend image back automatically. Confirm that it did.
+3. Otherwise, revert the bad commit on `master` and push it after approval: the next green build deploys the revert. For a faster rollback, hold the automatic deploy and deploy the previously recorded known-good commit manually. Remove the hold when `master` is fixed. The server keeps the previous frontend releases, so a frontend rollback switches back to one of them.
 4. Repeat the service, route, and persistence checks after rollback.
 5. Record the failure, the affected commit, the rollback release, and all residual advisories. Do not close an alert until the resolved production package version is outside its advisory range.
 

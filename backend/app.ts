@@ -71,7 +71,7 @@ const drainingReason =
 const appSocket = process.env.APP_SOCKET;
 
 // Only on the unix socket: Caddy on the VPS sends only /socket.io/* to the app.
-// On Fly the app is public on PORT, so these routes do not exist there.
+// When the app listens on PORT (local dev), these routes do not exist.
 if (appSocket) {
   const drainStatus = () => ({
     draining,
@@ -891,7 +891,7 @@ async function uniqueRandPlayerName(): Promise<string> {
 }
 
 // On the shared VPS the app listens on a unix socket that the host's Caddy
-// connects to (APP_SOCKET); elsewhere (Fly, local dev) it listens on PORT.
+// connects to (APP_SOCKET); elsewhere (local dev) it listens on PORT.
 if (appSocket) {
   fs.rmSync(appSocket, { force: true }); // a socket left by a stopped container
   server.listen(appSocket, () => {
