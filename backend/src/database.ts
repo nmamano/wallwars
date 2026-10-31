@@ -4,7 +4,10 @@ import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 import { newRatingAfterGame, initialRating } from "./rating";
 import { GameState } from "./gameState";
-const url = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.vt6ui.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
+// DB_URL (a full connection string) wins; without it, the Atlas cluster.
+const url =
+  process.env.DB_URL ||
+  `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.vt6ui.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 var connectedToDB = false;
 
 mongoose
