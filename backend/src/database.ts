@@ -10,17 +10,25 @@ const url =
   `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.vt6ui.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 var connectedToDB = false;
 
-mongoose
-  .connect(url)
-  .then(() => {
-    connectedToDB = true;
-    console.log("mongoose connected to database");
-  })
-  .catch((err) => {
-    connectedToDB = false;
-    console.log("mongoose connection failed");
-    console.log(err);
-  });
+// mongoose does not retry a failed first connect (a connection that was up reconnects by
+// itself), so try again every 5 s until it works. Until then the DB functions below return
+// at once with nothing, as when the DB is down.
+const connectRetryMs = 5000;
+function connect(attempt: number): void {
+  mongoose
+    .connect(url, { serverSelectionTimeoutMS: 5000 })
+    .then(() => {
+      connectedToDB = true;
+      console.log("mongoose connected to database");
+    })
+    .catch((err) => {
+      console.log(
+        `mongoose connection failed (try ${attempt}, next in ${connectRetryMs / 1000} s): ${err.message}`
+      );
+      setTimeout(() => connect(attempt + 1), connectRetryMs);
+    });
+}
+connect(1);
 
 // ============================================
 // Types representing the interface with the database.
