@@ -10,6 +10,11 @@ const url =
   `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.vt6ui.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 var connectedToDB = false;
 
+// A query filter that comes from a client can hold an operator such as $regex
+// or $ne. sanitizeFilter turns each operator into an exact match; filters that
+// use an operator on purpose wrap it in mongoose.trusted().
+mongoose.set("sanitizeFilter", true);
+
 // mongoose does not retry a failed first connect (a connection that was up reconnects by
 // itself), so try again every 5 s until it works. Until then the DB functions below return
 // at once with nothing, as when the DB is down.
@@ -366,7 +371,7 @@ export async function getGame(
 export async function getRandomGame(): Promise<dbFinishedGameWithoutIdTokens | null> {
   if (!connectedToDB) return null;
   const conditions = {
-    "moveHistory.20": { $exists: true }, //only games with 20+ moves
+    "moveHistory.20": mongoose.trusted({ $exists: true }), //only games with 20+ moves
   };
   let count = await Game.countDocuments(conditions);
   const randomIndex = Math.floor(Math.random() * count);
@@ -382,7 +387,7 @@ export async function getRecentGameSummaries(
   if (!connectedToDB) return null;
   if (count < 1) return null;
   const conditions = {
-    "moveHistory.4": { $exists: true }, //only games with 4+ moves
+    "moveHistory.4": mongoose.trusted({ $exists: true }), //only games with 4+ moves
   };
   const gameSummaries = await Game.find(
     conditions,

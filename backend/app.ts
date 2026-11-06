@@ -56,15 +56,6 @@ const io = new Server(server, {
   },
 });
 
-// Last resort for an error that no handler caught: log it and keep running,
-// so that one bad event does not stop every game in flight.
-process.on("unhandledRejection", (err) => {
-  console.error("Unhandled rejection:", err);
-});
-process.on("uncaughtException", (err) => {
-  console.error("Uncaught exception:", err);
-});
-
 // Global object containing all the games.
 const GM = new GameManager();
 
@@ -158,8 +149,8 @@ io.on(M.connectionMsg, function (socket: any): void {
     }: {
       idToken: string;
     }): Promise<void> {
-      if (receivedIdToken === "") {
-        console.error("Received empty idToken");
+      if (typeof receivedIdToken !== "string" || receivedIdToken === "") {
+        console.error("Received an idToken that is not a non-empty string");
         emitMessage(M.signUpFailedMsg);
         return;
       }
@@ -906,16 +897,31 @@ async function uniqueRandPlayerName(): Promise<string> {
   return tries === 0 ? "" : name;
 }
 
+// Last resort for an error that no handler caught: log it and keep running,
+// so that one bad event does not stop every game in flight. Installed only
+// once the server listens: a failure before that still stops the process, and
+// Docker restarts it.
+function keepRunningOnErrors(): void {
+  process.on("unhandledRejection", (err) => {
+    console.error("Unhandled rejection:", err);
+  });
+  process.on("uncaughtException", (err) => {
+    console.error("Uncaught exception:", err);
+  });
+}
+
 // On the shared VPS the app listens on a unix socket that the host's Caddy
 // connects to (APP_SOCKET); elsewhere (local dev) it listens on PORT.
 if (appSocket) {
   fs.rmSync(appSocket, { force: true }); // a socket left by a stopped container
   server.listen(appSocket, () => {
     fs.chmodSync(appSocket, 0o666); // Caddy runs as another user
+    keepRunningOnErrors();
     console.log(`Listening on ${appSocket}`);
   });
 } else {
-  server.listen(port as number, "0.0.0.0", () =>
-    console.log(`Listening on port ${port}`)
-  );
+  server.listen(port as number, "0.0.0.0", () => {
+    keepRunningOnErrors();
+    console.log(`Listening on port ${port}`);
+  });
 }
