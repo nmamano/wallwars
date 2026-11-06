@@ -10,7 +10,12 @@ import index from "./index";
 import ChallengeBroadcast from "./src/ChallengeBroadcast";
 import { logMessage } from "./src/logUtils";
 import * as auth from "./src/auth";
-import { isValidBoardSettings, isValidTimeControl } from "./src/gameSettings";
+import {
+  isValidBoardSettings,
+  isValidTimeControl,
+  isWellFormedMove,
+  maxMoves,
+} from "./src/gameSettings";
 import cors from "cors";
 import {
   GameState,
@@ -65,6 +70,8 @@ if (fakeLogin) console.warn("FAKE_LOGIN=1: logins are not checked");
 
 // Global object containing all the games.
 const GM = new GameManager();
+// Once a minute, remove the games that both players left long ago.
+setInterval(() => GM.removeAbandonedGames(Date.now()), 60 * 1000).unref();
 
 // For informing clients about new challenges.
 const ChallengeBC = new ChallengeBroadcast();
@@ -391,6 +398,15 @@ io.on(M.connectionMsg, function (socket: any): void {
         console.log("error: received move for finished game");
         return;
       }
+      const dims = (game.boardSettings as { dims: [number, number] }).dims;
+      if (!isWellFormedMove(dims, actions, remainingTime, distances)) {
+        console.log("Dropped malformed move");
+        return;
+      }
+      if (game.moveHistory.length >= maxMoves) {
+        console.log(`Dropped move: game ${game.joinCode} has ${maxMoves} moves`);
+        return;
+      }
       addMove({ game, actions, remainingTime, distances });
       emitMessageOpponent(M.movedMsg, {
         actions,
@@ -599,6 +615,7 @@ io.on(M.connectionMsg, function (socket: any): void {
     const idx = clientIndex(game, idToken, socket.id);
     if (idx === null) return;
     game.arePlayersPresent[idx] = false;
+    GM.playerLeft(game, Date.now());
     emitMessageOpponent(M.leftGameMsg);
     if (game.winner !== "") GM.removeOngoingGamesByClient(idToken, socket.id);
   }

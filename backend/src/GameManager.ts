@@ -4,11 +4,17 @@ import {
   gameForClients,
 } from "./gameState";
 
+// A game that both players left is removed after this time. A logged-in
+// player can return to it until then; a guest cannot return at all.
+export const abandonedGameMs = 15 * 60 * 1000;
+
 // Manages the pairings between clients currently playing. This is stored in
 // memory, not in the DB, so it is lost if the server restarts.
 export class GameManager {
   unjoinedGames: GameState[];
   ongoingGames: GameState[];
+  // When the last player left each game that both players left.
+  private leftAt = new WeakMap<GameState, number>();
 
   constructor() {
     //if there were many concurrent users, this should be converted into a map
@@ -170,11 +176,34 @@ export class GameManager {
     }
   }
 
+  // Called when a player leaves the game page or disconnects.
+  playerLeft(game: GameState, now: number): void {
+    if (!game.arePlayersPresent.some((present) => present)) {
+      this.leftAt.set(game, now);
+    }
+  }
+
+  // Removes the ongoing games that both players left at least
+  // abandonedGameMs ago. Without this, such games stay in memory until the
+  // process restarts.
+  removeAbandonedGames(now: number): void {
+    this.ongoingGames = this.ongoingGames.filter((game) => {
+      const leftAt = this.leftAt.get(game);
+      const abandoned =
+        !game.arePlayersPresent.some((present) => present) &&
+        leftAt !== undefined &&
+        now - leftAt >= abandonedGameMs;
+      if (abandoned) console.log(`removed abandoned game ${game.joinCode}`);
+      return !abandoned;
+    });
+  }
+
   // Number of games that a server restart would interrupt (deploy gate). A game
   // counts if it has no result, at least one player is on the game page, and the
   // player to move still has time. The server never ends a game by itself, so
   // games that both players left, or that were lost on time with no client
-  // message, stay in ongoingGames; they do not count.
+  // message, stay in ongoingGames (the first until removeAbandonedGames); they
+  // do not count.
   gamesInFlight(): number {
     return this.ongoingGames.filter(
       (game) =>
