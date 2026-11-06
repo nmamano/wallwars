@@ -10,6 +10,7 @@ import index from "./index";
 import ChallengeBroadcast from "./src/ChallengeBroadcast";
 import { logMessage } from "./src/logUtils";
 import * as auth from "./src/auth";
+import { isValidBoardSettings, isValidTimeControl } from "./src/gameSettings";
 import cors from "cors";
 import {
   GameState,
@@ -227,6 +228,15 @@ io.on(M.connectionMsg, function (socket: any): void {
     }): Promise<void> {
       if (draining) {
         emitMessage(M.createGameFailedMsg, { reason: drainingReason });
+        return;
+      }
+      // The settings go to every lobby visitor: refuse a malformed value.
+      if (
+        !isValidTimeControl(timeControl) ||
+        !isValidBoardSettings(boardSettings) ||
+        typeof isPublic !== "boolean"
+      ) {
+        emitMessage(M.createGameFailedMsg, { reason: "Invalid game settings" });
         return;
       }
       const ongoingGame = GM.getOngoingGameByClient(idToken, socket.id);
