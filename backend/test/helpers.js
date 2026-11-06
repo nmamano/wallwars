@@ -41,7 +41,8 @@ function freePort() {
 }
 
 // With dbUrl, the server uses that MongoDB instead of the in-memory database.
-async function startServer({ dbUrl } = {}) {
+// env adds variables to the server's environment.
+async function startServer({ dbUrl, env = {} } = {}) {
   const port = await freePort();
   const { jwks } = await keys;
   const preload = dbUrl ? [] : ["--require", "./test/fake-db.js"];
@@ -58,6 +59,7 @@ async function startServer({ dbUrl } = {}) {
         FAKE_LOGIN: "",
         TEST_JWKS: JSON.stringify(jwks),
         DB_URL: dbUrl || "",
+        ...env,
       },
       stdio: ["ignore", "pipe", "pipe"],
     }

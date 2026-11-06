@@ -11,7 +11,12 @@ const fakeDb = {
     return true;
   },
   getName: async (idToken) => players.get(idToken)?.name ?? null,
-  nameExists: async () => false,
+  // FAKE_DB_NAMES_TAKEN=letters: every name with no digit is taken (the pool
+  // of random names is full). FAKE_DB_NAMES_TAKEN=all: every name is taken.
+  nameExists: async (name) =>
+    process.env.FAKE_DB_NAMES_TAKEN === "all" ||
+    (process.env.FAKE_DB_NAMES_TAKEN === "letters" && !/\d/.test(name)) ||
+    [...players.values()].some((p) => p.name.toLowerCase() === name.toLowerCase()),
   changeName: async () => true,
   getRanking: async () => [],
   addPlayerSolvedPuzzle: async () => true,

@@ -204,9 +204,12 @@ io.on(M.connectionMsg, function (socket: any): void {
 
       // Case 2: player does not exist yet, do a sign up.
       // Get a random and unique name for the client and save it in the DB.
+      // If the sign-up fails, the socket stays a guest: a socket tied to a user
+      // id with no Player can not create or join games.
       const newName = await uniqueRandPlayerName();
       if (newName === "") {
         console.error("Could not find a unique name for new player");
+        idToken = "";
         emitMessage(M.signUpFailedMsg);
         return;
       }
@@ -215,6 +218,7 @@ io.on(M.connectionMsg, function (socket: any): void {
       if (success) {
         emitMessage(M.signedUpMsg, { name: newName });
       } else {
+        idToken = "";
         emitMessage(M.signUpFailedMsg);
       }
     }
@@ -923,17 +927,16 @@ function randPlayerName(): string {
 }
 
 // Returns a random player name that is not already in the DB. Returns an empty
-// string if no unique name could be found.
+// string if no unique name could be found. The pool of names is finite, so
+// after 20 taken names it adds 5 random digits (at most 15 characters): the
+// accounts can not use up that pool.
 async function uniqueRandPlayerName(): Promise<string> {
-  let name = randPlayerName();
-  let tries = 20;
-  while (tries > 0) {
-    if (await db.nameExists(name)) {
-      name = randPlayerName();
-      tries--;
-    } else break;
+  for (let i = 0; i < 40; i++) {
+    let name = randPlayerName();
+    if (i >= 20) name += Math.floor(10000 + Math.random() * 90000);
+    if (!(await db.nameExists(name))) return name;
   }
-  return tries === 0 ? "" : name;
+  return "";
 }
 
 // Last resort for an error that no handler caught: log it and keep running,
