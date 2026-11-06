@@ -212,7 +212,7 @@ export default function LobbyTabs({
           }}
           onMouseEnter={() => handleMouseEnter(LobbyTabName.Challenges)}
           onMouseLeave={handleMouseLeave}
-          title={"Players looking for an opponent. * means rated"}
+          title={"Players looking for an opponent."}
         >
           {`Challenges (${state.challenges.length})`}
         </div>

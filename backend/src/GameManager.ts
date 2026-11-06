@@ -183,11 +183,6 @@ export class GameManager {
         (game.moveHistory.length < 2 || playerToMoveHasTimeLeft(game))
     ).length;
   }
-
-  printAllGames(): void {
-    console.log("Unjoined games:\n", this.unjoinedGames);
-    console.log("Ongoing games:\n", this.ongoingGames);
-  }
 }
 
 function createdByClient(

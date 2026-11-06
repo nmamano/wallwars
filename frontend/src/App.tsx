@@ -42,7 +42,6 @@ export type Cookies = {
   numRows?: string;
   numCols?: string;
   isPrivate?: string | boolean;
-  isRated?: string | boolean;
   isVolumeOn?: string | boolean;
   zoomLevel?: string;
 };
@@ -84,9 +83,6 @@ export type AppState = {
   menuTheme: MenuThemeName;
   boardTheme: BoardThemeName;
 
-  // Indicates if the game is rated or not when the user clicks the "create game" button.
-  isRated: boolean;
-
   gameSpec: GameSpec | null; // For uploaded games.
 };
 
@@ -120,7 +116,6 @@ function initialAppState(cookies: Cookies): AppState {
     },
     watchGameId: null,
     isPrivate: parseBooleanCookie(cookies.isPrivate, false),
-    isRated: parseBooleanCookie(cookies.isRated, true),
     idToken: "", // guests (logged out users) have an empty-string idToken
 
     creatorStarts: false,
@@ -183,7 +178,6 @@ export default function App() {
     "numRows",
     "numCols",
     "isPrivate",
-    "isRated",
   ]);
 
   const [state, updateState] = useImmer<AppState>(initialAppState(cookies));
@@ -307,15 +301,6 @@ export default function App() {
     });
   };
 
-  const handleIsRated = (val: boolean) => {
-    updateState((draftState) => {
-      draftState.isRated = val;
-    });
-    setCookie("isRated", val ? "true" : "false", {
-      path: "/",
-    });
-  };
-
   const handleNumRows = (nr: number) => {
     updateState((draftState) => {
       const curNr = draftState.boardSettings.dims[0];
@@ -404,7 +389,7 @@ export default function App() {
       timeControl: state.timeControl,
       boardSettings: state.boardSettings,
       isPublic: !state.isPrivate,
-      isRated: state.isRated,
+      isRated: false, // Rated play is off.
     });
   };
 
@@ -657,7 +642,6 @@ export default function App() {
               handleToggleTheme={handleToggleTheme}
               handleToggleDarkMode={handleToggleDarkMode}
               handleIsPrivate={handleIsPrivate}
-              handleIsRated={handleIsRated}
               handleNumRows={handleNumRows}
               handleNumCols={handleNumCols}
               handlePosSetting={handlePosSetting}

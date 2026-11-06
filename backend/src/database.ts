@@ -2,7 +2,8 @@
 Users can play even if the DB is down: the games are simply not stored in that case */
 import mongoose from "mongoose";
 const Schema = mongoose.Schema;
-import { newRatingAfterGame, initialRating } from "./rating";
+import { initialRating } from "./rating";
+import { recordGameResult } from "./playerStats";
 import { GameState } from "./gameState";
 // DB_URL (a full connection string) wins; without it, the Atlas cluster.
 const url =
@@ -509,29 +510,6 @@ const playerSchema = new Schema({
 });
 const Player = mongoose.model("Player", playerSchema);
 
-// updates the `player` (locally) based on the result of a game.
-function updatePlayerWithGameResult(
-  player: dbPlayer,
-  game: GameState,
-  score: number,
-  newRatingTuple: { rating: number; deviation: number; volatility: number },
-  isVsGuest: boolean
-): void {
-  if (!isVsGuest && game.isRated) {
-    // The rating is a competitive statistic, so it is not influenced by games
-    // vs guests.
-    player.rating = newRatingTuple.rating;
-    player.peakRating = Math.max(player.rating, player.peakRating);
-    player.ratingDeviation = newRatingTuple.deviation;
-    player.ratingVolatility = newRatingTuple.volatility;
-  }
-  player.gameCount++;
-  if (score === 1) player.winCount++;
-  if (score === 0.5) player.drawCount++;
-  if (!player.firstGameDate) player.firstGameDate = game.startDate;
-  player.lastGameDate = game.startDate;
-}
-
 // Updates both players of a game in the database. Returns whether it succeeds.
 async function updatePlayers(game: GameState): Promise<boolean> {
   if (!connectedToDB) {
@@ -572,24 +550,6 @@ async function updatePlayers(game: GameState): Promise<boolean> {
     }
   }
 
-  // Get the rating statistics for both players, regardless of whether they are
-  // guests or not. Guests just get the initial rating.
-  let p1RatingTuple = isGuest[0]
-    ? initialRating()
-    : {
-        rating: p1.rating,
-        deviation: p1.ratingDeviation,
-        volatility: p1.ratingVolatility,
-      };
-
-  let p2RatingTuple = isGuest[1]
-    ? initialRating()
-    : {
-        rating: p2.rating,
-        deviation: p2.ratingDeviation,
-        volatility: p2.ratingVolatility,
-      };
-
   let scores;
   if (game.winner === "draw") scores = [0.5, 0.5];
   else if (game.winner === "creator") scores = [1, 0];
@@ -597,13 +557,7 @@ async function updatePlayers(game: GameState): Promise<boolean> {
 
   // Update the players which are not guests.
   if (!isGuest[0]) {
-    updatePlayerWithGameResult(
-      p1,
-      game,
-      scores[0],
-      newRatingAfterGame(p1RatingTuple, p2RatingTuple, scores[0]),
-      isGuest[1]
-    );
+    recordGameResult(p1, game, scores[0]);
     try {
       await p1.save();
       console.log(
@@ -615,13 +569,7 @@ async function updatePlayers(game: GameState): Promise<boolean> {
     }
   }
   if (!isGuest[1]) {
-    updatePlayerWithGameResult(
-      p2,
-      game,
-      scores[1],
-      newRatingAfterGame(p2RatingTuple, p1RatingTuple, scores[1]),
-      isGuest[0]
-    );
+    recordGameResult(p2, game, scores[1]);
     try {
       await p2.save();
       console.log(

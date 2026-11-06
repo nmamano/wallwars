@@ -38,7 +38,6 @@ export default function LobbyPage({
   handleToggleTheme,
   handleToggleDarkMode,
   handleIsPrivate,
-  handleIsRated,
   handleNumRows,
   handleNumCols,
   handlePosSetting,
@@ -61,7 +60,6 @@ export default function LobbyPage({
   handleToggleTheme: () => void;
   handleToggleDarkMode: () => void;
   handleIsPrivate: (isPrivate: boolean) => void;
-  handleIsRated: (isRated: boolean) => void;
   handleNumRows: (nr: number) => void;
   handleNumCols: (nc: number) => void;
   handlePosSetting: (posSetting: PosSetting) => void;
@@ -156,9 +154,9 @@ export default function LobbyPage({
         paddingBottom: gapSize,
         height: headerHeight,
       }}
-      title={"Ranking based on ELO points."}
+      title={"Ratings are frozen: games are no longer rated."}
     >
-      ELO Ranking
+      ELO Ranking (frozen)
     </div>
   );
   const puzzleHeight = `${comboHeight / 2}px`;
@@ -240,7 +238,6 @@ export default function LobbyPage({
           handleInputtedDuration={handleInputtedDuration}
           handleInputtedIncrement={handleInputtedIncrement}
           handleIsPrivate={handleIsPrivate}
-          handleIsRated={handleIsRated}
           handleNumRows={handleNumRows}
           handleNumCols={handleNumCols}
           handleShowMoreOptions={handleShowMoreOptions}

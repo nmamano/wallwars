@@ -219,13 +219,11 @@ io.on(M.connectionMsg, function (socket: any): void {
       timeControl,
       boardSettings,
       isPublic,
-      isRated,
     }: {
       token: string;
       timeControl: TimeControl;
       boardSettings: BoardSettings;
       isPublic: boolean;
-      isRated: boolean;
     }): Promise<void> {
       if (draining) {
         emitMessage(M.createGameFailedMsg, { reason: drainingReason });
@@ -262,7 +260,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         idToken,
         isPublic,
         rating,
-        isRated,
+        isRated: false, // Rated play is off, whatever the client sends.
       });
       GM.addUnjoinedGame(game);
       emitMessage(M.gameCreatedMsg, {

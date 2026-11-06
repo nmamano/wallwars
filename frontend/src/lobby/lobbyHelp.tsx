@@ -23,7 +23,7 @@ export const lobbyHelpText = (
     </h6>
     <h6>
       By default, players start as guests. You can create an account to have
-      your own name, play rated games, and more.
+      your own name and more.
     </h6>
   </div>
 );
