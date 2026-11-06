@@ -56,6 +56,15 @@ const io = new Server(server, {
   },
 });
 
+// Last resort for an error that no handler caught: log it and keep running,
+// so that one bad event does not stop every game in flight.
+process.on("unhandledRejection", (err) => {
+  console.error("Unhandled rejection:", err);
+});
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught exception:", err);
+});
+
 // Global object containing all the games.
 const GM = new GameManager();
 
@@ -97,9 +106,18 @@ io.on(M.connectionMsg, function (socket: any): void {
   // Inject middleware to log incoming messages.
   const originalOn = socket.on;
   socket.on = function (this: any, event: string, listener: Function): any {
+    // A listener that throws or rejects (for example on a malformed payload)
+    // drops only this event, and the server keeps running.
     const wrappedListener = function (this: any, ...args: any[]) {
-      logReceivedMessage(event, args[0]);
-      listener.apply(this, args);
+      const drop = (err: unknown) =>
+        console.error(`Dropped event ${event} from ${socket.id}: ${err}`);
+      try {
+        logReceivedMessage(event, args[0]);
+        const result = listener.apply(this, args);
+        if (result instanceof Promise) result.catch(drop);
+      } catch (err) {
+        drop(err);
+      }
     };
     return originalOn.call(this, event, wrappedListener);
   };
