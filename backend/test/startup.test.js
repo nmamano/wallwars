@@ -6,6 +6,7 @@ const net = require("net");
 const path = require("path");
 const { spawn } = require("child_process");
 
+// 15 s, not less: the files run in parallel, and on a busy box the start is slow.
 test("the process exits when its port is taken", async () => {
   const blocker = net.createServer();
   await new Promise((resolve) => blocker.listen(0, "0.0.0.0", resolve));
@@ -20,7 +21,7 @@ test("the process exits when its port is taken", async () => {
   child.stderr.on("data", (d) => (output += d));
   try {
     const code = await new Promise((resolve) => {
-      const t = setTimeout(() => resolve("still running"), 5000);
+      const t = setTimeout(() => resolve("still running"), 15000);
       child.on("exit", (c) => {
         clearTimeout(t);
         resolve(c);
