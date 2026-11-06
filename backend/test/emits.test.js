@@ -2,15 +2,10 @@
 // key of the player's account.
 const test = require("node:test");
 const assert = require("node:assert");
-const { startServer, client, once, createGame } = require("./helpers");
+const { startServer, client, once, createGame, logIn, signIdToken } = require("./helpers");
 
 const SUB_A = "auth0|creator-secret-sub";
 const SUB_C = "auth0|joiner-secret-sub";
-
-async function logIn(socket, idToken) {
-  socket.emit("logInOrSignUp", { idToken });
-  await Promise.race([once(socket, "signedUp"), once(socket, "loggedIn")]);
-}
 
 test("no emitted payload contains an idToken", async () => {
   const server = await startServer();
@@ -18,8 +13,8 @@ test("no emitted payload contains an idToken", async () => {
     const A = await client(server); // logged in, creates a public game
     const B = await client(server); // guest, reads the open challenges
     const C = await client(server); // logged in, joins the game
-    await logIn(A, SUB_A);
-    await logIn(C, SUB_C);
+    assert.strictEqual((await logIn(A, await signIdToken(SUB_A))).event, "signedUp");
+    assert.strictEqual((await logIn(C, await signIdToken(SUB_C))).event, "signedUp");
 
     const newChallenge = once(B, "newChallenge");
     const created = await createGame(A, true);

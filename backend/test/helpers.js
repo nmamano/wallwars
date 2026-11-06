@@ -4,6 +4,30 @@ const { spawn } = require("child_process");
 const net = require("net");
 const path = require("path");
 const { io } = require("socket.io-client");
+const { generateKeyPair, exportJWK, SignJWT } = require("jose");
+
+const ISSUER = "https://dev-l7k7kmidqclptw4l.us.auth0.com/";
+const AUDIENCE = "xhKCco1nI2npeCFC1Q6opf2mHmtKjwDG";
+
+// A key pair made for each test run, and one that the server does not know.
+const keys = generateKeyPair("RS256").then(async ({ publicKey, privateKey }) => {
+  const jwk = { ...(await exportJWK(publicKey)), kid: "test", alg: "RS256", use: "sig" };
+  const other = await generateKeyPair("RS256");
+  return { jwks: { keys: [jwk] }, privateKey, otherKey: other.privateKey };
+});
+
+// An ID token like the ones Auth0 gives. Options change one claim or the key.
+async function signIdToken(sub, { issuer = ISSUER, audience = AUDIENCE, expiresIn = "1h", key } = {}) {
+  const k = await keys;
+  return new SignJWT({})
+    .setProtectedHeader({ alg: "RS256", kid: "test" })
+    .setSubject(sub)
+    .setIssuer(issuer)
+    .setAudience(audience)
+    .setIssuedAt()
+    .setExpirationTime(expiresIn)
+    .sign(key === "other" ? k.otherKey : k.privateKey);
+}
 
 const backendDir = path.join(__dirname, "..");
 
@@ -18,12 +42,20 @@ function freePort() {
 
 async function startServer() {
   const port = await freePort();
+  const { jwks } = await keys;
   const child = spawn(
     process.execPath,
-    ["--require", "./test/fake-db.js", "dist/app.js"],
+    ["--require", "./test/fake-db.js", "--require", "./test/fake-auth.js", "dist/app.js"],
     {
       cwd: backendDir,
-      env: { ...process.env, PORT: String(port), APP_SOCKET: "", LOG_MESSAGES: "" },
+      env: {
+        ...process.env,
+        PORT: String(port),
+        APP_SOCKET: "",
+        LOG_MESSAGES: "",
+        FAKE_LOGIN: "",
+        TEST_JWKS: JSON.stringify(jwks),
+      },
       stdio: ["ignore", "pipe", "pipe"],
     }
   );
@@ -84,6 +116,28 @@ const boardSettings = {
   goalPos: [[14, 18], [14, 0]],
 };
 
+// Sends a login; resolves with the reply event and its payload.
+function logIn(socket, idToken) {
+  const events = ["signedUp", "loggedIn", "signUpFailed"];
+  return new Promise((resolve, reject) => {
+    const handlers = {};
+    const done = () => events.forEach((e) => socket.off(e, handlers[e]));
+    const t = setTimeout(() => {
+      done();
+      reject(new Error("timeout waiting for a login reply"));
+    }, 5000);
+    for (const event of events) {
+      handlers[event] = (payload) => {
+        clearTimeout(t);
+        done();
+        resolve({ event, payload });
+      };
+      socket.on(event, handlers[event]);
+    }
+    socket.emit("logInOrSignUp", { idToken });
+  });
+}
+
 function createGame(socket, isPublic) {
   socket.emit("createGame", {
     token: "default",
@@ -95,4 +149,6 @@ function createGame(socket, isPublic) {
   return once(socket, "gameCreated");
 }
 
-module.exports = { startServer, client, once, createGame };
+const testKeys = () => keys;
+
+module.exports = { startServer, client, once, createGame, logIn, signIdToken, testKeys };

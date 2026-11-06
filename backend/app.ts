@@ -9,6 +9,7 @@ import { GameManager } from "./src/GameManager";
 import index from "./index";
 import ChallengeBroadcast from "./src/ChallengeBroadcast";
 import { logMessage } from "./src/logUtils";
+import * as auth from "./src/auth";
 import cors from "cors";
 import {
   GameState,
@@ -55,6 +56,11 @@ const io = new Server(server, {
     credentials: true,
   },
 });
+
+// Local development only: the frontend in development mode logs in with any id
+// that the user types, without Auth0. FAKE_LOGIN=1 makes the server accept it.
+const fakeLogin = process.env.FAKE_LOGIN === "1";
+if (fakeLogin) console.warn("FAKE_LOGIN=1: logins are not checked");
 
 // Global object containing all the games.
 const GM = new GameManager();
@@ -103,7 +109,9 @@ io.on(M.connectionMsg, function (socket: any): void {
       const drop = (err: unknown) =>
         console.error(`Dropped event ${event} from ${socket.id}: ${err}`);
       try {
-        logReceivedMessage(event, args[0]);
+        // Do not log the ID token that a login sends.
+        const loggedArgs = event === M.logInOrSignUpMsg ? undefined : args[0];
+        logReceivedMessage(event, loggedArgs);
         const result = listener.apply(this, args);
         if (result instanceof Promise) result.catch(drop);
       } catch (err) {
@@ -117,7 +125,8 @@ io.on(M.connectionMsg, function (socket: any): void {
   // It is a persistent and unique id for each user (it is the key in the
   // player DB table). It is empty for non-logged in users (guests).
   // All connections start as guests. The idToken is set when a client sends the
-  // logInOrSignUp message, which includes their idToken.
+  // logInOrSignUp message, which includes their Auth0 ID token: idToken is
+  // the user id (sub) in it, after the server has checked the token.
   //
   // The idToken should not be confused with socket.id, which identifies the
   // connection itself and is used to route messages to the appropriate client.
@@ -154,9 +163,17 @@ io.on(M.connectionMsg, function (socket: any): void {
         emitMessage(M.signUpFailedMsg);
         return;
       }
+      const userId = fakeLogin
+        ? receivedIdToken
+        : await auth.verifyIdToken(receivedIdToken);
+      if (userId === null) {
+        console.error("Login refused: no valid ID token");
+        emitMessage(M.signUpFailedMsg);
+        return;
+      }
 
-      // Tie this socket connection with the received idToken.
-      idToken = receivedIdToken;
+      // Tie this socket connection with the user id.
+      idToken = userId;
 
       const player = await db.getPlayer(idToken);
 
