@@ -141,16 +141,18 @@ function initialAppState(cookies: Cookies): AppState {
 
 // In production, this is just a wrapper around the `useAuth0` hook. In
 // development, the auth0 hook is bypassed and instead a dialog is shown where
-// the user can enter any id token manually.
+// the user can enter any id token manually (the backend accepts it only when it
+// runs with FAKE_LOGIN=1).
 function useCustomAuth(setIsAuthDialogOpen: (b: boolean) => void) {
   const {
     error: authError,
     isAuthenticated: isAuth,
     user: authUser,
     loginWithRedirect,
+    getIdTokenClaims,
   } = useAuth0();
   if (isProduction) {
-    return { authError, isAuth, authUser, loginWithRedirect };
+    return { authError, isAuth, authUser, loginWithRedirect, getIdTokenClaims };
   }
 
   console.log("Bypassing auth0 for local development.");
@@ -160,6 +162,7 @@ function useCustomAuth(setIsAuthDialogOpen: (b: boolean) => void) {
     isAuth: false,
     authUser: null,
     loginWithRedirect: () => setIsAuthDialogOpen(true),
+    getIdTokenClaims,
   };
 }
 
@@ -201,7 +204,7 @@ export default function App() {
     socket.emit("logInOrSignUp", { idToken: fakeIdToken });
   };
 
-  const { authError, isAuth, authUser, loginWithRedirect } =
+  const { authError, isAuth, authUser, loginWithRedirect, getIdTokenClaims } =
     useCustomAuth(setIsAuthDialogOpen);
 
   useEffect(() => {
@@ -229,17 +232,30 @@ export default function App() {
     updateState((draftState) => {
       draftState.idToken = authUser.sub!;
     });
-    // Tell the server that we have an id token. This asks the server to do one
-    // of 2 things:
+    // Send our Auth0 ID token to the server. The server checks it and uses the
+    // user id (sub) in it. This asks the server to do one of 2 things:
     // - If the server has a player in the DB with this id token, it returns to
     // us the player's name.
     // - Otherwise, the server creates a new player with this id token in the
     // DB with a unique name and also returns it to us as our initial non-guest
     // name (that we can later change).
     console.log("emitting logInOrSignUp: ", authUser.sub);
-    socket.emit("logInOrSignUp", { idToken: authUser.sub });
+    getIdTokenClaims().then((claims) => {
+      if (!claims || !claims.__raw) {
+        console.error("no ID token");
+        return;
+      }
+      socket.emit("logInOrSignUp", { idToken: claims.__raw });
+    });
     return;
-  }, [authUser, isAuth, authError, updateState, state.idToken]);
+  }, [
+    authUser,
+    isAuth,
+    authError,
+    updateState,
+    state.idToken,
+    getIdTokenClaims,
+  ]);
 
   const handleLogin = () => {
     loginWithRedirect();
