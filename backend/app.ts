@@ -823,11 +823,10 @@ io.on(M.connectionMsg, function (socket: any): void {
     ];
   }
 
-  // Stores game to db, updates players in db, messages both players about
-  // new ratings.
+  // Stores game to db, messages both players about new ratings (never, while
+  // rated play is off).
   async function storeGameAndNotifyRatings(game: GameState): Promise<void> {
-    // Store game and updated player statistics to DB.
-    await db.storeGameAndUpdatePlayers(game);
+    await db.storeGame(game);
 
     // Message new ratings to both players.
     if (!game.isRated) {

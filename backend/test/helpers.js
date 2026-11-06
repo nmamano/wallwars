@@ -40,12 +40,14 @@ function freePort() {
   });
 }
 
-async function startServer() {
+// With dbUrl, the server uses that MongoDB instead of the in-memory database.
+async function startServer({ dbUrl } = {}) {
   const port = await freePort();
   const { jwks } = await keys;
+  const preload = dbUrl ? [] : ["--require", "./test/fake-db.js"];
   const child = spawn(
     process.execPath,
-    ["--require", "./test/fake-db.js", "--require", "./test/fake-auth.js", "dist/app.js"],
+    [...preload, "--require", "./test/fake-auth.js", "dist/app.js"],
     {
       cwd: backendDir,
       env: {
@@ -55,6 +57,7 @@ async function startServer() {
         LOG_MESSAGES: "",
         FAKE_LOGIN: "",
         TEST_JWKS: JSON.stringify(jwks),
+        DB_URL: dbUrl || "",
       },
       stdio: ["ignore", "pipe", "pipe"],
     }
@@ -66,7 +69,8 @@ async function startServer() {
   await new Promise((resolve, reject) => {
     const t = setTimeout(() => reject(new Error("server did not start:\n" + server.output)), 10000);
     const check = () => {
-      if (server.output.includes(`Listening on port ${port}`)) {
+      const dbReady = !dbUrl || server.output.includes("mongoose connected");
+      if (server.output.includes(`Listening on port ${port}`) && dbReady) {
         clearTimeout(t);
         resolve();
       } else if (server.exited) {

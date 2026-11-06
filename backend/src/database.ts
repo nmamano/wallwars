@@ -3,7 +3,6 @@ Users can play even if the DB is down: the games are simply not stored in that c
 import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 import { initialRating } from "./rating";
-import { recordGameResult } from "./playerStats";
 import { GameState } from "./gameState";
 // DB_URL (a full connection string) wins; without it, the Atlas cluster.
 const url =
@@ -329,9 +328,10 @@ export async function addPlayerSolvedPuzzle(
   }
 }
 
-// Stores the game to DB and updates the two players in the DB if they are not
-// guests.
-export async function storeGameAndUpdatePlayers(
+// Stores the game to DB. Rated play is off and the result comes from the
+// clients, so a game changes nothing in the players' ranking: not the rating,
+// not the game counts, not the dates.
+export async function storeGame(
   game: GameState
 ): Promise<void> {
   if (!connectedToDB) return;
@@ -346,13 +346,6 @@ export async function storeGameAndUpdatePlayers(
     console.log(
       `Stored game in DB ${process.env.DB_NAME} _id: ${gameToStore.id} time: ${gameToStore.startDate}`
     );
-    try {
-      await updatePlayers(game);
-      console.log(`Updated  players`);
-    } catch (err) {
-      console.error("Updating players failed");
-      console.log(err);
-    }
   } catch (err) {
     console.error(`Store game to DB ${process.env.DB_NAME} failed`);
     console.log(err);
@@ -509,79 +502,6 @@ const playerSchema = new Schema({
   lowercaseName: { type: String, required: true },
 });
 const Player = mongoose.model("Player", playerSchema);
-
-// Updates both players of a game in the database. Returns whether it succeeds.
-async function updatePlayers(game: GameState): Promise<boolean> {
-  if (!connectedToDB) {
-    console.error("cannot update players because not connected to db");
-    return false;
-  }
-  const isGuest: [boolean, boolean] = [
-    game.idTokens[0] === "",
-    game.idTokens[1] === "",
-  ];
-
-  // Only non-guests exist in the DB. If both are guests, there is nothing to
-  // do.
-  if (isGuest[0] && isGuest[1]) return true;
-
-  // Read the non-guest players from db
-  let p1: any, p2: any; // TODO: type this properly
-  if (!isGuest[0]) {
-    const foundPlayer = await Player.findOne({
-      idToken: game.idTokens[0],
-    });
-    if (foundPlayer) {
-      p1 = foundPlayer;
-    } else {
-      console.error("player is not a guest and not found in db");
-      return false;
-    }
-  }
-  if (!isGuest[1]) {
-    const foundPlayer = await Player.findOne({
-      idToken: game.idTokens[1],
-    });
-    if (foundPlayer) {
-      p2 = foundPlayer;
-    } else {
-      console.error("player is not a guest and not found in db");
-      return false;
-    }
-  }
-
-  let scores;
-  if (game.winner === "draw") scores = [0.5, 0.5];
-  else if (game.winner === "creator") scores = [1, 0];
-  else scores = [0, 1];
-
-  // Update the players which are not guests.
-  if (!isGuest[0]) {
-    recordGameResult(p1, game, scores[0]);
-    try {
-      await p1.save();
-      console.log(
-        `Stored player in DB ${process.env.DB_NAME}: name ${p1.name} freshness: ${p1.lastGameDate}`
-      );
-    } catch (err) {
-      console.error(`Store player to DB ${process.env.DB_NAME} failed: ${err}`);
-      return false;
-    }
-  }
-  if (!isGuest[1]) {
-    recordGameResult(p2, game, scores[1]);
-    try {
-      await p2.save();
-      console.log(
-        `Stored player in DB ${process.env.DB_NAME}: name ${p2.name} freshness: ${p2.lastGameDate}`
-      );
-    } catch (err) {
-      console.error(`Store player to DB ${process.env.DB_NAME} failed: ${err}`);
-      return false;
-    }
-  }
-  return true;
-}
 
 const moveSchema = new Schema(
   {

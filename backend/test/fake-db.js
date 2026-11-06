@@ -15,7 +15,7 @@ const fakeDb = {
   changeName: async () => true,
   getRanking: async () => [],
   addPlayerSolvedPuzzle: async () => true,
-  storeGameAndUpdatePlayers: async (game) => {
+  storeGame: async (game) => {
     // The tests read this line from the server output.
     console.log(`FAKE_DB stored game isRated=${game.isRated} winner=${game.winner}`);
     return true;
