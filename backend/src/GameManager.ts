@@ -1,4 +1,8 @@
-import { GameState, playerToMoveHasTimeLeft } from "./gameState";
+import {
+  GameState,
+  playerToMoveHasTimeLeft,
+  gameForClients,
+} from "./gameState";
 
 // Manages the pairings between clients currently playing. This is stored in
 // memory, not in the DB, so it is lost if the server restarts.
@@ -87,7 +91,10 @@ export class GameManager {
     for (let i = 0; i < this.unjoinedGames.length; i++) {
       const game = this.unjoinedGames[i];
       if (createdByClient(idToken, socketId, game)) {
-        console.log("remove unjoined game: ", JSON.stringify(game));
+        console.log(
+          "remove unjoined game: ",
+          JSON.stringify(gameForClients(game))
+        );
         this.unjoinedGames.splice(i, 1);
         i--;
       }
@@ -126,7 +133,10 @@ export class GameManager {
       const game = this.ongoingGames[i];
       if (containsClient(idToken, socketId, game)) {
         this.ongoingGames.splice(i, 1);
-        console.log("removed ongoing game: ", JSON.stringify(game));
+        console.log(
+          "removed ongoing game: ",
+          JSON.stringify(gameForClients(game))
+        );
         i--;
       }
     }

@@ -244,7 +244,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         const clientPlayer = await db.getPlayer(idToken);
         if (!clientPlayer) {
           emitMessage(M.createGameFailedMsg);
-          console.error(`Player with id token ${idToken} not found in DB.`);
+          console.error("Player of this client not found in DB.");
           return;
         }
         name = clientPlayer.name;
@@ -313,7 +313,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         const clientPlayer = await db.getPlayer(idToken);
         if (!clientPlayer) {
           emitMessage(M.gameJoinFailedMsg);
-          console.error(`Client id token ${idToken} not found in DB.`);
+          console.error("Player of this client not found in DB.");
           return;
         }
         name = clientPlayer.name;
@@ -325,9 +325,7 @@ io.on(M.connectionMsg, function (socket: any): void {
         const oppPlayer = await db.getPlayer(game.idTokens[0]);
         if (!oppPlayer) {
           emitMessage(M.gameJoinFailedMsg);
-          console.error(
-            `Creator id token ${game.idTokens[0]} not found in DB.`
-          );
+          console.error("Player of the game creator not found in DB.");
           return;
         }
         creatorRating = oppPlayer.rating;

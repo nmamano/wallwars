@@ -32,6 +32,16 @@ test("no emitted payload contains an idToken", async () => {
     C.emit("returnToOngoingGame");
     await once(C, "returnedToOngoingGame");
 
+    // C starts a new game: the server removes the game with A and logs it.
+    await createGame(C, false);
+    A.disconnect();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.ok(server.output.includes("removed ongoing game"), server.output);
+    assert.ok(
+      !server.output.includes(SUB_A) && !server.output.includes(SUB_C),
+      "the server log has an idToken:\n" + server.output
+    );
+
     const received = [A, B, C].flatMap((socket) => socket.received);
     assert.ok(received.length > 0);
     for (const { event, args } of received) {

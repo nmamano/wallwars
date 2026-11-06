@@ -231,7 +231,7 @@ export async function addNewPlayer(
   try {
     await p.save();
     console.log(
-      `Stored new player in DB ${process.env.DB_NAME}: name ${p.name} idToken ${p.idToken}`
+      `Stored new player in DB ${process.env.DB_NAME}: name ${p.name}`
     );
     return true;
   } catch (err) {
@@ -322,7 +322,7 @@ export async function addPlayerSolvedPuzzle(
     return true;
   } catch (err) {
     console.error(
-      `Store player ${p} to DB ${process.env.DB_NAME} failed:\n${err}`
+      `Store player ${p.name} to DB ${process.env.DB_NAME} failed:\n${err}`
     );
     return false;
   }
@@ -607,7 +607,7 @@ async function updatePlayers(game: GameState): Promise<boolean> {
     try {
       await p1.save();
       console.log(
-        `Stored player in DB ${process.env.DB_NAME}: name ${p1.name} idToken ${p1.idToken} freshness: ${p1.lastGameDate}`
+        `Stored player in DB ${process.env.DB_NAME}: name ${p1.name} freshness: ${p1.lastGameDate}`
       );
     } catch (err) {
       console.error(`Store player to DB ${process.env.DB_NAME} failed: ${err}`);
@@ -625,7 +625,7 @@ async function updatePlayers(game: GameState): Promise<boolean> {
     try {
       await p2.save();
       console.log(
-        `Stored player in DB ${process.env.DB_NAME}: name ${p2.name} idToken ${p2.idToken} freshness: ${p2.lastGameDate}`
+        `Stored player in DB ${process.env.DB_NAME}: name ${p2.name} freshness: ${p2.lastGameDate}`
       );
     } catch (err) {
       console.error(`Store player to DB ${process.env.DB_NAME} failed: ${err}`);
