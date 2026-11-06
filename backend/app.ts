@@ -27,6 +27,7 @@ import {
   applyTakeback,
   applyGiveExtraTime,
   setResult,
+  gameForClients,
 } from "./src/gameState";
 import M from "./src/messageList";
 import { version } from "wallwars-core";
@@ -660,7 +661,7 @@ io.on(M.connectionMsg, function (socket: any): void {
   });
 
   socket.on(M.requestCurrentChallengesMsg, function (): void {
-    const challenges = GM.getOpenChallenges();
+    const challenges = GM.getOpenChallenges().map(gameForClients);
     emitMessage(M.requestedCurrentChallengesMsg, { challenges });
   });
 
@@ -729,11 +730,8 @@ io.on(M.connectionMsg, function (socket: any): void {
       return;
     }
     game.arePlayersPresent[idx] = true;
-    // Remove the id token of the opponent, which is secret.
-    let gameWithoutIdTokens = JSON.parse(JSON.stringify(game));
-    delete gameWithoutIdTokens.idTokens;
     emitMessage(M.returnedToOngoingGameMsg, {
-      ongoingGame: gameWithoutIdTokens,
+      ongoingGame: gameForClients(game),
       isCreator: idx === 0,
       timeLeft: timeLeftByPlayer(game),
     });

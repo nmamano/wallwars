@@ -1,6 +1,6 @@
 import { logMessage } from "./logUtils";
 import M from "./messageList";
-import { GameState } from "./gameState";
+import { GameState, gameForClients } from "./gameState";
 
 export default class ChallengeBroadcast {
   subscribedSockets: any[];
@@ -25,15 +25,9 @@ export default class ChallengeBroadcast {
   }
 
   notifyNewChallenge(game: GameState) {
-    // Remove the token id before broadcasting the game, as it should be kept
-    // secret to the client.
-    const gameWithoutIdTokens: GameState = {
-      ...game,
-    };
-    gameWithoutIdTokens.idTokens = ["", ""];
     for (let i = 0; i < this.subscribedSockets.length; i++) {
       emitMessageSubscriber(this.subscribedSockets[i], M.newChallengeMsg, {
-        challenge: gameWithoutIdTokens,
+        challenge: gameForClients(game),
       });
     }
   }

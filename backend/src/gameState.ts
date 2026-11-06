@@ -41,6 +41,15 @@ export type GameState = {
   isRated: boolean;
 };
 
+// The copy of a game that may be sent to clients. It has no idTokens: an
+// idToken is the key of a player's account. It also has no socket ids.
+export function gameForClients(
+  game: GameState
+): Omit<GameState, "idTokens" | "socketIds"> {
+  const { idTokens, socketIds, ...rest } = game;
+  return rest;
+}
+
 //Game "constructor"
 export function newGame(): GameState {
   return {
