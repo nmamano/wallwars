@@ -17,7 +17,7 @@
     "express-openid-connect": "^2.20.2",
     "jose": "^5.10.0",
     "mongodb": "^5.9.2",
-    "mongoose": "^6.13.11",
+    "mongoose": "^6.13.12",
     "socket.io": "^4.8.3",
     "unique-names-generator": "^4.7.1",
     "wallwars-core": "^0.0.5"
